@@ -31,7 +31,9 @@ export default function LoginPage() {
     const handleLogin = (data: any) => {
         localStorage.setItem('token', data.access_token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        document.cookie = `token=${data.access_token}; path=/; max-age=86400`;
+        // Add Secure flag for production HTTPS
+        const isProduction = window.location.protocol === 'https:';
+        document.cookie = `token=${data.access_token}; path=/; max-age=86400; SameSite=Lax${isProduction ? '; Secure' : ''}`;
         window.dispatchEvent(new Event('auth-change'));
         if (data.user.role === 'ADMIN' || data.user.role === 'SUPERADMIN') {
             router.push('/admin');

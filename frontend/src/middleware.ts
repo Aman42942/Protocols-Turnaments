@@ -10,14 +10,27 @@ export async function middleware(request: NextRequest) {
     try {
         // Use the backend URL from env, usually defined in next.config or .env
         const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        const res = await fetch(`${backendUrl}/maintenance`, { next: { revalidate: 60 } }); // Cache for 60s to reduce load
+
+        // Add timeout to prevent hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+
+        const res = await fetch(`${backendUrl}/maintenance`, {
+            next: { revalidate: 60 },
+            signal: controller.signal
+        }); // Cache for 60s to reduce load
+
+        clearTimeout(timeoutId);
+
         if (res.ok) {
             const data = await res.json();
             isMaintenanceMode = data.isMaintenanceMode;
         }
     } catch (err) {
-        // If backend is down, default to NOT in maintenance mode (or safe mode)
+        // If backend is down or timeout, default to NOT in maintenance mode
+        // This prevents the site from being inaccessible if backend is slow/down
         console.error('Middleware maintenance check failed', err);
+        isMaintenanceMode = false; // Fail open - allow access
     }
 
     // Allow static files, api routes, and admin routes even in maintenance mode
