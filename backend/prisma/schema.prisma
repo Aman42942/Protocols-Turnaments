@@ -1,0 +1,275 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"  // Using Neon PostgreSQL database
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String?
+  name      String?
+  role      String   @default("USER") // USER, ADMIN, SUPERADMIN
+  avatar    String?
+  banned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  teams     TeamMember[]
+  tournaments TournamentParticipant[]
+  
+  // Auth Provider
+  provider  String? // GOOGLE, FACEBOOK, LOCAL
+  providerId String?
+
+  // Email Verification
+  emailVerified    Boolean   @default(false)
+  emailVerifyCode  String?
+  emailVerifyExpiry DateTime?
+
+  // Password Reset
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  
+  // OTP (Login Verification)  
+  otpCode   String?
+  otpExpiry DateTime?
+  
+  // Two-Factor Authentication (TOTP)
+  twoFactorEnabled Boolean  @default(false)
+  twoFactorSecret  String?
+  
+  // Security Tracking
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  loginAttempts Int       @default(0)
+  lockedUntil   DateTime?
+  
+  // Game Identities
+  riotId    String? // Valorant Name#Tag
+  pubgId    String? // PUBG Account ID
+  bgmiId    String? // BGMI ID
+  freeFireId String? // Free Fire UID (10-12 digits)
+  
+  // Profile Stats
+  badges    String? // JSON string of badges
+  country   String?
+  bio       String?
+  socials   String? // JSON string of social links
+
+  // Relations to new models
+  wallet        Wallet?
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+}
+
+model Tournament {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  game        String   // VALID_GAMES: VALORANT, PUBG, BGMI, FREEFIRE
+  status      String   @default("UPCOMING") // UPCOMING, LIVE, COMPLETED, CANCELLED
+  tier        String   @default("LOW") // LOW, MEDIUM, HIGH
+  
+  // Pricing
+  entryFeePerPerson Float @default(0)
+  prizePool   Float @default(0)
+  currency    String @default("INR")
+  
+  // Schedule
+  startDate   DateTime
+  endDate     DateTime?
+  
+  // Config
+  maxTeams    Int
+  minTeams    Int?
+  gameMode    String @default("SQUAD") // SOLO, DUO, SQUAD, TEAM_5V5
+  format      String @default("SINGLE_ELIM") // SINGLE_ELIM, DOUBLE_ELIM, ROUND_ROBIN, SWISS, CUSTOM
+  
+  // Game-Specific Settings (JSON)
+  scoringEngine     String? // JSON: point matrix e.g. {"1":10,"2":6,...,"kill":1}
+  mapPool           String? // JSON: array of maps for veto
+  gameSettings      String? // JSON: game-specific config (blue zone, overtime, gun property, etc.)
+  rules             String? // JSON: array of rule strings
+  prizeDistribution String? // JSON: e.g. [{"place":"1st","percent":50},...]
+  
+  // Room Management (BGMI/FF)
+  roomId        String?
+  roomPassword  String?
+  slotList      String? // JSON: slot assignments [{"slot":1,"teamId":"..."}]
+  
+  // Sharing & Links
+  shareCode         String?  @unique // Short code for share URL
+  whatsappGroupLink String?
+  discordChannelId  String?
+  streamUrl         String?
+  region            String?  // Server region
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  teams       TournamentParticipant[]
+  matches     Match[]
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  logo        String?
+  leaderId    String
+  inviteCode  String   @unique
+  gameType    String   @default("PUBG_SQUAD") // PUBG_SQUAD, VALORANT_5V5, etc.
+  maxMembers  Int      @default(4)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  members     TeamMember[]
+  tournaments TournamentParticipant[]
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  teamId    String
+  userId    String
+  role      String   @default("MEMBER") // LEADER, MEMBER
+  joinedAt  DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model TournamentParticipant {
+  id           String     @id @default(uuid())
+  tournamentId String
+  teamId       String?    // Optional for Solo tournaments
+  userId       String     // The user who registered (captain or solo player)
+  status       String     @default("PENDING") // PENDING, APPROVED, REJECTED
+  paymentStatus String    @default("UNPAID") // UNPAID, PAID, REFUNDED
+  paymentId    String?    // Razorpay/Cashfree Order ID
+  registeredAt DateTime   @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  team         Team?      @relation(fields: [teamId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+}
+
+model Match {
+  id           String     @id @default(uuid())
+  tournamentId String
+  round        Int
+  teamAId      String?
+  teamBId      String?
+  scoreA       Int?
+  scoreB       Int?
+  winnerId     String?
+  status       String     @default("SCHEDULED") // SCHEDULED, LIVE, COMPLETED
+  startTime    DateTime
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+}
+
+// ============ NEW MODELS FOR FULL FUNCTIONALITY ============
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  balance   Float    @default(0)
+  currency  String   @default("INR")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  walletId    String
+  type        String   // DEPOSIT, WITHDRAWAL, ENTRY_FEE, WINNINGS, REFUND
+  amount      Float
+  status      String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  method      String?  // UPI, BANK_TRANSFER, RAZORPAY, STRIPE
+  reference   String?  // External payment reference ID
+  description String?
+  createdAt   DateTime @default(now())
+  wallet      Wallet   @relation(fields: [walletId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("info") // info, success, warning, system
+  read      Boolean  @default(false)
+  link      String?  // Optional deep link
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  adminId   String
+  action    String   // e.g. "CREATE_TOURNAMENT", "BAN_USER", "LOGIN"
+  targetId  String?  // ID of affected entity
+  details   String?  // JSON string or text details
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  admin     User     @relation(fields: [adminId], references: [id])
+}
+
+model ThemeSettings {
+  id             String   @id @default(uuid())
+  isActive       Boolean  @default(true)
+  
+  // Branding
+  siteName       String   @default("Pro Tournaments")
+  logoUrl        String?
+  faviconUrl     String?
+  
+  // Colors (Hex Codes)
+  primaryColor   String   @default("#ff4f4f")
+  secondaryColor String   @default("#1f1f1f")
+  accentColor    String   @default("#3b82f6")
+  backgroundColor String  @default("#000000")
+  
+  // Hero Section
+  heroTitle      String   @default("Dominate the Arena")
+  heroSubtitle   String   @default("Join the ultimate esports tournaments and win big prizes.")
+  heroImageUrl   String?
+  
+  // Custom CSS (Advanced)
+  customCss      String?
+  
+  updatedAt      DateTime @updatedAt
+}
+
+// ============ CMS MODELS ============
+
+model ContentPage {
+  id        String   @id @default(uuid())
+  slug      String   @unique // e.g., "terms", "privacy", "about"
+  title     String
+  content   String   
+  isPublished Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, ALERT, WARNING, SUCCESS
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique // e.g. "REVOKE_BEFORE"
+  value     String   // Value stored as string (e.g. timestamp)
+  updatedAt DateTime @updatedAt
+}
