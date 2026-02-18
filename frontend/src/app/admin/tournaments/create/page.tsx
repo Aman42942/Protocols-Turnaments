@@ -15,6 +15,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 // ===== GAME CONFIGURATIONS =====
 const GAME_CONFIGS = {
@@ -211,26 +212,7 @@ export default function CreateTournamentPage() {
     const [prizePreset, setPrizePreset] = useState('top3');
     const [showRoomPassword, setShowRoomPassword] = useState(false);
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        const userStr = localStorage.getItem('user');
-
-        if (!token || !userStr) {
-            window.location.href = '/login';
-            return;
-        }
-
-        try {
-            const user = JSON.parse(userStr);
-            if (user.role !== 'ADMIN') {
-                window.location.href = '/';
-                return;
-            }
-        } catch {
-            window.location.href = '/login';
-            return;
-        }
-    }, [router]);
+    const { isAdmin, loading: authLoading } = useAdminAuth();
 
     const [formData, setFormData] = useState({
         title: '',
@@ -251,6 +233,23 @@ export default function CreateTournamentPage() {
         roomId: '',
         roomPassword: '',
     });
+
+    // Protect the page
+    useEffect(() => {
+        if (!authLoading && !isAdmin) {
+            // redirection handled by hook or middleware, but safe double check
+            window.location.href = '/';
+        }
+    }, [authLoading, isAdmin]);
+
+    if (authLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
