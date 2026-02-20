@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BrandingProvider } from "@/context/ThemeContext";
+import { SocketProvider } from "@/context/SocketContext";
 import Script from "next/script";
 
 const geistSans = Geist({
@@ -73,11 +74,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <BrandingProvider>
-            <Navbar />
-            <main className="min-h-screen flex flex-col">
-              {children}
-            </main>
-            <Footer />
+            <SocketProvider>
+              <Navbar />
+              <main className="min-h-screen flex flex-col">
+                {children}
+              </main>
+              <Footer />
+            </SocketProvider>
           </BrandingProvider>
         </ThemeProvider>
 

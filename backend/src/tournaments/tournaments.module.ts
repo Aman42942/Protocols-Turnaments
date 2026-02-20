@@ -10,6 +10,14 @@ import { ActivityLogModule } from '../activity-log/activity-log.module';
 
 import { LeaderboardService } from './leaderboard.service';
 import { LeaderboardController } from './leaderboard.controller';
+import { ScoringService } from './engine/scoring.service';
+import { MatchService } from './engine/match.service';
+import { MatchController } from './engine/match.controller';
+
+import { TournamentLifecycleService } from './tournament-lifecycle.service';
+import { TournamentLifecycleController } from './tournament-lifecycle.controller';
+import { EscrowService } from './escrow.service';
+import { ResultLockService } from './result-lock.service';
 
 @Module({
   imports: [
@@ -19,7 +27,28 @@ import { LeaderboardController } from './leaderboard.controller';
     PaymentsModule,
     ActivityLogModule,
   ],
-  controllers: [TournamentsController, LeaderboardController],
-  providers: [TournamentsService, LeaderboardGateway, LeaderboardService],
+  controllers: [
+    TournamentsController,
+    LeaderboardController,
+    MatchController,
+    TournamentLifecycleController,
+  ],
+  providers: [
+    TournamentsService,
+    LeaderboardService,
+    LeaderboardGateway,
+    ScoringService,
+    MatchService,
+    TournamentLifecycleService,
+    EscrowService,
+    ResultLockService,
+  ],
+  exports: [
+    TournamentsService,
+    LeaderboardService,
+    MatchService,
+    EscrowService,
+    ResultLockService,
+  ],
 })
-export class TournamentsModule {}
+export class TournamentsModule { }

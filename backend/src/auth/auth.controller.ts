@@ -15,13 +15,14 @@ import { RolesGuard } from './roles.guard';
 import { Roles } from './roles.decorator';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { RefreshTokenGuard } from './refresh-token.guard';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   // ========== REGISTRATION ==========
 
@@ -53,9 +54,9 @@ export class AuthController {
     const ip = req.headers['x-forwarded-for'] || req.ip || 'Unknown';
     const result = (await this.authService.login(body, ip)) as any;
 
-    // Only set cookie if token is present (e.g. OAuth or pre-verified)
-    if (result.access_token) {
-      res.cookie('token', result.access_token, {
+    // Set HTTP-only cookie for Refresh Token if present
+    if (result.refresh_token) {
+      res.cookie('refresh_token', result.refresh_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -65,6 +66,36 @@ export class AuthController {
     }
 
     return result;
+  }
+
+  // ========== REFRESH TOKEN ==========
+
+  @Post('refresh')
+  @UseGuards(RefreshTokenGuard)
+  async refresh(@Req() req, @Res({ passthrough: true }) res) {
+    const userId = req.user['sub'];
+    const refreshToken = req.user['refreshToken'];
+    const tokens = await this.authService.refreshTokens(userId, refreshToken);
+
+    res.cookie('refresh_token', tokens.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    return { access_token: tokens.access_token };
+  }
+
+  // ========== LOGOUT ==========
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  async logout(@Req() req, @Res({ passthrough: true }) res) {
+    await this.authService.logout(req.user['id'] || req.user['sub']);
+    res.clearCookie('refresh_token');
+    return { message: 'Logged out successfully' };
   }
 
   // ========== OTP VERIFICATION ==========
@@ -82,12 +113,12 @@ export class AuthController {
       ip,
     )) as any;
 
-    if (result.access_token) {
-      res.cookie('token', result.access_token, {
+    if (result.refresh_token) {
+      res.cookie('refresh_token', result.refresh_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: 7 * 24 * 60 * 60 * 1000,
         path: '/',
       });
     }
@@ -126,8 +157,8 @@ export class AuthController {
       ip,
     )) as any;
 
-    if (result.access_token) {
-      res.cookie('token', result.access_token, {
+    if (result.refresh_token) {
+      res.cookie('refresh_token', result.refresh_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -150,7 +181,6 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPERADMIN')
   async globalLogout(@Req() req) {
-    // Audit log should be added here ideally
     return this.authService.revokeAllSessions();
   }
 
@@ -158,28 +188,29 @@ export class AuthController {
 
   @Get('google')
   @UseGuards(AuthGuard('google'))
-  async googleAuth(@Req() req) {}
+  async googleAuth(@Req() req) { }
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req, @Res({ passthrough: true }) res) {
-    const { access_token } = (await this.authService.login(req.user)) as any;
+    const tokens = (await this.authService.login(req.user)) as any;
 
-    // Set HTTP-only cookie
-    res.cookie('token', access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', // Lax is required for OAuth redirects to work
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/',
-    });
+    if (tokens.refresh_token) {
+      res.cookie('refresh_token', tokens.refresh_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: '/',
+      });
+    }
 
     const frontendUrl = (
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000'
     ).replace(/\/$/, '');
-    // Redirect to auth callback with token (Frontend expects it to set localStorage/cookies)
+
     res.redirect(
-      `${frontendUrl}/auth/callback?token=${access_token}&login=success`,
+      `${frontendUrl}/auth/callback?token=${tokens.access_token}&login=success`,
     );
   }
 
@@ -187,27 +218,29 @@ export class AuthController {
 
   @Get('facebook')
   @UseGuards(AuthGuard('facebook'))
-  async facebookAuth(@Req() req) {}
+  async facebookAuth(@Req() req) { }
 
   @Get('facebook/callback')
   @UseGuards(AuthGuard('facebook'))
   async facebookAuthRedirect(@Req() req, @Res({ passthrough: true }) res) {
-    const { access_token } = (await this.authService.login(req.user)) as any;
+    const tokens = (await this.authService.login(req.user)) as any;
 
-    // Set HTTP-only cookie
-    res.cookie('token', access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', // Lax is required for OAuth redirects to work
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/',
-    });
+    if (tokens.refresh_token) {
+      res.cookie('refresh_token', tokens.refresh_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: '/',
+      });
+    }
 
     const frontendUrl = (
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000'
     ).replace(/\/$/, '');
+
     res.redirect(
-      `${frontendUrl}/auth/callback?token=${access_token}&login=success`,
+      `${frontendUrl}/auth/callback?token=${tokens.access_token}&login=success`,
     );
   }
 

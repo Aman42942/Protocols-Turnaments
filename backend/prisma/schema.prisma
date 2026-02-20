@@ -62,6 +62,9 @@ model User {
   bio       String?
   socials   String? // JSON string of social links
 
+  // Session Management
+  hashedRefreshToken String?
+
   // Relations to new models
   wallet        Wallet?
   notifications Notification[]
@@ -79,6 +82,7 @@ model Tournament {
   // Pricing
   entryFeePerPerson Float @default(0)
   prizePool   Float @default(0)
+  collectedFees Float @default(0)
   currency    String @default("INR")
   
   // Schedule
@@ -115,6 +119,7 @@ model Tournament {
   
   teams       TournamentParticipant[]
   matches     Match[]
+  leaderboard TournamentLeaderboard[]
 }
 
 model Team {
@@ -129,6 +134,8 @@ model Team {
   updatedAt   DateTime @updatedAt
   members     TeamMember[]
   tournaments TournamentParticipant[]
+  matchParticipations MatchParticipation[]
+  leaderboardEntries TournamentLeaderboard[]
 }
 
 model TeamMember {
@@ -167,6 +174,37 @@ model Match {
   status       String     @default("SCHEDULED") // SCHEDULED, LIVE, COMPLETED
   startTime    DateTime
   tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  participations MatchParticipation[]
+}
+
+model MatchParticipation {
+  id        String   @id @default(uuid())
+  matchId   String
+  teamId    String
+  placement Int?     // e.g., 1 for 1st place
+  kills     Int      @default(0)
+  score     Float    @default(0) // Calculated score based on rules
+  match     Match    @relation(fields: [matchId], references: [id])
+  team      Team     @relation(fields: [teamId], references: [id])
+
+  @@unique([matchId, teamId])
+}
+
+model TournamentLeaderboard {
+  id           String   @id @default(uuid())
+  tournamentId String
+  teamId       String
+  totalPoints  Float    @default(0)
+  totalKills   Int      @default(0)
+  matchesPlayed Int     @default(0)
+  rank         Int      @default(0)
+  updatedAt    DateTime @updatedAt
+  
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  team         Team       @relation(fields: [teamId], references: [id])
+
+  @@unique([tournamentId, teamId])
+  @@index([tournamentId, totalPoints(sort: Desc)])
 }
 
 // ============ NEW MODELS FOR FULL FUNCTIONALITY ============
@@ -175,6 +213,7 @@ model Wallet {
   id        String   @id @default(uuid())
   userId    String   @unique
   balance   Float    @default(0)
+  frozenBalance Float @default(0) // Funds locked (e.g., pending dispute/withdrawal)
   currency  String   @default("INR")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -191,6 +230,7 @@ model Transaction {
   method      String?  // UPI, BANK_TRANSFER, RAZORPAY, STRIPE
   reference   String?  // External payment reference ID
   description String?
+  metadata    String?  // JSON: { "tournamentId": "...", "reason": "..." }
   createdAt   DateTime @default(now())
   wallet      Wallet   @relation(fields: [walletId], references: [id])
 }
@@ -272,4 +312,39 @@ model SystemConfig {
   key       String   @unique // e.g. "REVOKE_BEFORE"
   value     String   // Value stored as string (e.g. timestamp)
   updatedAt DateTime @updatedAt
+}
+
+model DailyStat {
+  id          String   @id @default(uuid())
+  date        DateTime @unique // Midnight timestamp
+  newUsers    Int      @default(0)
+  activeUsers Int      @default(0)
+  revenue     Float    @default(0)
+  matchesPlayed Int    @default(0)
+  createdAt   DateTime @default(now())
+}
+
+// ============ PHASE 1: LIFECYCLE & ESCROW ============
+
+model EscrowPool {
+  id             String   @id @default(uuid())
+  tournamentId   String   @unique
+  totalCollected Float    @default(0)  // Sum of all entry fees
+  platformFeeRaw Float    @default(0)  // Fee captured by platform
+  netPrizePool   Float    @default(0)  // What winners get
+  status         String   @default("OPEN") // OPEN, LOCKED, DISTRIBUTED
+  distributedAt  DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ResultLock {
+  id           String   @id @default(uuid())
+  matchId      String   @unique
+  lockedBy     String   // adminId who submitted result
+  lockedAt     DateTime @default(now())
+  isOverridden Boolean  @default(false)
+  overrideBy   String?  // superadminId
+  overrideAt   DateTime?
+  overrideReason String?
 }

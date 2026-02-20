@@ -7,6 +7,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { GoogleStrategy } from './google.strategy';
 import { FacebookStrategy } from './facebook.strategy';
+import { RefreshTokenStrategy } from './refresh-token.strategy';
 import { WalletModule } from '../wallet/wallet.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -30,8 +31,9 @@ import { JwtAuthGuard } from './jwt-auth.guard';
     JwtStrategy,
     GoogleStrategy,
     FacebookStrategy,
+    RefreshTokenStrategy,
     JwtAuthGuard,
   ],
   exports: [AuthService, JwtAuthGuard],
 })
-export class AuthModule {}
+export class AuthModule { }

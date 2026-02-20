@@ -13,7 +13,6 @@ export class WalletService {
     private configService: ConfigService,
   ) { }
 
-  // Get or create wallet for a user
   async getWallet(userId: string) {
     let wallet = await this.prisma.wallet.findUnique({
       where: { userId },
@@ -30,7 +29,59 @@ export class WalletService {
     return wallet;
   }
 
-  // Get UPI payment details for QR code
+  // Lock funds (Move from Balance -> Frozen)
+  async lockFunds(userId: string, amount: number, reason: string) {
+    const wallet = await this.getWallet(userId);
+    if (wallet.balance < amount) throw new BadRequestException('Insufficient balance to lock');
+
+    await this.prisma.wallet.update({
+      where: { id: wallet.id },
+      data: {
+        balance: { decrement: amount },
+        frozenBalance: { increment: amount }
+      }
+    });
+  }
+
+  // Unlock funds (Move from Frozen -> Balance) e.g. Refund
+  async unlockFunds(userId: string, amount: number, reason: string) {
+    const wallet = await this.getWallet(userId);
+    // Note: We might want to check if frozenBalance >= amount, but in some edge cases (admin override) it might differ.
+    // Safe check:
+    if (wallet.frozenBalance < amount) throw new BadRequestException('Insufficient frozen balance');
+
+    await this.prisma.wallet.update({
+      where: { id: wallet.id },
+      data: {
+        balance: { increment: amount },
+        frozenBalance: { decrement: amount }
+      }
+    });
+
+    // Log the refund/unlock
+    await this.prisma.transaction.create({
+      data: {
+        walletId: wallet.id,
+        type: 'REFUND',
+        amount,
+        status: 'COMPLETED',
+        description: `Refund/Unlock: ${reason}`,
+      }
+    });
+  }
+
+  // Capture funds (Frozen -> Burn/Transfer) e.g. Dispute resolved against user
+  async captureFunds(userId: string, amount: number, reason: string) {
+    const wallet = await this.getWallet(userId);
+    if (wallet.frozenBalance < amount) throw new BadRequestException('Insufficient frozen balance');
+
+    await this.prisma.wallet.update({
+      where: { id: wallet.id },
+      data: { frozenBalance: { decrement: amount } }
+    });
+    // Funds are effectively 'burned' from user perspective or moved to admin wallet (not impl here)
+  }
+
   getUpiDetails() {
     return {
       upiId:
@@ -41,7 +92,6 @@ export class WalletService {
     };
   }
 
-  // Create a pending QR deposit (user has scanned QR and paid)
   async createQrDeposit(userId: string, amount: number, utrNumber: string) {
     if (amount <= 0) throw new BadRequestException('Amount must be positive');
     if (amount < 10) throw new BadRequestException('Minimum deposit is ₹10');
@@ -51,7 +101,6 @@ export class WalletService {
       );
     }
 
-    // Check for duplicate UTR
     const existingTx = await this.prisma.transaction.findFirst({
       where: { reference: utrNumber.trim() },
     });
@@ -82,7 +131,6 @@ export class WalletService {
     };
   }
 
-  // Admin: Get all pending deposits
   async getPendingDeposits() {
     return this.prisma.transaction.findMany({
       where: { type: 'DEPOSIT', status: 'PENDING', method: 'UPI_QR' },
@@ -95,7 +143,6 @@ export class WalletService {
     });
   }
 
-  // Admin: Get all transactions for the admin panel
   async getAllTransactions(page = 1, limit = 50) {
     const skip = (page - 1) * limit;
     const [transactions, total] = await this.prisma.$transaction([
@@ -116,7 +163,6 @@ export class WalletService {
     return { transactions, total, page, limit };
   }
 
-  // Admin: Approve a pending transaction (Deposit/Withdrawal)
   async approveTransaction(transactionId: string) {
     const tx = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
@@ -128,7 +174,6 @@ export class WalletService {
       throw new BadRequestException('Transaction is not pending');
 
     if (tx.type === 'DEPOSIT') {
-      // Credits user balance
       const [updatedTx, updatedWallet] = await this.prisma.$transaction([
         this.prisma.transaction.update({
           where: { id: transactionId },
@@ -144,8 +189,6 @@ export class WalletService {
       ]);
       return { transaction: updatedTx, wallet: updatedWallet };
     } else if (tx.type === 'WITHDRAWAL') {
-      // Balance was already decremented during withdrawal request
-      // Just mark as completed
       const updatedTx = await this.prisma.transaction.update({
         where: { id: transactionId },
         data: {
@@ -159,7 +202,6 @@ export class WalletService {
     throw new BadRequestException('Unsupported transaction type for approval');
   }
 
-  // Admin: Reject a pending transaction
   async rejectTransaction(transactionId: string, reason?: string) {
     const tx = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
@@ -198,7 +240,6 @@ export class WalletService {
     return { transaction: updatedTx };
   }
 
-  // Add money (deposit) — instant (used by Razorpay callback)
   async deposit(
     userId: string,
     amount: number,
@@ -230,7 +271,6 @@ export class WalletService {
     return { wallet: updatedWallet, transaction };
   }
 
-  // Withdraw money
   async withdraw(userId: string, amount: number, method: string) {
     if (amount <= 0) throw new BadRequestException('Amount must be positive');
 
@@ -238,6 +278,10 @@ export class WalletService {
     if (wallet.balance < amount) {
       throw new BadRequestException('Insufficient balance');
     }
+
+    // Move to frozen balance maybe? Or just deduct as existing.
+    // Existing logic just deducts. Locked funds logic is better for atomic safety.
+    // For now keeping existing flow but could upgrade to lockFunds.
 
     const [updatedWallet, transaction] = await this.prisma.$transaction([
       this.prisma.wallet.update({
@@ -259,7 +303,6 @@ export class WalletService {
     return { wallet: updatedWallet, transaction };
   }
 
-  // Deduct entry fee
   async deductEntryFee(userId: string, amount: number, tournamentName: string) {
     const wallet = await this.getWallet(userId);
     if (wallet.balance < amount) {
@@ -285,7 +328,6 @@ export class WalletService {
     return { wallet: updatedWallet, transaction };
   }
 
-  // Credit winnings
   async creditWinnings(userId: string, amount: number, tournamentName: string) {
     const wallet = await this.getWallet(userId);
 
@@ -308,7 +350,6 @@ export class WalletService {
     return { wallet: updatedWallet, transaction };
   }
 
-  // Get transaction history
   async getTransactions(userId: string, page = 1, limit = 20) {
     const wallet = await this.getWallet(userId);
     const skip = (page - 1) * limit;

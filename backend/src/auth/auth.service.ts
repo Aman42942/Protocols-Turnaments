@@ -27,7 +27,7 @@ export class AuthService {
     private notificationsService: NotificationsService,
     private emailService: EmailService,
     private prisma: PrismaService,
-  ) {}
+  ) { }
 
   // ========== HELPERS ==========
 
@@ -138,7 +138,7 @@ export class AuthService {
     return {
       message: 'Email verified successfully!',
       verified: true,
-      ...(await this.generateToken(userWithoutPassword)),
+      ...(await this.getTokens(userWithoutPassword.id, userWithoutPassword.email, userWithoutPassword.role)),
     };
   }
 
@@ -180,7 +180,7 @@ export class AuthService {
   async login(userOrBody: any, ip?: string) {
     // If called from OAuth flow, user is already validated
     if (userOrBody.id) {
-      return this.generateToken(userOrBody);
+      return this.getTokens(userOrBody.id, userOrBody.email, userOrBody.role);
     }
 
     const { email, password } = userOrBody;
@@ -324,7 +324,7 @@ export class AuthService {
     );
 
     const { password, ...userWithoutPassword } = user;
-    return this.generateToken(userWithoutPassword);
+    return this.getTokens(userWithoutPassword.id, userWithoutPassword.email, userWithoutPassword.role);
   }
 
   async resendLoginOTP(email: string) {
@@ -456,7 +456,7 @@ export class AuthService {
     );
 
     const { password, ...userWithoutPassword } = user;
-    return this.generateToken(userWithoutPassword);
+    return this.getTokens(userWithoutPassword.id, userWithoutPassword.email, userWithoutPassword.role);
   }
 
   async disable2FA(userId: string, code: string) {
@@ -490,22 +490,80 @@ export class AuthService {
 
   // ========== TOKEN GENERATION ==========
 
-  private async generateToken(user: any) {
+  private async generateTokens(userId: string, email: string, role: string) {
     const payload = {
-      email: user.email,
-      sub: user.id,
-      name: user.name,
-      role: user.role,
+      sub: userId,
+      email: email,
+      role: role,
     };
+
+    const [at, rt] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_SECRET || 'super-secret',
+        expiresIn: '15m',
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_REFRESH_SECRET || 'super-secret-refresh',
+        expiresIn: '7d',
+      }),
+    ]);
+
     return {
-      access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      access_token: at,
+      refresh_token: rt,
     };
+  }
+
+  async updateRefreshToken(userId: string, refreshToken: string) {
+    const hash = await bcrypt.hash(refreshToken, 10);
+    await this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        hashedRefreshToken: hash,
+      },
+    });
+  }
+
+  async getTokens(userId: string, email: string, role: string) {
+    const tokens = await this.generateTokens(userId, email, role);
+    await this.updateRefreshToken(userId, tokens.refresh_token);
+    return tokens;
+  }
+
+  async refreshTokens(userId: string, refreshToken: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+    if (!user || !user.hashedRefreshToken)
+      throw new ForbiddenException('Access Denied');
+
+    const tokenMatches = await bcrypt.compare(
+      refreshToken,
+      user.hashedRefreshToken,
+    );
+    if (!tokenMatches) throw new ForbiddenException('Access Denied');
+
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    await this.updateRefreshToken(user.id, tokens.refresh_token);
+    return tokens;
+  }
+
+  async logout(userId: string) {
+    await this.prisma.user.updateMany({
+      where: {
+        id: userId,
+        hashedRefreshToken: {
+          not: null,
+        },
+      },
+      data: {
+        hashedRefreshToken: null,
+      },
+    });
   }
 
   // ========== OAUTH ==========

@@ -67,6 +67,12 @@ export class EmailService {
     </html>`;
   }
 
+  // ========== PUBLIC GENERIC EMAIL (for queue processors) ==========
+
+  async sendGenericEmail(to: string, subject: string, html: string) {
+    await this.sendMail(to, subject, html);
+  }
+
   // ========== EMAIL TEMPLATES ==========
 
   async sendVerificationCode(email: string, name: string, code: string) {

@@ -18,11 +18,15 @@ import { ActivityLogModule } from './activity-log/activity-log.module';
 import { ThemeModule } from './theme/theme.module';
 import { ContentModule } from './content/content.module';
 import { HealthModule } from './health/health.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { AdminOperationsModule } from './admin-operations/admin-operations.module';
+import { QueueModule } from './queue/queue.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     EmailModule,
     AuthModule,
     PrismaModule,
@@ -37,6 +41,10 @@ import { HealthModule } from './health/health.module';
     ThemeModule,
     ContentModule,
     HealthModule,
+    AnalyticsModule,
+    AdminOperationsModule,
+    RedisModule,
+    QueueModule,
   ],
   controllers: [AppController],
   providers: [
@@ -47,4 +55,4 @@ import { HealthModule } from './health/health.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

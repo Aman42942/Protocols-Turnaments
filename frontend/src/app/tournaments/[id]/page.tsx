@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { LiveLeaderboard } from '@/components/tournament/LiveLeaderboard';
+import { TournamentActivityFeed } from '@/components/tournament/TournamentActivityFeed';
 
 interface Tournament {
     id: string;
@@ -107,7 +109,7 @@ export default function TournamentDetailPage() {
     const [registering, setRegistering] = useState(false);
     const [registered, setRegistered] = useState(false);
     const [walletBalance, setWalletBalance] = useState<number | null>(null);
-    const [activeTab, setActiveTab] = useState<'overview' | 'rules' | 'players'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'leaderboard' | 'rules' | 'players'>('overview');
 
     useEffect(() => {
         if (params.id) { fetchTournament(); }
@@ -350,22 +352,30 @@ export default function TournamentDetailPage() {
                         </Card>
 
                         {/* Tabs */}
-                        <div className="flex gap-1 border-b">
-                            {(['overview', 'rules', 'players'] as const).map(tab => (
+                        <div className="flex gap-1 border-b overflow-x-auto">
+                            {(['overview', 'leaderboard', 'rules', 'players'] as const).map(tab => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors capitalize ${activeTab === tab
+                                    className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors capitalize whitespace-nowrap ${activeTab === tab
                                         ? 'border-primary text-primary'
                                         : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                                 >
                                     {tab === 'overview' && <Target className="inline h-4 w-4 mr-1.5" />}
+                                    {tab === 'leaderboard' && <Trophy className="inline h-4 w-4 mr-1.5" />}
                                     {tab === 'rules' && <Shield className="inline h-4 w-4 mr-1.5" />}
                                     {tab === 'players' && <Users className="inline h-4 w-4 mr-1.5" />}
                                     {tab} {tab === 'players' && `(${tournament.teams?.length || 0})`}
                                 </button>
                             ))}
                         </div>
+
+                        {/* Leaderboard Tab */}
+                        {activeTab === 'leaderboard' && (
+                            <div className="space-y-6">
+                                <LiveLeaderboard tournamentId={tournament.id} />
+                            </div>
+                        )}
 
                         {/* Overview Tab */}
                         {activeTab === 'overview' && (
@@ -550,6 +560,7 @@ export default function TournamentDetailPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
+                                <TournamentActivityFeed tournamentId={tournament.id} />
                                 {/* Pricing */}
                                 <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border">
                                     <div className="flex justify-between items-center">
