@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { RedisService } from './redis.service';
+import { LeaderboardCacheService } from './leaderboard-cache.service';
 
 /**
  * Global Redis Module
@@ -10,7 +11,7 @@ import { RedisService } from './redis.service';
 @Global()
 @Module({
     imports: [ConfigModule],
-    providers: [RedisService],
-    exports: [RedisService],
+    providers: [RedisService, LeaderboardCacheService],
+    exports: [RedisService, LeaderboardCacheService],
 })
 export class RedisModule { }

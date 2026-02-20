@@ -22,6 +22,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { AdminOperationsModule } from './admin-operations/admin-operations.module';
 import { QueueModule } from './queue/queue.module';
 import { RedisModule } from './redis/redis.module';
+import { RbacModule } from './rbac/rbac.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { RedisModule } from './redis/redis.module';
     AdminOperationsModule,
     RedisModule,
     QueueModule,
+    RbacModule,
   ],
   controllers: [AppController],
   providers: [
