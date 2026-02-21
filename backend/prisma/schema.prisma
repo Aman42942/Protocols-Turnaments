@@ -114,9 +114,13 @@ model Tournament {
   streamUrl         String?
   region            String?  // Server region
   
+  // Multi-tenant
+  organizerId String?   // null = platform-hosted, set = organizer-hosted
+  organizer   Organizer? @relation(fields: [organizerId], references: [id])
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   teams       TournamentParticipant[]
   matches     Match[]
   leaderboard TournamentLeaderboard[]
@@ -347,4 +351,75 @@ model ResultLock {
   overrideBy   String?  // superadminId
   overrideAt   DateTime?
   overrideReason String?
+}
+
+// ============ PHASE 4: MULTI-TENANT ORGANIZER ============
+
+model Organizer {
+  id          String   @id @default(uuid())
+  userId      String   @unique  // The platform user who owns this organizer account
+  name        String
+  slug        String   @unique  // Subdomain / URL slug e.g. "xtreme-esports"
+  logoUrl     String?
+  description String?
+  website     String?
+  contactEmail String?
+  plan        String   @default("FREE")  // FREE, BASIC, PRO, ENTERPRISE
+  isVerified  Boolean  @default(false)   // Admin-verified organizer
+  isActive    Boolean  @default(true)
+
+  // India Skill-Gaming Compliance
+  panNumber   String?   // PAN for tax compliance
+  gstNumber   String?   // GST registration
+  tnc         String?   // Custom terms and conditions (markdown)
+
+  // White-label config
+  theme       OrganizerTheme?
+
+  // Tournaments run by this organizer
+  tournaments Tournament[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OrganizerTheme {
+  id            String   @id @default(uuid())
+  organizerId   String   @unique
+  organizer     Organizer @relation(fields: [organizerId], references: [id])
+
+  // Brand colors
+  primaryColor  String   @default("#6366f1")  // Indigo default
+  accentColor   String   @default("#8b5cf6")
+  bgColor       String   @default("#0a0a0f")
+  textColor     String   @default("#ffffff")
+
+  // Brand identity
+  logoUrl       String?
+  faviconUrl    String?
+  bannerUrl     String?
+  fontFamily    String   @default("Inter")
+
+  // Custom branding text
+  heroTitle     String?
+  heroSubtitle  String?
+  footerText    String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// India Skill-Gaming Compliance Audit Log
+model ComplianceAuditLog {
+  id           String   @id @default(uuid())
+  organizerId  String
+  tournamentId String?
+  event        String   // e.g. RESULT_LOCKED, PRIZE_DISTRIBUTED, REFUND_ISSUED
+  details      String   // JSON blob with amounts, user IDs, timestamps
+  ipAddress    String?
+  performedBy  String   // userId of admin/organizer
+  createdAt    DateTime @default(now())
+
+  @@index([organizerId])
+  @@index([tournamentId])
 }

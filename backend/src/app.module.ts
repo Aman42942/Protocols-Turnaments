@@ -23,6 +23,7 @@ import { AdminOperationsModule } from './admin-operations/admin-operations.modul
 import { QueueModule } from './queue/queue.module';
 import { RedisModule } from './redis/redis.module';
 import { RbacModule } from './rbac/rbac.module';
+import { OrganizerModule } from './organizer/organizer.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { RbacModule } from './rbac/rbac.module';
     RedisModule,
     QueueModule,
     RbacModule,
+    OrganizerModule,
   ],
   controllers: [AppController],
   providers: [
