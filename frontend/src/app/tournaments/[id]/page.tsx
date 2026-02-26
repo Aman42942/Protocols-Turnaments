@@ -14,6 +14,9 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { LiveLeaderboard } from '@/components/tournament/LiveLeaderboard';
 import { TournamentActivityFeed } from '@/components/tournament/TournamentActivityFeed';
+import { UpiPaymentFallback } from '@/components/payment/UpiPaymentFallback';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 interface Tournament {
     id: string;
@@ -107,9 +110,13 @@ export default function TournamentDetailPage() {
     const [tournament, setTournament] = useState<Tournament | null>(null);
     const [loading, setLoading] = useState(true);
     const [registering, setRegistering] = useState(false);
+    const [showUpiModal, setShowUpiModal] = useState(false);
+    const [upiAmount, setUpiAmount] = useState(0);
     const [registered, setRegistered] = useState(false);
     const [walletBalance, setWalletBalance] = useState<number | null>(null);
     const [activeTab, setActiveTab] = useState<'overview' | 'leaderboard' | 'rules' | 'players'>('overview');
+    const [showPaymentChoice, setShowPaymentChoice] = useState(false);
+    const [cashfree, setCashfree] = useState<any>(null);
 
     useEffect(() => {
         if (params.id) { fetchTournament(); }
@@ -129,75 +136,90 @@ export default function TournamentDetailPage() {
         } catch (err) { console.error('Failed to fetch tournament:', err); } finally { setLoading(false); }
     };
 
+    useEffect(() => {
+        // Initialize Cashfree SDK
+        const initCashfree = () => {
+            if (typeof window !== 'undefined' && (window as any).Cashfree) {
+                const cf = (window as any).Cashfree({ mode: "production" });
+                setCashfree(cf);
+            } else {
+                setTimeout(initCashfree, 1000);
+            }
+        };
+        initCashfree();
+    }, []);
+
     const handleRegister = async () => {
         const token = localStorage.getItem('token');
         if (!token) { router.push('/login'); return; }
 
         if (!tournament) return;
 
-        setRegistering(true);
-        try {
-            // Case 1: FREE Entry
-            if (tournament.entryFeePerPerson <= 0) {
+        // Case 1: FREE Entry
+        if (tournament.entryFeePerPerson <= 0) {
+            setRegistering(true);
+            try {
                 const res = await api.post(`/tournaments/${params.id}/register`);
                 setRegistered(true);
                 alert(res.data.message || 'Registered successfully! 🎉');
+            } catch (err: any) {
+                alert(err.response?.data?.message || 'Registration failed');
+            } finally {
                 setRegistering(false);
-                return;
             }
+            return;
+        }
 
-            // Case 2: PAID Entry -> Razorpay
+        // Case 2: PAID Entry -> Choice
+        setShowPaymentChoice(true);
+    };
+
+    const handleCashfreeRegister = async () => {
+        if (!cashfree || !tournament) return;
+        setRegistering(true);
+        setShowPaymentChoice(false);
+        try {
             // Step 1: Create Order
-            const orderRes = await api.post(`/tournaments/${params.id}/payment-order`);
-            const { id: orderId, amount, key_id, currency } = orderRes.data;
-
-            if (!key_id) {
-                throw new Error("Payment gateway not configured");
-            }
+            const orderRes = await api.post(`/tournaments/${params.id}/create-order`);
+            const { payment_session_id, order_id } = orderRes.data;
 
             // Step 2: Open Checkout
-            const options = {
-                key: key_id,
-                amount: amount,
-                currency: currency,
-                name: "Protocol Tournaments",
-                description: `Entry Fee for ${tournament.title}`,
-                order_id: orderId,
-                handler: async function (response: any) {
-                    try {
-                        // Step 3: Verify & Register
-                        const verifyRes = await api.post(`/tournaments/${params.id}/register`, {
-                            paymentId: response.razorpay_payment_id,
-                            orderId: response.razorpay_order_id,
-                            signature: response.razorpay_signature,
-                        });
-                        setRegistered(true);
-                        alert(verifyRes.data.message || 'Registered successfully! 🎉');
-                    } catch (err: any) {
-                        alert(err.response?.data?.message || 'Verification failed');
-                    } finally {
-                        setRegistering(false);
-                    }
-                },
-                prefill: {
-                    name: JSON.parse(localStorage.getItem('user') || '{}').name,
-                    email: JSON.parse(localStorage.getItem('user') || '{}').email,
-                },
-                theme: {
-                    color: "#22c55e"
-                },
-                modal: {
-                    ondismiss: function () {
-                        setRegistering(false);
-                    }
-                }
-            };
+            await cashfree.checkout({
+                paymentSessionId: payment_session_id,
+                returnUrl: `${window.location.origin}/tournaments/${params.id}?order_id={order_id}`,
+            });
 
-            const rzp = new (window as any).Razorpay(options);
-            rzp.open();
-
+            // Note: Registration verification happens in the background or on return
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Registration failed.');
+            alert(err.response?.data?.message || 'Payment initiation failed');
+            setRegistering(false);
+        }
+    };
+
+    // Handle return from Cashfree
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('order_id');
+        if (orderId && params.id && !registered) {
+            handleVerifyCashfree(orderId);
+        }
+    }, [params.id]);
+
+    const handleVerifyCashfree = async (orderId: string) => {
+        setRegistering(true);
+        try {
+            const verifyRes = await api.post(`/tournaments/${params.id}/register`, {
+                orderId: orderId,
+                paymentId: orderId, // Using orderId as reference
+                signature: 'CASHFREE_DIRECT'
+            });
+            setRegistered(true);
+            alert(verifyRes.data.message || 'Payment Verified & Registered! 🎉');
+            // Clean URL
+            window.history.replaceState({}, '', window.location.pathname);
+        } catch (err: any) {
+            console.error('Final verification failed:', err);
+        } finally {
             setRegistering(false);
         }
     };
@@ -263,48 +285,145 @@ export default function TournamentDetailPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* ===== HERO BANNER ===== */}
-            <div className={`relative overflow-hidden bg-gradient-to-br ${gameColor.gradient} border-b`}>
-                <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-                <div className="container max-w-6xl py-8">
-                    <Link href="/tournaments" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors text-sm">
-                        <ArrowLeft className="h-4 w-4" /> All Tournaments
-                    </Link>
+            {/* ===== PAYMENT CHOICE MODAL ===== */}
+            {showPaymentChoice && tournament && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
+                    <Card className="w-full max-w-md border-primary/20 shadow-2xl animate-in zoom-in duration-200">
+                        <CardHeader className="text-center pb-2">
+                            <CardTitle className="text-2xl font-black">Choose Payment Method</CardTitle>
+                            <CardDescription>Select how you want to pay the ₹{tournament.entryFeePerPerson} entry fee</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 p-6">
+                            <button
+                                onClick={handleCashfreeRegister}
+                                className="w-full group relative p-4 rounded-2xl border-2 border-primary/20 bg-primary/5 hover:border-primary hover:bg-primary/10 transition-all text-left"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-xl bg-primary/20 text-primary">
+                                        <Zap className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-lg">Online Payment</p>
+                                        <p className="text-xs text-muted-foreground italic">Fastest — Instant Registration</p>
+                                    </div>
+                                    <ChevronRight className="h-5 w-5 ml-auto text-muted-foreground group-hover:text-primary transition-colors" />
+                                </div>
+                            </button>
 
-                    <div className="flex flex-wrap gap-2 mb-4">
-                        {getStatusBadge(tournament.status)}
-                        <Badge className={getTierColor(tournament.tier)}>{tournament.tier} TIER</Badge>
-                        <Badge variant="outline" className={`${gameColor.text} ${gameColor.border}`}>
-                            <Gamepad2 className="mr-1 h-3 w-3" /> {tournament.game}
-                        </Badge>
-                        <Badge variant="outline"><Swords className="mr-1 h-3 w-3" /> {tournament.gameMode}</Badge>
+                            <button
+                                onClick={() => {
+                                    setUpiAmount(tournament.entryFeePerPerson);
+                                    setShowUpiModal(true);
+                                    setShowPaymentChoice(false);
+                                }}
+                                className="w-full group relative p-4 rounded-2xl border-2 border-orange-500/20 bg-orange-500/5 hover:border-orange-500 hover:bg-orange-500/10 transition-all text-left"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-xl bg-orange-500/20 text-orange-500">
+                                        <Shield className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-lg text-orange-500">Emergency UPI QR</p>
+                                        <p className="text-xs text-muted-foreground italic">Manual — Reliable Fallback</p>
+                                    </div>
+                                    <ChevronRight className="h-5 w-5 ml-auto text-muted-foreground group-hover:text-orange-500 transition-colors" />
+                                </div>
+                            </button>
+
+                            <Button
+                                variant="ghost"
+                                className="w-full mt-2"
+                                onClick={() => setShowPaymentChoice(false)}
+                            >
+                                Cancel
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* ===== UPI EMERGENCY FALLBACK ===== */}
+            {showUpiModal && tournament && (
+                <UpiPaymentFallback
+                    amount={upiAmount}
+                    tournamentName={tournament.title}
+                    tournamentId={params.id as string}
+                    onClose={() => setShowUpiModal(false)}
+                    onConfirm={() => {
+                        setShowUpiModal(false);
+                        fetchTournament(); // Refresh to show "You're Registered"
+                    }}
+                />
+            )}
+            {/* ===== IMMERSIVE HERO BANNER ===== */}
+            <div className={`relative overflow-hidden bg-gradient-to-br ${gameColor.gradient} border-b min-h-[40vh] flex flex-col justify-end pb-12`}>
+                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.05] dark:opacity-[0.1]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+
+                <div className="container max-w-6xl relative z-10 px-6">
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                    >
+                        <Link href="/tournaments" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-all group">
+                            <div className="p-2 rounded-xl bg-background/20 backdrop-blur-md border border-white/10 group-hover:scale-110 transition-transform">
+                                <ArrowLeft className="h-4 w-4" />
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-widest">Back to Arena</span>
+                        </Link>
+                    </motion.div>
+
+                    <div className="flex flex-wrap gap-3 mb-6">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 }}>
+                            {getStatusBadge(tournament.status)}
+                        </motion.div>
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.2 }}>
+                            <Badge className={cn("font-black tracking-widest uppercase border-0 rounded-lg px-3 py-1", getTierColor(tournament.tier))}>
+                                {tournament.tier} TIER
+                            </Badge>
+                        </motion.div>
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3 }}>
+                            <Badge variant="outline" className={cn("font-black tracking-widest uppercase border-white/20 bg-white/5 backdrop-blur-md rounded-lg px-3 py-1", gameColor.text)}>
+                                <Gamepad2 className="mr-2 h-3.5 w-3.5" /> {tournament.game}
+                            </Badge>
+                        </motion.div>
                     </div>
 
-                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">{tournament.title}</h1>
-                    {tournament.description && (
-                        <p className="text-muted-foreground text-lg max-w-3xl mb-6">{tournament.description}</p>
-                    )}
+                    <motion.h1
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-[0.9] italic"
+                    >
+                        {tournament.title.toUpperCase()}
+                    </motion.h1>
 
-                    {/* Countdown Timer */}
+                    {/* Countdown Overlay for Mobile */}
                     {countdown && (
-                        <div className="flex items-center gap-4 mb-4">
-                            <Timer className="h-5 w-5 text-primary" />
-                            <span className="text-sm text-muted-foreground font-medium">Starts in:</span>
-                            <div className="flex gap-3">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.5 }}
+                            className="flex items-center gap-6 p-4 rounded-[2rem] bg-background/40 backdrop-blur-xl border border-white/10 w-fit"
+                        >
+                            <div className="flex gap-4">
                                 {[
                                     { value: countdown.days, label: 'Days' },
                                     { value: countdown.hours, label: 'Hours' },
                                     { value: countdown.mins, label: 'Mins' },
                                 ].map((unit, i) => (
-                                    <div key={i} className="text-center">
-                                        <div className="bg-background/80 backdrop-blur border rounded-lg px-3 py-2 min-w-[52px]">
-                                            <span className="text-xl font-bold text-primary">{unit.value}</span>
-                                        </div>
-                                        <span className="text-[10px] text-muted-foreground font-medium">{unit.label}</span>
+                                    <div key={i} className="text-center group">
+                                        <div className="text-3xl font-black text-primary tracking-tighter leading-none mb-1 group-hover:scale-110 transition-transform">{unit.value}</div>
+                                        <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{unit.label}</div>
                                     </div>
                                 ))}
                             </div>
-                        </div>
+                            <div className="h-10 w-[1px] bg-white/10" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Battle Starts In</span>
+                                <span className="text-xs font-bold text-muted-foreground">{formatDate(tournament.startDate).split('•')[0]}</span>
+                            </div>
+                        </motion.div>
                     )}
                 </div>
             </div>
@@ -313,23 +432,31 @@ export default function TournamentDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* LEFT: Main Content */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Quick Stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {/* Quick Stats - Horizontal Snap on Mobile */}
+                        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide snap-x">
                             {[
                                 { icon: Trophy, label: 'Prize Pool', value: `₹${tournament.prizePool.toLocaleString('en-IN')}`, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
                                 { icon: Wallet, label: 'Entry Fee', value: tournament.entryFeePerPerson > 0 ? `₹${tournament.entryFeePerPerson}` : 'FREE', color: 'text-green-500', bg: 'bg-green-500/10' },
                                 { icon: Users, label: 'Spots', value: `${tournament._count?.teams || 0}/${tournament.maxTeams}`, color: 'text-blue-500', bg: 'bg-blue-500/10' },
                                 { icon: Calendar, label: 'Start Date', value: new Date(tournament.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), color: 'text-purple-500', bg: 'bg-purple-500/10' },
                             ].map((stat, i) => (
-                                <Card key={i} className="overflow-hidden">
-                                    <CardContent className="p-4">
-                                        <div className={`inline-flex p-2 rounded-lg ${stat.bg} mb-3`}>
-                                            <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                                        </div>
-                                        <p className="text-xl font-bold">{stat.value}</p>
-                                        <p className="text-xs text-muted-foreground">{stat.label}</p>
-                                    </CardContent>
-                                </Card>
+                                <motion.div
+                                    key={i}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.6 + i * 0.1 }}
+                                    className="snap-start shrink-0 min-w-[160px] md:min-w-0 md:flex-1"
+                                >
+                                    <Card className="overflow-hidden rounded-3xl border-border/40 bg-card/40 backdrop-blur-md hover:bg-card/60 transition-all duration-300">
+                                        <CardContent className="p-5">
+                                            <div className={cn("inline-flex p-3 rounded-2xl mb-4 group-hover:scale-110 transition-transform duration-500", stat.bg)}>
+                                                <stat.icon className={cn("h-6 w-6", stat.color)} />
+                                            </div>
+                                            <p className="text-2xl font-black tracking-tight">{stat.value}</p>
+                                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{stat.label}</p>
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
                             ))}
                         </div>
 
@@ -351,21 +478,25 @@ export default function TournamentDetailPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Tabs */}
-                        <div className="flex gap-1 border-b overflow-x-auto">
+                        {/* Premium Tabs - App Segments */}
+                        <div className="flex p-1.5 gap-1 bg-muted/30 backdrop-blur-md rounded-2xl border border-border/40 overflow-x-auto scrollbar-hide">
                             {(['overview', 'leaderboard', 'rules', 'players'] as const).map(tab => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors capitalize whitespace-nowrap ${activeTab === tab
-                                        ? 'border-primary text-primary'
-                                        : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                                    className={cn(
+                                        "flex-1 flex items-center justify-center gap-2 px-6 py-3 text-sm font-black uppercase tracking-widest transition-all rounded-xl whitespace-nowrap",
+                                        activeTab === tab
+                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[0.98]"
+                                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                    )}
                                 >
-                                    {tab === 'overview' && <Target className="inline h-4 w-4 mr-1.5" />}
-                                    {tab === 'leaderboard' && <Trophy className="inline h-4 w-4 mr-1.5" />}
-                                    {tab === 'rules' && <Shield className="inline h-4 w-4 mr-1.5" />}
-                                    {tab === 'players' && <Users className="inline h-4 w-4 mr-1.5" />}
-                                    {tab} {tab === 'players' && `(${tournament.teams?.length || 0})`}
+                                    {tab === 'overview' && <Target className="h-4 w-4" />}
+                                    {tab === 'leaderboard' && <Trophy className="h-4 w-4" />}
+                                    {tab === 'rules' && <Shield className="h-4 w-4" />}
+                                    {tab === 'players' && <Users className="h-4 w-4" />}
+                                    <span className="hidden sm:inline">{tab}</span>
+                                    {tab === 'players' && <span className="text-[10px] opacity-70">({tournament.teams?.length || 0})</span>}
                                 </button>
                             ))}
                         </div>
@@ -703,6 +834,34 @@ export default function TournamentDetailPage() {
                     </div>
                 </div>
             </div>
+            {/* ===== STICKY MOBILE JOIN BAR ===== */}
+            <AnimatePresence>
+                {!registered && !loading && (
+                    <motion.div
+                        initial={{ y: 100 }}
+                        animate={{ y: 0 }}
+                        exit={{ y: 100 }}
+                        className="fixed bottom-0 left-0 right-0 z-50 p-4 md:hidden bg-background/80 backdrop-blur-2xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.3)] pb-safe"
+                    >
+                        <div className="flex items-center justify-between gap-4 max-w-lg mx-auto">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Entry Fee</span>
+                                <span className="text-2xl font-black text-primary">
+                                    {tournament.entryFeePerPerson > 0 ? `₹${tournament.entryFeePerPerson}` : 'FREE'}
+                                </span>
+                            </div>
+                            <Button
+                                size="lg"
+                                className="grow h-14 rounded-2xl font-black tracking-widest uppercase shadow-lg shadow-primary/40 active:scale-95 transition-transform"
+                                onClick={handleRegister}
+                                disabled={registering || isFull}
+                            >
+                                {registering ? <Loader2 className="animate-spin" /> : isFull ? 'FULL' : 'REGISTER NOW'}
+                            </Button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

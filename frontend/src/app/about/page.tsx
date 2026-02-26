@@ -58,7 +58,8 @@ export default function AboutPage() {
                         transition={{ delay: 0.1 }}
                         className="text-xl text-muted-foreground"
                     >
-                        The ultimate esports tournament platform designed for gamers, by gamers.
+                        We&apos;re not just another tournament platform.
+                        designed for gamers, by gamers.
                         Elevate your game, compete for glory, and win real prizes.
                     </motion.p>
                 </div>

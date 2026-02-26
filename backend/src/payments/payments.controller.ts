@@ -10,7 +10,7 @@ export class PaymentsController {
     private readonly paymentsService: PaymentsService,
     private readonly walletService: WalletService,
     private readonly notificationsService: NotificationsService,
-  ) { }
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Post('create-order')
@@ -24,10 +24,7 @@ export class PaymentsController {
 
   @UseGuards(JwtAuthGuard)
   @Post('verify')
-  async verifyPayment(
-    @Request() req,
-    @Body('order_id') orderId: string,
-  ) {
+  async verifyPayment(@Request() req, @Body('order_id') orderId: string) {
     const result = await this.paymentsService.verifyPayment(orderId);
 
     if (result.success && result.amount > 0) {

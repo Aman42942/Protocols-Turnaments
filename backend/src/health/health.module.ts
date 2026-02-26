@@ -11,4 +11,4 @@ import { PrismaModule } from '../prisma/prisma.module';
   controllers: [HealthController],
   providers: [HealthService],
 })
-export class HealthModule { }
+export class HealthModule {}

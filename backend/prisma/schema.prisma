@@ -1,241 +1,199 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"  // Using Neon PostgreSQL database
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String?
-  name      String?
-  role      String   @default("USER") // USER, ADMIN, SUPERADMIN
-  avatar    String?
-  banned    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  teams     TeamMember[]
-  tournaments TournamentParticipant[]
-  
-  // Auth Provider
-  provider  String? // GOOGLE, FACEBOOK, LOCAL
-  providerId String?
-
-  // Email Verification
-  emailVerified    Boolean   @default(false)
-  emailVerifyCode  String?
-  emailVerifyExpiry DateTime?
-
-  // Password Reset
-  resetToken       String?
-  resetTokenExpiry DateTime?
-  
-  // OTP (Login Verification)  
-  otpCode   String?
-  otpExpiry DateTime?
-  
-  // Two-Factor Authentication (TOTP)
-  twoFactorEnabled Boolean  @default(false)
-  twoFactorSecret  String?
-  
-  // Security Tracking
-  lastLoginAt   DateTime?
-  lastLoginIp   String?
-  loginAttempts Int       @default(0)
-  lockedUntil   DateTime?
-  
-  // Game Identities
-  riotId    String? // Valorant Name#Tag
-  pubgId    String? // PUBG Account ID
-  bgmiId    String? // BGMI ID
-  freeFireId String? // Free Fire UID (10-12 digits)
-  
-  // Profile Stats
-  badges    String? // JSON string of badges
-  country   String?
-  bio       String?
-  socials   String? // JSON string of social links
-
-  // Session Management
+  id                 String                  @id @default(uuid())
+  email              String                  @unique
+  password           String?
+  name               String?
+  role               String                  @default("USER")
+  avatar             String?
+  banned             Boolean                 @default(false)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  provider           String?
+  providerId         String?
+  emailVerified      Boolean                 @default(false)
+  emailVerifyCode    String?
+  emailVerifyExpiry  DateTime?
+  resetToken         String?
+  resetTokenExpiry   DateTime?
+  otpCode            String?
+  otpExpiry          DateTime?
+  twoFactorEnabled   Boolean                 @default(false)
+  twoFactorSecret    String?
+  lastLoginAt        DateTime?
+  lastLoginIp        String?
+  loginAttempts      Int                     @default(0)
+  lockedUntil        DateTime?
+  riotId             String?
+  pubgId             String?
+  bgmiId             String?
+  freeFireId         String?
+  badges             String?
+  country            String?
+  bio                String?
+  socials            String?
   hashedRefreshToken String?
-
-  // Relations to new models
-  wallet        Wallet?
-  notifications Notification[]
-  activityLogs  ActivityLog[]
+  activityLogs       ActivityLog[]
+  notifications      Notification[]
+  teams              TeamMember[]
+  tournaments        TournamentParticipant[]
+  wallet             Wallet?
 }
 
 model Tournament {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  game        String   // VALID_GAMES: VALORANT, PUBG, BGMI, FREEFIRE
-  status      String   @default("UPCOMING") // UPCOMING, LIVE, COMPLETED, CANCELLED
-  tier        String   @default("LOW") // LOW, MEDIUM, HIGH
-  
-  // Pricing
-  entryFeePerPerson Float @default(0)
-  prizePool   Float @default(0)
-  collectedFees Float @default(0)
-  currency    String @default("INR")
-  
-  // Schedule
-  startDate   DateTime
-  endDate     DateTime?
-  
-  // Config
-  maxTeams    Int
-  minTeams    Int?
-  gameMode    String @default("SQUAD") // SOLO, DUO, SQUAD, TEAM_5V5
-  format      String @default("SINGLE_ELIM") // SINGLE_ELIM, DOUBLE_ELIM, ROUND_ROBIN, SWISS, CUSTOM
-  
-  // Game-Specific Settings (JSON)
-  scoringEngine     String? // JSON: point matrix e.g. {"1":10,"2":6,...,"kill":1}
-  mapPool           String? // JSON: array of maps for veto
-  gameSettings      String? // JSON: game-specific config (blue zone, overtime, gun property, etc.)
-  rules             String? // JSON: array of rule strings
-  prizeDistribution String? // JSON: e.g. [{"place":"1st","percent":50},...]
-  
-  // Room Management (BGMI/FF)
-  roomId        String?
-  roomPassword  String?
-  slotList      String? // JSON: slot assignments [{"slot":1,"teamId":"..."}]
-  
-  // Sharing & Links
-  shareCode         String?  @unique // Short code for share URL
+  id                String                  @id @default(uuid())
+  title             String
+  description       String?
+  game              String
+  status            String                  @default("UPCOMING")
+  tier              String                  @default("LOW")
+  entryFeePerPerson Float                   @default(0)
+  prizePool         Float                   @default(0)
+  currency          String                  @default("INR")
+  startDate         DateTime
+  endDate           DateTime?
+  maxTeams          Int
+  minTeams          Int?
+  gameMode          String                  @default("SQUAD")
+  format            String                  @default("SINGLE_ELIM")
+  scoringEngine     String?
+  mapPool           String?
+  gameSettings      String?
+  rules             String?
+  prizeDistribution String?
+  roomId            String?
+  roomPassword      String?
+  slotList          String?
+  shareCode         String?                 @unique
   whatsappGroupLink String?
   discordChannelId  String?
   streamUrl         String?
-  region            String?  // Server region
-  
-  // Multi-tenant
-  organizerId String?   // null = platform-hosted, set = organizer-hosted
-  organizer   Organizer? @relation(fields: [organizerId], references: [id])
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  teams       TournamentParticipant[]
-  matches     Match[]
-  leaderboard TournamentLeaderboard[]
+  region            String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  collectedFees     Float                   @default(0)
+  organizerId       String?
+  matches           Match[]
+  organizer         Organizer?              @relation(fields: [organizerId], references: [id])
+  leaderboard       TournamentLeaderboard[]
+  teams             TournamentParticipant[]
 }
 
 model Team {
-  id          String   @id @default(uuid())
-  name        String
-  logo        String?
-  leaderId    String
-  inviteCode  String   @unique
-  gameType    String   @default("PUBG_SQUAD") // PUBG_SQUAD, VALORANT_5V5, etc.
-  maxMembers  Int      @default(4)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  members     TeamMember[]
-  tournaments TournamentParticipant[]
+  id                  String                  @id @default(uuid())
+  name                String
+  logo                String?
+  leaderId            String
+  inviteCode          String                  @unique
+  gameType            String                  @default("PUBG_SQUAD")
+  maxMembers          Int                     @default(4)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
   matchParticipations MatchParticipation[]
-  leaderboardEntries TournamentLeaderboard[]
+  members             TeamMember[]
+  leaderboardEntries  TournamentLeaderboard[]
+  tournaments         TournamentParticipant[]
 }
 
 model TeamMember {
-  id        String   @id @default(uuid())
-  teamId    String
-  userId    String
-  role      String   @default("MEMBER") // LEADER, MEMBER
-  joinedAt  DateTime @default(now())
-  team      Team     @relation(fields: [teamId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  id       String   @id @default(uuid())
+  teamId   String
+  userId   String
+  role     String   @default("MEMBER")
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
 }
 
 model TournamentParticipant {
-  id           String     @id @default(uuid())
-  tournamentId String
-  teamId       String?    // Optional for Solo tournaments
-  userId       String     // The user who registered (captain or solo player)
-  status       String     @default("PENDING") // PENDING, APPROVED, REJECTED
-  paymentStatus String    @default("UNPAID") // UNPAID, PAID, REFUNDED
-  paymentId    String?    // Razorpay/Cashfree Order ID
-  registeredAt DateTime   @default(now())
-  tournament   Tournament @relation(fields: [tournamentId], references: [id])
-  team         Team?      @relation(fields: [teamId], references: [id])
-  user         User       @relation(fields: [userId], references: [id])
+  id            String     @id @default(uuid())
+  tournamentId  String
+  teamId        String?
+  userId        String
+  status        String     @default("PENDING")
+  paymentStatus String     @default("UNPAID")
+  paymentId     String?
+  registeredAt  DateTime   @default(now())
+  team          Team?      @relation(fields: [teamId], references: [id])
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+  user          User       @relation(fields: [userId], references: [id])
 }
 
 model Match {
-  id           String     @id @default(uuid())
-  tournamentId String
-  round        Int
-  teamAId      String?
-  teamBId      String?
-  scoreA       Int?
-  scoreB       Int?
-  winnerId     String?
-  status       String     @default("SCHEDULED") // SCHEDULED, LIVE, COMPLETED
-  startTime    DateTime
-  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  id             String               @id @default(uuid())
+  tournamentId   String
+  round          Int
+  teamAId        String?
+  teamBId        String?
+  scoreA         Int?
+  scoreB         Int?
+  winnerId       String?
+  status         String               @default("SCHEDULED")
+  startTime      DateTime
+  tournament     Tournament           @relation(fields: [tournamentId], references: [id])
   participations MatchParticipation[]
 }
 
 model MatchParticipation {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   matchId   String
   teamId    String
-  placement Int?     // e.g., 1 for 1st place
-  kills     Int      @default(0)
-  score     Float    @default(0) // Calculated score based on rules
-  match     Match    @relation(fields: [matchId], references: [id])
-  team      Team     @relation(fields: [teamId], references: [id])
+  placement Int?
+  kills     Int    @default(0)
+  score     Float  @default(0)
+  match     Match  @relation(fields: [matchId], references: [id])
+  team      Team   @relation(fields: [teamId], references: [id])
 
   @@unique([matchId, teamId])
 }
 
 model TournamentLeaderboard {
-  id           String   @id @default(uuid())
-  tournamentId String
-  teamId       String
-  totalPoints  Float    @default(0)
-  totalKills   Int      @default(0)
-  matchesPlayed Int     @default(0)
-  rank         Int      @default(0)
-  updatedAt    DateTime @updatedAt
-  
-  tournament   Tournament @relation(fields: [tournamentId], references: [id])
-  team         Team       @relation(fields: [teamId], references: [id])
+  id            String     @id @default(uuid())
+  tournamentId  String
+  teamId        String
+  totalPoints   Float      @default(0)
+  totalKills    Int        @default(0)
+  matchesPlayed Int        @default(0)
+  rank          Int        @default(0)
+  updatedAt     DateTime   @updatedAt
+  team          Team       @relation(fields: [teamId], references: [id])
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
 
   @@unique([tournamentId, teamId])
   @@index([tournamentId, totalPoints(sort: Desc)])
 }
 
-// ============ NEW MODELS FOR FULL FUNCTIONALITY ============
-
 model Wallet {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  balance   Float    @default(0)
-  frozenBalance Float @default(0) // Funds locked (e.g., pending dispute/withdrawal)
-  currency  String   @default("INR")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id])
-  transactions Transaction[]
+  id            String        @id @default(uuid())
+  userId        String        @unique
+  balance       Float         @default(0)
+  currency      String        @default("INR")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  frozenBalance Float         @default(0)
+  transactions  Transaction[]
+  user          User          @relation(fields: [userId], references: [id])
 }
 
 model Transaction {
   id          String   @id @default(uuid())
   walletId    String
-  type        String   // DEPOSIT, WITHDRAWAL, ENTRY_FEE, WINNINGS, REFUND
+  type        String
   amount      Float
-  status      String   @default("PENDING") // PENDING, COMPLETED, FAILED
-  method      String?  // UPI, BANK_TRANSFER, RAZORPAY, STRIPE
-  reference   String?  // External payment reference ID
+  status      String   @default("PENDING")
+  method      String?
+  reference   String?
   description String?
-  metadata    String?  // JSON: { "tournamentId": "...", "reason": "..." }
   createdAt   DateTime @default(now())
+  metadata    String?
   wallet      Wallet   @relation(fields: [walletId], references: [id])
 }
 
@@ -244,9 +202,9 @@ model Notification {
   userId    String
   title     String
   message   String
-  type      String   @default("info") // info, success, warning, system
+  type      String   @default("info")
   read      Boolean  @default(false)
-  link      String?  // Optional deep link
+  link      String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
 }
@@ -254,58 +212,46 @@ model Notification {
 model ActivityLog {
   id        String   @id @default(uuid())
   adminId   String
-  action    String   // e.g. "CREATE_TOURNAMENT", "BAN_USER", "LOGIN"
-  targetId  String?  // ID of affected entity
-  details   String?  // JSON string or text details
+  action    String
+  targetId  String?
+  details   String?
   ipAddress String?
   createdAt DateTime @default(now())
-
   admin     User     @relation(fields: [adminId], references: [id])
 }
 
 model ThemeSettings {
-  id             String   @id @default(uuid())
-  isActive       Boolean  @default(true)
-  
-  // Branding
-  siteName       String   @default("Pro Tournaments")
-  logoUrl        String?
-  faviconUrl     String?
-  
-  // Colors (Hex Codes)
-  primaryColor   String   @default("#ff4f4f")
-  secondaryColor String   @default("#1f1f1f")
-  accentColor    String   @default("#3b82f6")
-  backgroundColor String  @default("#000000")
-  
-  // Hero Section
-  heroTitle      String   @default("Dominate the Arena")
-  heroSubtitle   String   @default("Join the ultimate esports tournaments and win big prizes.")
-  heroImageUrl   String?
-  
-  // Custom CSS (Advanced)
-  customCss      String?
-  
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(uuid())
+  isActive        Boolean  @default(true)
+  siteName        String   @default("Pro Tournaments")
+  logoUrl         String?
+  faviconUrl      String?
+  primaryColor    String   @default("#ff4f4f")
+  secondaryColor  String   @default("#1f1f1f")
+  accentColor     String   @default("#3b82f6")
+  backgroundColor String   @default("#000000")
+  heroTitle       String   @default("Dominate the Arena")
+  heroSubtitle    String   @default("Join the ultimate esports tournaments and win big prizes.")
+  heroImageUrl    String?
+  customCss       String?
+  updatedAt       DateTime @updatedAt
 }
 
-// ============ CMS MODELS ============
-
 model ContentPage {
-  id        String   @id @default(uuid())
-  slug      String   @unique // e.g., "terms", "privacy", "about"
-  title     String
-  content   String   
-  isPublished Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String
+  content     String
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Announcement {
   id        String   @id @default(uuid())
   title     String
   message   String
-  type      String   @default("INFO") // INFO, ALERT, WARNING, SUCCESS
+  type      String   @default("INFO")
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -313,111 +259,92 @@ model Announcement {
 
 model SystemConfig {
   id        String   @id @default(uuid())
-  key       String   @unique // e.g. "REVOKE_BEFORE"
-  value     String   // Value stored as string (e.g. timestamp)
+  key       String   @unique
+  value     String
   updatedAt DateTime @updatedAt
 }
 
 model DailyStat {
-  id          String   @id @default(uuid())
-  date        DateTime @unique // Midnight timestamp
-  newUsers    Int      @default(0)
-  activeUsers Int      @default(0)
-  revenue     Float    @default(0)
-  matchesPlayed Int    @default(0)
-  createdAt   DateTime @default(now())
+  id            String   @id @default(uuid())
+  date          DateTime @unique
+  newUsers      Int      @default(0)
+  activeUsers   Int      @default(0)
+  revenue       Float    @default(0)
+  matchesPlayed Int      @default(0)
+  createdAt     DateTime @default(now())
 }
 
-// ============ PHASE 1: LIFECYCLE & ESCROW ============
-
 model EscrowPool {
-  id             String   @id @default(uuid())
-  tournamentId   String   @unique
-  totalCollected Float    @default(0)  // Sum of all entry fees
-  platformFeeRaw Float    @default(0)  // Fee captured by platform
-  netPrizePool   Float    @default(0)  // What winners get
-  status         String   @default("OPEN") // OPEN, LOCKED, DISTRIBUTED
+  id             String    @id @default(uuid())
+  tournamentId   String    @unique
+  totalCollected Float     @default(0)
+  platformFeeRaw Float     @default(0)
+  netPrizePool   Float     @default(0)
+  status         String    @default("OPEN")
   distributedAt  DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model ResultLock {
-  id           String   @id @default(uuid())
-  matchId      String   @unique
-  lockedBy     String   // adminId who submitted result
-  lockedAt     DateTime @default(now())
-  isOverridden Boolean  @default(false)
-  overrideBy   String?  // superadminId
-  overrideAt   DateTime?
+  id             String    @id @default(uuid())
+  matchId        String    @unique
+  lockedBy       String
+  lockedAt       DateTime  @default(now())
+  isOverridden   Boolean   @default(false)
+  overrideBy     String?
+  overrideAt     DateTime?
   overrideReason String?
 }
 
-// ============ PHASE 4: MULTI-TENANT ORGANIZER ============
-
 model Organizer {
-  id          String   @id @default(uuid())
-  userId      String   @unique  // The platform user who owns this organizer account
-  name        String
-  slug        String   @unique  // Subdomain / URL slug e.g. "xtreme-esports"
-  logoUrl     String?
-  description String?
-  website     String?
+  id           String          @id @default(uuid())
+  userId       String          @unique
+  name         String
+  slug         String          @unique
+  logoUrl      String?
+  description  String?
+  website      String?
   contactEmail String?
-  plan        String   @default("FREE")  // FREE, BASIC, PRO, ENTERPRISE
-  isVerified  Boolean  @default(false)   // Admin-verified organizer
-  isActive    Boolean  @default(true)
-
-  // India Skill-Gaming Compliance
-  panNumber   String?   // PAN for tax compliance
-  gstNumber   String?   // GST registration
-  tnc         String?   // Custom terms and conditions (markdown)
-
-  // White-label config
-  theme       OrganizerTheme?
-
-  // Tournaments run by this organizer
-  tournaments Tournament[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  plan         String          @default("FREE")
+  isVerified   Boolean         @default(false)
+  isActive     Boolean         @default(true)
+  panNumber    String?
+  gstNumber    String?
+  tnc          String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  theme        OrganizerTheme?
+  tournaments  Tournament[]
 }
 
 model OrganizerTheme {
-  id            String   @id @default(uuid())
-  organizerId   String   @unique
-  organizer     Organizer @relation(fields: [organizerId], references: [id])
-
-  // Brand colors
-  primaryColor  String   @default("#6366f1")  // Indigo default
-  accentColor   String   @default("#8b5cf6")
-  bgColor       String   @default("#0a0a0f")
-  textColor     String   @default("#ffffff")
-
-  // Brand identity
-  logoUrl       String?
-  faviconUrl    String?
-  bannerUrl     String?
-  fontFamily    String   @default("Inter")
-
-  // Custom branding text
-  heroTitle     String?
-  heroSubtitle  String?
-  footerText    String?
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String    @id @default(uuid())
+  organizerId  String    @unique
+  primaryColor String    @default("#6366f1")
+  accentColor  String    @default("#8b5cf6")
+  bgColor      String    @default("#0a0a0f")
+  textColor    String    @default("#ffffff")
+  logoUrl      String?
+  faviconUrl   String?
+  bannerUrl    String?
+  fontFamily   String    @default("Inter")
+  heroTitle    String?
+  heroSubtitle String?
+  footerText   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  organizer    Organizer @relation(fields: [organizerId], references: [id])
 }
 
-// India Skill-Gaming Compliance Audit Log
 model ComplianceAuditLog {
   id           String   @id @default(uuid())
   organizerId  String
   tournamentId String?
-  event        String   // e.g. RESULT_LOCKED, PRIZE_DISTRIBUTED, REFUND_ISSUED
-  details      String   // JSON blob with amounts, user IDs, timestamps
+  event        String
+  details      String
   ipAddress    String?
-  performedBy  String   // userId of admin/organizer
+  performedBy  String
   createdAt    DateTime @default(now())
 
   @@index([organizerId])

@@ -22,7 +22,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   // ========== REGISTRATION ==========
 
@@ -188,7 +188,7 @@ export class AuthController {
 
   @Get('google')
   @UseGuards(AuthGuard('google'))
-  async googleAuth(@Req() req) { }
+  async googleAuth(@Req() req) {}
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
@@ -218,7 +218,7 @@ export class AuthController {
 
   @Get('facebook')
   @UseGuards(AuthGuard('facebook'))
-  async facebookAuth(@Req() req) { }
+  async facebookAuth(@Req() req) {}
 
   @Get('facebook/callback')
   @UseGuards(AuthGuard('facebook'))

@@ -10,8 +10,8 @@ import { LeaderboardCacheService } from './leaderboard-cache.service';
  */
 @Global()
 @Module({
-    imports: [ConfigModule],
-    providers: [RedisService, LeaderboardCacheService],
-    exports: [RedisService, LeaderboardCacheService],
+  imports: [ConfigModule],
+  providers: [RedisService, LeaderboardCacheService],
+  exports: [RedisService, LeaderboardCacheService],
 })
-export class RedisModule { }
+export class RedisModule {}

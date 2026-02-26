@@ -13,4 +13,4 @@ import { NotificationsModule } from '../notifications/notifications.module';
   providers: [PaymentsService, PayoutService, FraudService],
   exports: [PaymentsService, PayoutService, FraudService],
 })
-export class PaymentsModule { }
+export class PaymentsModule {}

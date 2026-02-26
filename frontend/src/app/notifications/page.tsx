@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Bell, Check, Info, AlertTriangle, Trophy, Trash2, Mail, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import api from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
 interface Notification {
     id: string;
@@ -18,6 +19,7 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
+    const router = useRouter();
     const [filter, setFilter] = useState<'all' | 'unread' | 'system'>('all');
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
@@ -51,6 +53,16 @@ export default function NotificationsPage() {
         }
     };
 
+    const markAsRead = async (id: string) => {
+        try {
+            await api.patch(`/notifications/${id}/read`);
+            setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (err) {
+            console.error('Failed to mark as read:', err);
+        }
+    };
+
     const markAllRead = async () => {
         try {
             await api.patch('/notifications/read-all');
@@ -58,6 +70,15 @@ export default function NotificationsPage() {
             setUnreadCount(0);
         } catch (err) {
             console.error('Failed to mark all as read:', err);
+        }
+    };
+
+    const handleNotificationClick = async (notification: Notification) => {
+        if (!notification.read) {
+            await markAsRead(notification.id);
+        }
+        if (notification.link) {
+            router.push(notification.link);
         }
     };
 
@@ -175,17 +196,20 @@ export default function NotificationsPage() {
                                 <h3 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">{date}</h3>
                                 <div className="space-y-3">
                                     {groupedNotifications[date].map((notification) => (
-                                        <Card key={notification.id} className={`transition-all hover:shadow-md ${!notification.read ? 'bg-primary/5 border-primary/20' : ''}`}>
-                                            <CardContent className="p-4 flex gap-4 items-start">
-                                                <div className={`p-2 rounded-full mt-1 ${!notification.read ? 'bg-background shadow-sm' : 'bg-muted/50'}`}>
+                                        <Card key={notification.id}
+                                            onClick={() => handleNotificationClick(notification)}
+                                            className={`transition-all hover:shadow-md cursor-pointer ${!notification.read ? 'bg-primary/5 border-primary/20' : ''}`}
+                                        >
+                                            <CardContent className="p-4 flex gap-4 items-start relative group">
+                                                <div className={`p-2 rounded-full mt-1 shrink-0 ${!notification.read ? 'bg-background shadow-sm' : 'bg-muted/50'}`}>
                                                     {getIcon(notification.type)}
                                                 </div>
-                                                <div className="flex-1">
+                                                <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between items-start">
-                                                        <h4 className={`text-base font-semibold ${!notification.read ? 'text-primary' : 'text-foreground'}`}>
+                                                        <h4 className={`text-base font-semibold truncate ${!notification.read ? 'text-primary' : 'text-foreground'}`}>
                                                             {notification.title}
                                                         </h4>
-                                                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                        <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
                                                             {formatTime(notification.createdAt)}
                                                         </span>
                                                     </div>
@@ -197,8 +221,8 @@ export default function NotificationsPage() {
                                                     <div className="h-2 w-2 rounded-full bg-primary mt-3 shrink-0" />
                                                 )}
                                                 <button
-                                                    onClick={() => deleteNotification(notification.id)}
-                                                    className="p-1 rounded-full text-muted-foreground hover:text-destructive transition-colors"
+                                                    onClick={(e) => { e.stopPropagation(); deleteNotification(notification.id); }}
+                                                    className="p-1.5 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>

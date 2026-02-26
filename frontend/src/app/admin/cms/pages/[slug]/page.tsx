@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -28,13 +28,7 @@ export default function EditPage() {
         isPublished: true,
     });
 
-    useEffect(() => {
-        if (!isNew && slug) {
-            fetchPage();
-        }
-    }, [slug]);
-
-    const fetchPage = async () => {
+    const fetchPage = useCallback(async () => {
         try {
             const res = await api.get(`/content/pages/${slug}`);
             if (res.data) {
@@ -51,7 +45,13 @@ export default function EditPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [slug, router]);
+
+    useEffect(() => {
+        if (!isNew && slug) {
+            fetchPage();
+        }
+    }, [isNew, slug, fetchPage]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;

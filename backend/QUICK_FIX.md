@@ -1,30 +1,26 @@
-# Quick Fix: Switch to SQLite for Local Development
+# Quick Fix: Get the Project Running
 
 ## Why This Fix?
-- ✅ Works immediately (no internet needed)
-- ✅ No database credentials required
-- ✅ Fast for development
-- ✅ Easy to reset/recreate
+- ✅ Automates dependency installation
+- ✅ Handles database syncing
+- ✅ Clears ports and starts both servers
 - ⏱️ Takes 2 minutes
 
 ## Step-by-Step Instructions
 
-### 1. Update Prisma Schema
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
-}
+### 1. Ensure Node.js is installed
+Download from [nodejs.org](https://nodejs.org/) (LTS version recommended).
 
-### 2. Update .env
-DATABASE_URL="file:./dev.db"
+### 2. Run Setup
+Double-click `setup.bat` in the root folder. This will:
+- Install backend and frontend dependencies.
+- Update the database schema.
 
-### 3. Run Commands
-npx prisma migrate dev --name init
-npx prisma generate
-npx prisma db seed (if you have seed data)
-
-### 4. Start Backend
-npm run start
+### 3. Run Project
+Double-click `run-project.bat` in the root folder. This will:
+- Clear ports 3000 and 4000.
+- Start the Backend and Frontend servers.
+- Automatically open the browser to `localhost:3000`.
 
 ## Done!
-Your database is now a local file called `dev.db` in your backend folder.
+If you still encounter issues, check your `.env` file in the `backend` folder and ensure your `DATABASE_URL` is correct.

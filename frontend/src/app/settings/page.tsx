@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { User, Lock, Bell, Shield, Mail, Camera, Loader2, CheckCircle, Gamepad2 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 
 export default function SettingsPage() {
@@ -121,38 +123,47 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-muted/30 pt-8 pb-12">
-            <div className="container max-w-5xl">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-                    <p className="text-muted-foreground">Manage your account settings and preferences.</p>
-                </div>
+        <div className="min-h-screen bg-background pt-8 pb-32">
+            <div className="container max-w-5xl px-6">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-12"
+                >
+                    <h1 className="text-5xl font-black tracking-tighter italic uppercase underline decoration-primary decoration-4 underline-offset-8 mb-4">Settings</h1>
+                    <p className="text-muted-foreground font-medium">Customize your Protocol identity and preferences.</p>
+                </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    {/* Sidebar */}
-                    <Card className="h-fit">
-                        <CardContent className="p-2">
-                            <nav className="flex flex-col gap-1">
-                                {[
-                                    { id: 'profile', icon: User, label: 'Profile' },
-                                    { id: 'gameids', icon: Gamepad2, label: 'Game IDs' },
-                                    { id: 'account', icon: Lock, label: 'Account' },
-                                    { id: 'notifications', icon: Bell, label: 'Notifications' },
-                                    { id: 'security', icon: Shield, label: 'Security' },
-                                ].map(tab => (
-                                    <Button
-                                        key={tab.id}
-                                        variant={activeTab === tab.id ? 'secondary' : 'ghost'}
-                                        className="justify-start"
-                                        onClick={() => setActiveTab(tab.id)}
-                                    >
-                                        <tab.icon className="mr-2 h-4 w-4" />
-                                        {tab.label}
-                                    </Button>
-                                ))}
-                            </nav>
-                        </CardContent>
-                    </Card>
+                    {/* Sidebar / Top Navigation for Mobile */}
+                    <div className="md:col-span-1">
+                        <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex md:flex-col gap-2 overflow-x-auto pb-4 md:pb-0 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0"
+                        >
+                            {[
+                                { id: 'profile', icon: User, label: 'Profile' },
+                                { id: 'gameids', icon: Gamepad2, label: 'Game IDs' },
+                                { id: 'account', icon: Lock, label: 'Account' },
+                                { id: 'notifications', icon: Bell, label: 'Notifications' },
+                                { id: 'security', icon: Shield, label: 'Security' },
+                            ].map(tab => (
+                                <Button
+                                    key={tab.id}
+                                    variant={activeTab === tab.id ? 'default' : 'ghost'}
+                                    className={cn(
+                                        "justify-start min-w-[120px] md:min-w-0 rounded-2xl h-12 font-black tracking-widest uppercase text-[10px]",
+                                        activeTab === tab.id ? "shadow-lg shadow-primary/20 scale-95" : "text-muted-foreground"
+                                    )}
+                                    onClick={() => setActiveTab(tab.id)}
+                                >
+                                    <tab.icon className="mr-2 h-4 w-4" />
+                                    {tab.label}
+                                </Button>
+                            ))}
+                        </motion.div>
+                    </div>
 
                     {/* Main Content */}
                     <div className="md:col-span-3 space-y-6">

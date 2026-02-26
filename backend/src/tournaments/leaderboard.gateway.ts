@@ -27,11 +27,12 @@ import { LeaderboardCacheService } from '../redis/leaderboard-cache.service';
   namespace: 'leaderboard',
 })
 export class LeaderboardGateway
-  implements OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(LeaderboardGateway.name);
 
-  constructor(private readonly leaderboardCache: LeaderboardCacheService) { }
+  constructor(private readonly leaderboardCache: LeaderboardCacheService) {}
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
@@ -58,7 +59,11 @@ export class LeaderboardGateway
 
     // Send current cached leaderboard immediately on join
     const leaderboard = await this.leaderboardCache.getTop(tournamentId, 50);
-    client.emit('leaderboard_snapshot', { tournamentId, leaderboard, timestamp: new Date() });
+    client.emit('leaderboard_snapshot', {
+      tournamentId,
+      leaderboard,
+      timestamp: new Date(),
+    });
   }
 
   /**
@@ -89,7 +94,9 @@ export class LeaderboardGateway
       timestamp: new Date(),
     });
 
-    this.logger.log(`Leaderboard update broadcast to room ${room} (${leaderboard.length} entries)`);
+    this.logger.log(
+      `Leaderboard update broadcast to room ${room} (${leaderboard.length} entries)`,
+    );
   }
 
   // Keep backward-compatible global broadcast for older clients

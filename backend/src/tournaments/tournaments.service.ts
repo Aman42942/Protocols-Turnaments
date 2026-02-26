@@ -5,20 +5,26 @@ import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { randomBytes } from 'crypto';
 
 import { LeaderboardGateway } from './leaderboard.gateway';
+import { UsersService } from '../users/users.service';
+import { EmailService } from '../email/email.service';
+import { WalletService } from '../wallet/wallet.service';
 
 @Injectable()
 export class TournamentsService {
   constructor(
     private prisma: PrismaService,
     private leaderboardGateway: LeaderboardGateway,
-  ) {}
+    private usersService: UsersService,
+    private emailService: EmailService,
+    private walletService: WalletService,
+  ) { }
 
   private generateShareCode(): string {
     return randomBytes(4).toString('hex').toUpperCase(); // 8-char code
   }
 
-  create(createTournamentDto: CreateTournamentDto) {
-    return this.prisma.tournament.create({
+  async create(createTournamentDto: CreateTournamentDto) {
+    const tournament = await this.prisma.tournament.create({
       data: {
         title: createTournamentDto.title,
         description: createTournamentDto.description,
@@ -48,6 +54,32 @@ export class TournamentsService {
         region: createTournamentDto.region,
       },
     });
+
+    // Send notifications to all users asynchronously
+    this.notifyAllUsers(tournament).catch(err =>
+      console.error('Failed to notify users about new tournament:', err)
+    );
+
+    return tournament;
+  }
+
+  private async notifyAllUsers(tournament: any) {
+    const users = await this.usersService.findAll();
+    const emailPromises = users.map(user =>
+      this.emailService.sendTournamentCreatedNotification(
+        user.email,
+        user.name || 'Warrior',
+        {
+          id: tournament.id,
+          title: tournament.title,
+          game: tournament.game,
+          prizePool: tournament.prizePool,
+          entryFee: tournament.entryFeePerPerson,
+          startDate: tournament.startDate,
+        }
+      )
+    );
+    await Promise.allSettled(emailPromises);
   }
 
   findAll() {
@@ -120,7 +152,7 @@ export class TournamentsService {
   }
 
   // Register a user for a tournament (Robust Version)
-  async registerUser(userId: string, tournamentId: string) {
+  async registerUser(userId: string, tournamentId: string, paymentReference?: string, status: 'APPROVED' | 'PENDING' = 'APPROVED') {
     // 1. Check Tournament Existence & Status
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
@@ -150,10 +182,43 @@ export class TournamentsService {
 
     // 4. Handle Entry Fee & Wallet Deduction
     if (tournament.entryFeePerPerson > 0) {
+      // If we have a paymentReference, it means the user paid directly (Cashfree or Manual UPI)
+      if (paymentReference) {
+        return this.prisma.$transaction(async (tx) => {
+          const wallet = await tx.wallet.findUnique({ where: { userId } });
+
+          // Record Transaction (Completed since it's already verified)
+          await tx.transaction.create({
+            data: {
+              walletId: wallet?.id || '',
+              amount: tournament.entryFeePerPerson,
+              type: 'ENTRY_FEE',
+              status: 'COMPLETED',
+              reference: paymentReference,
+              description: `Direct payment for ${tournament.title}`,
+            },
+          });
+
+          // Add to Tournament
+          const participant = await tx.tournamentParticipant.create({
+            data: {
+              userId,
+              tournamentId,
+              status,
+              paymentStatus: status === 'APPROVED' ? 'PAID' : 'PENDING',
+              paymentId: paymentReference,
+            },
+          });
+
+          return participant;
+        });
+      }
+
+      // Traditional Wallet Deduction Flow (Fallback)
       const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
       if (!wallet || wallet.balance < tournament.entryFeePerPerson) {
         throw new BadRequestException(
-          `Insufficient funds. You need ₹${tournament.entryFeePerPerson} to join.`,
+          `Insufficient funds. Please pay ₹${tournament.entryFeePerPerson} to join.`,
         );
       }
 
@@ -181,8 +246,8 @@ export class TournamentsService {
           data: {
             userId,
             tournamentId,
-            status: 'APPROVED',
-            paymentStatus: 'PAID',
+            status,
+            paymentStatus: status === 'APPROVED' ? 'PAID' : 'PENDING',
           },
         });
 
@@ -195,7 +260,7 @@ export class TournamentsService {
       data: {
         userId,
         tournamentId,
-        status: 'APPROVED',
+        status,
         paymentStatus: 'PAID',
       },
     });
@@ -229,9 +294,142 @@ export class TournamentsService {
     });
   }
 
-  remove(id: string) {
-    return this.prisma.tournament.delete({
-      where: { id },
+  async remove(id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Delete Leaderboard entries
+      await tx.tournamentLeaderboard.deleteMany({ where: { tournamentId: id } });
+
+      // 2. Delete Match Participations for matches in this tournament
+      const matches = await tx.match.findMany({
+        where: { tournamentId: id },
+        select: { id: true },
+      });
+      const matchIds = matches.map((m) => m.id);
+      await tx.matchParticipation.deleteMany({
+        where: { matchId: { in: matchIds } },
+      });
+
+      // 3. Delete Match Result Locks
+      await tx.resultLock.deleteMany({
+        where: { matchId: { in: matchIds } },
+      });
+
+      // 4. Delete Matches
+      await tx.match.deleteMany({ where: { tournamentId: id } });
+
+      // 5. Delete Participants/Teams registrations
+      await tx.tournamentParticipant.deleteMany({
+        where: { tournamentId: id },
+      });
+
+      // 6. Delete Escrow Pool
+      await tx.escrowPool.deleteMany({ where: { tournamentId: id } });
+
+      // 7. Finally, delete the Tournament
+      return tx.tournament.delete({ where: { id } });
     });
+  }
+
+  async refundParticipant(tournamentId: string, participantId: string, adminId: string, ip: string) {
+    const tournament = await this.findOne(tournamentId);
+    if (!tournament) throw new BadRequestException('Tournament not found');
+
+    const participant = await this.prisma.tournamentParticipant.findUnique({
+      where: { id: participantId },
+    });
+
+    if (!participant) throw new BadRequestException('Participant not found');
+    if (participant.tournamentId !== tournamentId) throw new BadRequestException('Participant does not belong to this tournament');
+    if (participant.paymentStatus === 'REFUNDED') throw new BadRequestException('Participant already refunded');
+    if (participant.paymentStatus !== 'PAID') throw new BadRequestException('Only paid participants can be refunded');
+
+    const amount = tournament.entryFeePerPerson || 0;
+    if (amount <= 0) throw new BadRequestException('No entry fee to refund');
+
+    // 1. Perform refund in wallet
+    await this.walletService.refundTournamentEntry(
+      participant.userId,
+      amount,
+      tournamentId,
+      tournament.title,
+    );
+
+    // 2. Update participant status
+    const updated = await this.prisma.tournamentParticipant.update({
+      where: { id: participantId },
+      data: {
+        paymentStatus: 'REFUNDED',
+        status: 'CANCELLED',
+      },
+    });
+
+    return {
+      amount,
+      userId: participant.userId,
+      tournamentTitle: tournament.title,
+      updatedParticipant: updated,
+    };
+  }
+
+  async findParticipant(userId: string, tournamentId: string) {
+    return this.prisma.tournamentParticipant.findFirst({
+      where: {
+        userId,
+        tournamentId,
+        paymentStatus: 'PAID',
+      },
+    });
+  }
+
+  // ─── ADMIN: Get all participants for a tournament ───────────────────────────
+  async getParticipants(tournamentId: string) {
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { id: true, title: true, entryFeePerPerson: true },
+    });
+    if (!tournament) throw new BadRequestException('Tournament not found');
+
+    const participants = await this.prisma.tournamentParticipant.findMany({
+      where: { tournamentId },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, createdAt: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return { tournament, participants };
+  }
+
+  // ─── ADMIN: Force-remove a fraudulent participant ────────────────────────────
+  async kickParticipant(tournamentId: string, participantId: string, reason: string) {
+    const participant = await this.prisma.tournamentParticipant.findUnique({
+      where: { id: participantId },
+      include: { user: { select: { name: true, email: true } } },
+    });
+
+    if (!participant) throw new BadRequestException('Participant not found');
+    if (participant.tournamentId !== tournamentId) {
+      throw new BadRequestException('Participant does not belong to this tournament');
+    }
+    if (['CANCELLED', 'KICKED'].includes(participant.status)) {
+      throw new BadRequestException('Participant is already removed');
+    }
+
+    // Mark as kicked (soft delete — preserves audit trail)
+    const updated = await this.prisma.tournamentParticipant.update({
+      where: { id: participantId },
+      data: {
+        status: 'CANCELLED',
+        paymentStatus: 'CANCELLED',
+      },
+    });
+
+    return {
+      success: true,
+      message: `${participant.user.name} has been removed from the tournament.`,
+      participant: updated,
+    };
   }
 }

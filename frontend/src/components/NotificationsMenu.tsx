@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { Bell, Check, Info, AlertTriangle, Trophy, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 
 interface Notification {
@@ -12,10 +13,12 @@ interface Notification {
     message: string;
     type: string;
     read: boolean;
+    link?: string;
     createdAt: string;
 }
 
 export function NotificationsMenu() {
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'all' | 'mentions'>('all');
@@ -51,12 +54,30 @@ export function NotificationsMenu() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const markAsRead = async (id: string) => {
+        try {
+            await api.patch(`/notifications/${id}/read`);
+            setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch { }
+    };
+
     const markAllAsRead = async () => {
         try {
             await api.patch('/notifications/read-all');
             setNotifications(notifications.map(n => ({ ...n, read: true })));
             setUnreadCount(0);
         } catch { }
+    };
+
+    const handleNotificationClick = async (notification: Notification) => {
+        if (!notification.read) {
+            await markAsRead(notification.id);
+        }
+        if (notification.link) {
+            setIsOpen(false);
+            router.push(notification.link);
+        }
     };
 
     const deleteNotification = async (id: string) => {
@@ -150,6 +171,7 @@ export function NotificationsMenu() {
                                 {notifications.map((notification) => (
                                     <div
                                         key={notification.id}
+                                        onClick={() => handleNotificationClick(notification)}
                                         className={`relative group p-3 flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer ${!notification.read ? 'bg-primary/5' : ''}`}
                                     >
                                         <div className="mt-1 w-8 h-8 rounded-full flex items-center justify-center bg-card border border-border shrink-0 shadow-sm">

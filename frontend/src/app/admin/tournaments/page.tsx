@@ -8,7 +8,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import {
     Plus, Search, Trophy, Loader2, Trash2, Edit, Eye,
-    Users, IndianRupee, Calendar, MoreHorizontal
+    Users, IndianRupee, Calendar, MoreHorizontal, UserCheck, Swords
 } from 'lucide-react';
 import { ADMIN_ROLES } from '@/lib/roles';
 
@@ -290,6 +290,16 @@ export default function AdminTournamentsPage() {
                                         <td className="p-4 text-muted-foreground text-xs">{formatDate(t.startDate)}</td>
                                         <td className="p-4 text-right">
                                             <div className="flex justify-end gap-1">
+                                                <Link href={`/admin/tournaments/${t.id}/teams`}>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-purple-500 hover:text-purple-600 hover:bg-purple-500/10" title="Team Monitor">
+                                                        <Swords className="h-4 w-4" />
+                                                    </Button>
+                                                </Link>
+                                                <Link href={`/admin/tournaments/${t.id}/participants`}>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10" title="Manage Participants">
+                                                        <Users className="h-4 w-4" />
+                                                    </Button>
+                                                </Link>
                                                 <Link href={`/tournaments/${t.id}`}>
                                                     <Button variant="ghost" size="icon" className="h-8 w-8" title="View">
                                                         <Eye className="h-4 w-4" />

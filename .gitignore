@@ -14,3 +14,11 @@ yarn-error.log*
 .vscode
 *.swp
 *.swo
+
+# Local scripts - do not upload
+run.bat
+backend/check-users.ts
+backend/update-test-user.ts
+backend/scripts/check-users-status.ts
+backend/scripts/cleanup-test-data.ts
+frontend/build_log.txt

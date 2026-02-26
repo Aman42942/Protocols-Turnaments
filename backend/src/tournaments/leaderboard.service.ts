@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class LeaderboardService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   async getGlobalLeaderboard(limit: number = 100) {
     const cachedLeaderboard = await this.prisma.tournamentLeaderboard.findMany({
@@ -11,8 +11,8 @@ export class LeaderboardService {
       take: limit,
       include: {
         team: { include: { members: { include: { user: true } } } },
-        tournament: { select: { game: true } }
-      }
+        tournament: { select: { game: true } },
+      },
     });
 
     return cachedLeaderboard.map((entry, index) => ({
@@ -21,8 +21,11 @@ export class LeaderboardService {
       avatar: entry.team.logo, // Assuming team logo
       points: entry.totalPoints,
       game: entry.tournament.game,
-      winRate: entry.matchesPlayed > 0 ? `${Math.round((entry.totalPoints / (entry.matchesPlayed * 10)) * 100)}%` : '0%', // Simplified metric
-      rank: index + 1
+      winRate:
+        entry.matchesPlayed > 0
+          ? `${Math.round((entry.totalPoints / (entry.matchesPlayed * 10)) * 100)}%`
+          : '0%', // Simplified metric
+      rank: index + 1,
     }));
   }
 
@@ -30,7 +33,7 @@ export class LeaderboardService {
     const lb = await this.prisma.tournamentLeaderboard.findMany({
       where: { tournamentId },
       orderBy: { totalPoints: 'desc' },
-      include: { team: true }
+      include: { team: true },
     });
 
     return lb.map((entry, index) => ({
@@ -39,7 +42,7 @@ export class LeaderboardService {
       teamName: entry.team.name,
       points: entry.totalPoints,
       kills: entry.totalKills,
-      matches: entry.matchesPlayed
+      matches: entry.matchesPlayed,
     }));
   }
 

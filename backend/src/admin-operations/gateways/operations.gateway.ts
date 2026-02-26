@@ -1,15 +1,19 @@
-import { WebSocketGateway, WebSocketServer, SubscribeMessage } from '@nestjs/websockets';
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  SubscribeMessage,
+} from '@nestjs/websockets';
 import { Server } from 'socket.io';
 
 @WebSocketGateway({ namespace: 'admin-ops', cors: { origin: '*' } })
 export class OperationsGateway {
-    @WebSocketServer() server: Server;
+  @WebSocketServer() server: Server;
 
-    sendFraudAlert(alert: any) {
-        this.server.emit('fraud-alert', alert);
-    }
+  sendFraudAlert(alert: any) {
+    this.server.emit('fraud-alert', alert);
+  }
 
-    sendLiveMatchUpdate(match: any) {
-        this.server.emit('live-match-update', match);
-    }
+  sendLiveMatchUpdate(match: any) {
+    this.server.emit('live-match-update', match);
+  }
 }

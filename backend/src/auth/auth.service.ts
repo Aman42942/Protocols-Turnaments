@@ -3,7 +3,9 @@ import {
   UnauthorizedException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { WalletService } from '../wallet/wallet.service';
@@ -19,8 +21,10 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AuthService {
   private readonly MAX_LOGIN_ATTEMPTS = 5;
   private readonly LOCKOUT_MINUTES = 15;
+  private readonly logger = new Logger(AuthService.name);
 
   constructor(
+    private configService: ConfigService,
     private usersService: UsersService,
     private jwtService: JwtService,
     private walletService: WalletService,
@@ -87,11 +91,23 @@ export class AuthService {
 
   async revokeAllSessions() {
     const now = new Date().toISOString();
+    // 1. Update global revocation timestamp for JwtStrategy check
     await this.prisma.systemConfig.upsert({
       where: { key: 'REVOKE_BEFORE' },
       update: { value: now },
       create: { key: 'REVOKE_BEFORE', value: now },
     });
+
+    // 2. Clear all refresh tokens in DB to force immediate re-authentication on next refresh
+    await this.prisma.user.updateMany({
+      where: {
+        hashedRefreshToken: { not: null },
+      },
+      data: {
+        hashedRefreshToken: null,
+      },
+    });
+
     return {
       message: 'All active sessions have been revoked. Users must re-login.',
     };
@@ -130,15 +146,25 @@ export class AuthService {
       },
     });
 
-    // Send welcome email
+    // Send welcome email & notification
     await this.emailService.sendWelcomeEmail(email, user.name || '');
+    await this.emailService.sendLoginSuccessEmail(
+      email,
+      user.name || '',
+      'System (Auto-verify)',
+      new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    );
 
     // Auto-login after verification
     const { password, ...userWithoutPassword } = user;
     return {
       message: 'Email verified successfully!',
       verified: true,
-      ...(await this.getTokens(userWithoutPassword.id, userWithoutPassword.email, userWithoutPassword.role)),
+      ...(await this.getTokens(
+        userWithoutPassword.id,
+        userWithoutPassword.email,
+        userWithoutPassword.role,
+      )),
     };
   }
 
@@ -308,7 +334,7 @@ export class AuthService {
     });
 
     // Send login alert email
-    await this.emailService.sendLoginAlert(
+    await this.emailService.sendLoginSuccessEmail(
       email,
       user.name || '',
       ip || 'Unknown',
@@ -318,13 +344,17 @@ export class AuthService {
     // Send notification
     await this.notificationsService.create(
       user.id,
-      '🔐 New Login',
+      '✅ Login Successful',
       `You logged in from IP ${ip || 'Unknown'} at ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`,
       'info',
     );
 
     const { password, ...userWithoutPassword } = user;
-    return this.getTokens(userWithoutPassword.id, userWithoutPassword.email, userWithoutPassword.role);
+    return this.getTokens(
+      userWithoutPassword.id,
+      userWithoutPassword.email,
+      userWithoutPassword.role,
+    );
   }
 
   async resendLoginOTP(email: string) {
@@ -448,7 +478,7 @@ export class AuthService {
     });
 
     // Send login alert
-    await this.emailService.sendLoginAlert(
+    await this.emailService.sendLoginSuccessEmail(
       email,
       user.name || '',
       ip || 'Unknown',
@@ -456,7 +486,11 @@ export class AuthService {
     );
 
     const { password, ...userWithoutPassword } = user;
-    return this.getTokens(userWithoutPassword.id, userWithoutPassword.email, userWithoutPassword.role);
+    return this.getTokens(
+      userWithoutPassword.id,
+      userWithoutPassword.email,
+      userWithoutPassword.role,
+    );
   }
 
   async disable2FA(userId: string, code: string) {
@@ -497,13 +531,25 @@ export class AuthService {
       role: role,
     };
 
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
+
+    if (!jwtSecret || !refreshSecret) {
+      this.logger.error('CRITICAL: JWT secrets are missing in configuration!');
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'CATASTROPHIC FAILURE: Authentication secrets missing in production',
+        );
+      }
+    }
+
     const [at, rt] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_SECRET || 'super-secret',
-        expiresIn: '15m',
+        secret: jwtSecret || 'dev-only-insecure-secret',
+        expiresIn: '1d',
       }),
       this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_REFRESH_SECRET || 'super-secret-refresh',
+        secret: refreshSecret || 'dev-only-insecure-refresh-secret',
         expiresIn: '7d',
       }),
     ]);
@@ -587,6 +633,21 @@ export class AuthService {
       await this.notificationsService.sendWelcome(user.id);
       await this.emailService.sendWelcomeEmail(profile.email, user.name || '');
     }
+
+    // Send Login Notification & Email for OAuth
+    await this.emailService.sendLoginSuccessEmail(
+      user.email,
+      user.name || '',
+      'Google/OAuth',
+      new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    );
+
+    await this.notificationsService.create(
+      user.id,
+      '✅ Login Successful',
+      `You logged in via ${user.provider} at ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`,
+      'info',
+    );
 
     // Update login tracking
     await this.prisma.user.update({

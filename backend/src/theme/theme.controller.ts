@@ -31,14 +31,16 @@ export class ThemeController {
   @Roles('ADMIN')
   async updateTheme(@Body() body: any, @Request() req) {
     const result = await this.themeService.updateTheme(body);
-    // Log the activity
-    await this.activityLogService.log(
-      req.user.userId,
-      'UPDATE_THEME',
-      null,
-      result.id,
-      req.ip,
-    );
+    // Log the activity (result.id may be null if DB was unavailable)
+    if ((result as any).id) {
+      await this.activityLogService.log(
+        req.user.userId,
+        'UPDATE_THEME',
+        null,
+        (result as any).id,
+        req.ip,
+      );
+    }
     return result;
   }
 }

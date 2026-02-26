@@ -12,9 +12,23 @@ Welcome to **Protocol Tournaments**, a world-class esports platform built with N
 
 ## 🛠️ Tech Stack
 - **Frontend**: Next.js 15, Tailwind CSS, Framer Motion, Axios.
-- **Backend**: NestJS, Prisma (SQLite), Passport, JWT.
+- **Backend**: NestJS, Prisma (PostgreSQL/SQLite), Passport, JWT.
 
-## 📦 Installation & Setup
+## 📦 Installation & Setup (Recommended)
+
+1. **Run Setup**:
+   Execute the `setup.bat` in the root directory. This will install dependencies for both frontend and backend, and prepare the database.
+   ```bash
+   setup.bat
+   ```
+
+2. **Run Project**:
+   Execute the `run-project.bat` in the root directory to start both servers.
+   ```bash
+   run-project.bat
+   ```
+
+## 📦 Manual Installation & Setup
 
 ### 1. Backend Setup
 Navigate to the backend directory and install dependencies:
@@ -28,14 +42,14 @@ Set up the database:
 # Generate Prisma Client
 npx prisma generate
 
-# Push schema to SQLite database (dev.db)
+# Push schema to database
 npx prisma db push
 ```
 
 Start the backend server:
 ```bash
 npm run start
-# Server will run on http://localhost:3000
+# Server will run on http://localhost:4000
 ```
 
 ### 2. Frontend Setup
@@ -48,7 +62,7 @@ npm install
 Start the frontend development server:
 ```bash
 npm run dev
-# App will run on http://localhost:3001 (or 3000 if backend is on a different port)
+# App will run on http://localhost:3000
 ```
 
 ## 🧪 How to Test

@@ -13,10 +13,12 @@ import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('teams')
 export class TeamsController {
-  constructor(private readonly teamsService: TeamsService) {}
+  constructor(private readonly teamsService: TeamsService) { }
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -61,5 +63,30 @@ export class TeamsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.teamsService.remove(id);
+  }
+
+  // ─── ADMIN: View all teams in a tournament ─────────────────────────────────
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('tournament/:tournamentId')
+  getTeamsByTournament(@Param('tournamentId') tournamentId: string) {
+    return this.teamsService.getTeamsByTournament(tournamentId);
+  }
+
+  // ─── ADMIN: Disqualify a team from a tournament ────────────────────────────
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Delete(':teamId/disqualify/:tournamentId')
+  disqualifyTeam(
+    @Param('teamId') teamId: string,
+    @Param('tournamentId') tournamentId: string,
+    @Body() body: { reason?: string },
+    @Request() req,
+  ) {
+    return this.teamsService.disqualifyTeam(
+      tournamentId,
+      teamId,
+      body.reason || 'Disqualified by admin',
+    );
   }
 }

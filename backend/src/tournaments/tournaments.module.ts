@@ -7,6 +7,9 @@ import { WalletModule } from '../wallet/wallet.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { ActivityLogModule } from '../activity-log/activity-log.module';
+import { OrganizerModule } from '../organizer/organizer.module';
+import { UsersModule } from '../users/users.module';
+import { EmailModule } from '../email/email.module';
 
 import { LeaderboardService } from './leaderboard.service';
 import { LeaderboardController } from './leaderboard.controller';
@@ -26,6 +29,8 @@ import { ResultLockService } from './result-lock.service';
     NotificationsModule,
     PaymentsModule,
     ActivityLogModule,
+    OrganizerModule,
+    UsersModule,
   ],
   controllers: [
     TournamentsController,

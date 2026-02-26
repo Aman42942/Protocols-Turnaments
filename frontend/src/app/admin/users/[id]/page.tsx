@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -73,22 +73,8 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
     const [selectedRole, setSelectedRole] = useState('');
     const [updatingRole, setUpdatingRole] = useState(false);
 
-    useEffect(() => {
-        fetchUserDetails();
-        fetchUserTransactions();
-    }, [userId]);
-
-    const fetchUserDetails = async () => {
+    const fetchUserDetails = useCallback(async () => {
         try {
-            // Re-using the public profile endpoint or creating a specific admin one?
-            // Since we are admin, we can use the general get-by-id if available or we might need to add one.
-            // Requirement says "View detailed profile". 
-            // Let's rely on a hypothetical admin endpoint or the general one if accessible.
-            // Actually, UsersController usually has 'me', but finding by ID might be restricted or public.
-            // Let's assume we can fetch basic info via a new admin endpoint or existing.
-            // NOTE: UsersService has findById. UsersController needs an endpoint for it if not exists.
-            // Checking UsersController... it only has 'me'. I might need to add 'admin/users/:id' too.
-            // For now, I'll try to use a new endpoint I'll creating in a moment: /users/admin/:id
             const res = await api.get(`/users/admin/${userId}`);
             setUser(res.data);
         } catch (err) {
@@ -96,9 +82,9 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
         } finally {
             setLoading(false);
         }
-    };
+    }, [userId]);
 
-    const fetchUserTransactions = async () => {
+    const fetchUserTransactions = useCallback(async () => {
         try {
             const res = await api.get(`/wallet/admin/users/${userId}/transactions`);
             setTransactions(res.data.transactions || []);
@@ -107,7 +93,12 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
         } finally {
             setTxLoading(false);
         }
-    };
+    }, [userId]);
+
+    useEffect(() => {
+        fetchUserDetails();
+        fetchUserTransactions();
+    }, [fetchUserDetails, fetchUserTransactions]);
 
     const handleUpdateRole = async () => {
         if (!selectedRole || !user) return;

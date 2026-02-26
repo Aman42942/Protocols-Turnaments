@@ -59,4 +59,4 @@ import { OrganizerModule } from './organizer/organizer.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

@@ -10,6 +10,7 @@ import {
     Bell, Palette, IndianRupee, CheckCircle
 } from 'lucide-react';
 import { ADMIN_ROLES } from '@/lib/roles';
+import Link from 'next/link';
 
 export default function AdminSettingsPage() {
     const [loading, setLoading] = useState(false);
@@ -45,20 +46,24 @@ export default function AdminSettingsPage() {
             return;
         }
 
-        fetchUpiDetails();
-        fetchMaintenanceStatus();
+        const loadSettings = () => {
+            fetchUpiDetails();
+            fetchMaintenanceStatus();
 
-        // Load other settings from localStorage
-        const settings = localStorage.getItem('admin_settings');
-        if (settings) {
-            const parsed = JSON.parse(settings);
-            setSiteName(parsed.siteName || 'Protocol Tournament');
-            setMaxTeamSize(parsed.maxTeamSize || '5');
-            setMinDeposit(parsed.minDeposit || '10');
-            setMinWithdraw(parsed.minWithdraw || '100');
-            setAutoApproveDeposits(parsed.autoApproveDeposits || false);
-        }
-    }, [upiDetails.upiId]);
+            // Load other settings from localStorage
+            const settings = localStorage.getItem('admin_settings');
+            if (settings) {
+                const parsed = JSON.parse(settings);
+                setSiteName(parsed.siteName || 'Protocol Tournament');
+                setMaxTeamSize(parsed.maxTeamSize || '5');
+                setMinDeposit(parsed.minDeposit || '10');
+                setMinWithdraw(parsed.minWithdraw || '100');
+                setAutoApproveDeposits(parsed.autoApproveDeposits || false);
+            }
+        };
+
+        loadSettings();
+    }, []); // Removed upiDetails.upiId to avoid Infinite loop, and categorized correctly
 
     const fetchMaintenanceStatus = async () => {
         try {
@@ -219,36 +224,36 @@ export default function AdminSettingsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <a href="/admin/payments">
+                            <Link href="/admin/payments">
                                 <Button variant="outline" className="w-full h-auto flex-col gap-2 py-4">
                                     <IndianRupee className="h-6 w-6" />
                                     <span className="text-xs">Payments</span>
                                 </Button>
-                            </a>
-                            <a href="/admin/users">
+                            </Link>
+                            <Link href="/admin/users">
                                 <Button variant="outline" className="w-full h-auto flex-col gap-2 py-4">
                                     <Shield className="h-6 w-6" />
                                     <span className="text-xs">Users</span>
                                 </Button>
-                            </a>
-                            <a href="/admin/tournaments/create">
+                            </Link>
+                            <Link href="/admin/tournaments/create">
                                 <Button variant="outline" className="w-full h-auto flex-col gap-2 py-4">
                                     <Bell className="h-6 w-6" />
                                     <span className="text-xs">New Event</span>
                                 </Button>
-                            </a>
-                            <a href="/admin/tournaments">
+                            </Link>
+                            <Link href="/admin/tournaments">
                                 <Button variant="outline" className="w-full h-auto flex-col gap-2 py-4">
                                     <Palette className="h-6 w-6" />
                                     <span className="text-xs">Events</span>
                                 </Button>
-                            </a>
-                            <a href="/admin/settings/theme">
+                            </Link>
+                            <Link href="/admin/settings/theme">
                                 <Button variant="outline" className="w-full h-auto flex-col gap-2 py-4 border-primary/50 bg-primary/5 hover:bg-primary/10">
                                     <Palette className="h-6 w-6 text-primary" />
                                     <span className="text-xs font-medium text-primary">Theme & UI</span>
                                 </Button>
-                            </a>
+                            </Link>
                         </div>
                     </CardContent>
                 </Card>

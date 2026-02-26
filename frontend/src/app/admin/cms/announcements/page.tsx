@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -25,11 +25,7 @@ export default function AnnouncementsPage() {
         type: 'INFO', // INFO, ALERT, WARNING, SUCCESS
     });
 
-    useEffect(() => {
-        fetchAnnouncements();
-    }, []);
-
-    const fetchAnnouncements = async () => {
+    const fetchAnnouncements = useCallback(async () => {
         try {
             const res = await api.get('/content/admin/announcements');
             setAnnouncements(res.data);
@@ -38,7 +34,11 @@ export default function AnnouncementsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchAnnouncements();
+    }, [fetchAnnouncements]);
 
     const handleDelete = async (id: string) => {
         if (!confirm('Delete this announcement?')) return;
@@ -90,8 +90,8 @@ export default function AnnouncementsPage() {
                     <Card key={item.id}>
                         <div className="p-4 flex items-start gap-4">
                             <div className={`p-2 rounded-full mt-1 ${item.type === 'ALERT' || item.type === 'WARNING' ? 'bg-red-500/10 text-red-500' :
-                                    item.type === 'SUCCESS' ? 'bg-green-500/10 text-green-500' :
-                                        'bg-blue-500/10 text-blue-500'
+                                item.type === 'SUCCESS' ? 'bg-green-500/10 text-green-500' :
+                                    'bg-blue-500/10 text-blue-500'
                                 }`}>
                                 {item.type === 'ALERT' || item.type === 'WARNING' ? <AlertTriangle className="h-5 w-5" /> :
                                     item.type === 'SUCCESS' ? <CheckCircle className="h-5 w-5" /> :
@@ -150,8 +150,8 @@ export default function AnnouncementsPage() {
                                             key={type}
                                             onClick={() => setFormData(prev => ({ ...prev, type }))}
                                             className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${formData.type === type
-                                                    ? 'bg-primary text-primary-foreground border-primary'
-                                                    : 'bg-background border-border hover:bg-muted'
+                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                : 'bg-background border-border hover:bg-muted'
                                                 }`}
                                         >
                                             {type}

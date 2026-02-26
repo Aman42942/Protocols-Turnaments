@@ -10,7 +10,7 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class TeamsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(userId: string, createTeamDto: CreateTeamDto) {
     // Generate unique invite code
@@ -125,5 +125,68 @@ export class TeamsService {
     return this.prisma.team.delete({
       where: { id },
     });
+  }
+
+  // ─── ADMIN: Get all teams registered in a tournament ────────────────────────
+  async getTeamsByTournament(tournamentId: string) {
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { id: true, title: true, game: true, gameMode: true, maxTeams: true, entryFeePerPerson: true },
+    });
+    if (!tournament) throw new NotFoundException('Tournament not found');
+
+    // Get all TournamentParticipant records with their team and user info
+    const participants = await this.prisma.tournamentParticipant.findMany({
+      where: { tournamentId },
+      include: {
+        user: { select: { id: true, name: true, email: true, avatar: true } },
+        team: {
+          include: {
+            members: {
+              include: { user: { select: { id: true, name: true, avatar: true } } },
+            },
+          },
+        },
+      },
+      orderBy: { registeredAt: 'desc' },
+    });
+
+    return { tournament, participants };
+  }
+
+  // ─── ADMIN: Disqualify / forcibly remove a team from a tournament ────────────
+  async disqualifyTeam(tournamentId: string, teamId: string, reason: string) {
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      select: { id: true, name: true, leaderId: true },
+    });
+    if (!team) throw new NotFoundException('Team not found');
+
+    // Get all member userIds
+    const members = await this.prisma.teamMember.findMany({
+      where: { teamId },
+      select: { userId: true },
+    });
+    const memberIds = members.map(m => m.userId);
+
+    // Cancel tournament registrations for all team members
+    const updated = await this.prisma.tournamentParticipant.updateMany({
+      where: {
+        tournamentId,
+        userId: { in: memberIds },
+        status: { not: 'CANCELLED' },
+      },
+      data: {
+        status: 'CANCELLED',
+        paymentStatus: 'CANCELLED',
+      },
+    });
+
+    return {
+      success: true,
+      message: `Team "${team.name}" has been disqualified. ${updated.count} member(s) removed from tournament.`,
+      teamName: team.name,
+      removedCount: updated.count,
+    };
   }
 }

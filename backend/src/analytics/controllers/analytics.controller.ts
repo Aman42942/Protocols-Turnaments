@@ -6,22 +6,22 @@ import { AnalyticsService } from '../services/analytics.service';
 
 @Controller('analytics')
 export class AnalyticsController {
-    constructor(private readonly analyticsService: AnalyticsService) { }
+  constructor(private readonly analyticsService: AnalyticsService) {}
 
-    @Get('dashboard')
-    // @UseGuards(JwtAuthGuard, RolesGuard)
-    // @Roles('ADMIN')
-    async getDashboardStats() {
-        return this.analyticsService.getDashboardStats();
-    }
+  @Get('dashboard')
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles('ADMIN')
+  async getDashboardStats() {
+    return this.analyticsService.getDashboardStats();
+  }
 
-    @Get('player/:playerId')
-    async getPlayerStats(@Param('playerId') playerId: string) {
-        return this.analyticsService.getPlayerStats(playerId);
-    }
+  @Get('player/:playerId')
+  async getPlayerStats(@Param('playerId') playerId: string) {
+    return this.analyticsService.getPlayerStats(playerId);
+  }
 
-    @Get('team/:teamId')
-    async getTeamStats(@Param('teamId') teamId: string) {
-        return this.analyticsService.getTeamStats(teamId);
-    }
+  @Get('team/:teamId')
+  async getTeamStats(@Param('teamId') teamId: string) {
+    return this.analyticsService.getTeamStats(teamId);
+  }
 }

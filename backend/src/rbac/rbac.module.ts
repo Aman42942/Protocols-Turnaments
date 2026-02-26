@@ -13,7 +13,7 @@ import { RolesGuard } from './roles.guard';
  */
 @Global()
 @Module({
-    providers: [RolesGuard],
-    exports: [RolesGuard],
+  providers: [RolesGuard],
+  exports: [RolesGuard],
 })
-export class RbacModule { }
+export class RbacModule {}

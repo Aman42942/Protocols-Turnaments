@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { Zap, Shield, Globe, Award } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const features = [
     {
@@ -30,28 +31,45 @@ export function FeatureSection() {
     return (
         <section className="py-24 bg-muted/30">
             <div className="container">
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl font-bold tracking-tight mb-4">Why Choose Protocol?</h2>
-                    <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                        Built by gamers, for gamers. We provide the most reliable and premium tournament experience in the industry.
+                <div className="text-center mb-12">
+                    <motion.h2
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        className="text-4xl md:text-5xl font-black tracking-tighter mb-4 italic"
+                    >
+                        PROTOCOL <span className="text-primary">EDGE</span>
+                    </motion.h2>
+                    <p className="text-muted-foreground text-sm font-medium max-w-xl mx-auto uppercase tracking-widest opacity-80">
+                        The elite standard in competitive gaming infrastructure.
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="flex gap-6 overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide snap-x md:grid md:grid-cols-2 lg:grid-cols-4">
                     {features.map((feature, index) => (
-                        <Card key={index} className="border-border/50 bg-background/50 hover:bg-background transition-colors duration-300">
-                            <CardHeader>
-                                <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                                    <feature.icon className="w-6 h-6 text-primary" />
-                                </div>
-                                <CardTitle className="text-lg">{feature.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <CardDescription className="text-base">
-                                    {feature.description}
-                                </CardDescription>
-                            </CardContent>
-                        </Card>
+                        <motion.div
+                            key={index}
+                            initial={{ opacity: 0, x: 20 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            viewport={{ once: true }}
+                            className="snap-center shrink-0 w-[280px] md:w-auto"
+                        >
+                            <Card className="h-full border-border/40 bg-card/40 backdrop-blur-md hover:bg-card/60 hover:border-primary/40 transition-all duration-500 rounded-[2.5rem] overflow-hidden group">
+                                <CardHeader className="pt-8 px-8">
+                                    <div className="bg-primary/10 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+                                        <feature.icon className="w-8 h-8 text-primary" />
+                                    </div>
+                                    <CardTitle className="text-2xl font-black italic tracking-tight">{feature.title}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="px-8 pb-8">
+                                    <CardDescription className="text-sm font-medium leading-relaxed text-muted-foreground">
+                                        {feature.description}
+                                    </CardDescription>
+                                </CardContent>
+                                {/* Decorative Gradient */}
+                                <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors" />
+                            </Card>
+                        </motion.div>
                     ))}
                 </div>
             </div>

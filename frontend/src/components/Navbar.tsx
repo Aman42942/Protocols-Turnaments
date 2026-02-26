@@ -1,19 +1,31 @@
 "use client";
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, Trophy } from 'lucide-react';
+import { Menu, X, Trophy, ChevronRight } from 'lucide-react';
 import { Button } from './ui/Button';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
 import { NotificationsMenu } from './NotificationsMenu';
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [user, setUser] = useState<any>(null);
+    const [hidden, setHidden] = useState(false);
+    const { scrollY } = useScroll();
     const pathname = usePathname();
     const router = useRouter();
+
+    useMotionValueEvent(scrollY, "change", (latest) => {
+        const previous = scrollY.getPrevious();
+        if (previous !== undefined && latest > previous && latest > 150) {
+            setHidden(true);
+        } else {
+            setHidden(false);
+        }
+    });
 
     const [announcements, setAnnouncements] = useState<any[]>([]);
 
@@ -98,7 +110,15 @@ export function Navbar() {
                 </div>
             )}
 
-            <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <motion.nav
+                variants={{
+                    visible: { y: 0, opacity: 1 },
+                    hidden: { y: "-100%", opacity: 0 }
+                }}
+                animate={hidden ? "hidden" : "visible"}
+                transition={{ duration: 0.35, ease: "easeInOut" }}
+                className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/40"
+            >
                 <div className="container flex h-16 items-center justify-between">
                     <div className="flex items-center gap-2 md:gap-6">
                         <Link href="/" className="flex items-center gap-2">
@@ -163,62 +183,96 @@ export function Navbar() {
                         </div>
                     </div>
                 </div>
+            </motion.nav>
 
-                {/* Optimized Mobile Drawer */}
-                <div className={cn(
-                    "fixed inset-0 z-50 bg-background/80 backdrop-blur-sm transition-all duration-300 md:hidden",
-                    isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-                )} onClick={() => setIsOpen(false)}>
-                    <div
-                        className={cn(
-                            "fixed inset-y-0 left-0 w-[280px] bg-background border-r shadow-2xl transition-transform duration-300 ease-out p-6",
-                            isOpen ? "translate-x-0" : "-translate-x-full"
-                        )}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex items-center justify-between mb-8">
-                            <Link href="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
-                                <div className="bg-primary/10 p-1 rounded-lg">
-                                    <Trophy className="w-5 h-5 text-primary" />
-                                </div>
-                                <span className="text-lg font-bold tracking-tight">PROTOCOL</span>
+            {/* Optimized Mobile Menu Overlay */}
+            <div className={cn(
+                "fixed inset-0 z-[100] md:hidden transition-all duration-300",
+                isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+            )}>
+                {/* Backdrop with blur */}
+                <div
+                    className="absolute inset-0 bg-background/60 backdrop-blur-md"
+                    onClick={() => setIsOpen(false)}
+                />
+
+                {/* Menu Content */}
+                <div
+                    className={cn(
+                        "absolute inset-y-0 left-0 w-full sm:w-[400px] bg-background border-r border-border shadow-2xl transition-transform duration-300 ease-out flex flex-col",
+                        isOpen ? "translate-x-0" : "-translate-x-full"
+                    )}
+                >
+                    <div className="flex h-16 items-center justify-between px-6 border-b border-border">
+                        <Link href="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
+                            <div className="bg-primary/10 p-1 rounded-lg">
+                                <Trophy className="w-5 h-5 text-primary" />
+                            </div>
+                            <span className="text-lg font-bold tracking-tight">PROTOCOL</span>
+                        </Link>
+                        <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+                            <X className="h-6 w-6" />
+                        </Button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto py-8 px-6 space-y-2">
+                        {navLinks.map((link) => (
+                            <Link
+                                key={link.href}
+                                href={link.href}
+                                className={cn(
+                                    "flex items-center gap-4 px-4 py-4 rounded-2xl text-lg font-bold transition-all group",
+                                    pathname === link.href
+                                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                )}
+                                onClick={() => setIsOpen(false)}
+                            >
+                                <ChevronRight className={cn(
+                                    "w-5 h-5 transition-transform",
+                                    pathname === link.href ? "translate-x-0" : "-translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0"
+                                )} />
+                                {link.name}
                             </Link>
-                            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
-                                <X className="h-5 w-5" />
-                            </Button>
-                        </div>
+                        ))}
+                    </div>
 
-                        <div className="space-y-1">
-                            {navLinks.map((link) => (
-                                <Link
-                                    key={link.href}
-                                    href={link.href}
-                                    className={cn(
-                                        "flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all",
-                                        pathname === link.href
-                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                    )}
-                                    onClick={() => setIsOpen(false)}
+                    <div className="p-6 border-t border-border bg-muted/30">
+                        {user ? (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-4 p-4 rounded-2xl bg-background border border-border">
+                                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                                        {user.name && user.name[0]}
+                                    </div>
+                                    <div className="flex-1 overflow-hidden">
+                                        <p className="font-bold text-sm truncate">{user.name}</p>
+                                        <p className="text-[10px] text-muted-foreground uppercase truncate">{user.role}</p>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    className="w-full h-12 rounded-xl font-bold border-destructive/20 text-destructive hover:bg-destructive/10"
+                                    onClick={() => {
+                                        handleLogout();
+                                        setIsOpen(false);
+                                    }}
                                 >
-                                    {link.name}
+                                    Log Out
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <Link href="/login" className="block" onClick={() => setIsOpen(false)}>
+                                    <Button variant="outline" className="w-full h-12 rounded-xl font-bold border-border">Log In</Button>
                                 </Link>
-                            ))}
-                        </div>
-
-                        {!user && (
-                            <div className="absolute bottom-8 left-6 right-6 space-y-3">
-                                <Link href="/login" onClick={() => setIsOpen(false)}>
-                                    <Button variant="outline" className="w-full h-12 rounded-xl font-bold">Log In</Button>
-                                </Link>
-                                <Link href="/register" onClick={() => setIsOpen(false)}>
+                                <Link href="/register" className="block" onClick={() => setIsOpen(false)}>
                                     <Button className="w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/20">Sign Up</Button>
                                 </Link>
                             </div>
                         )}
                     </div>
                 </div>
-            </nav>
+            </div>
         </>
     );
 }

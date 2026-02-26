@@ -3,72 +3,96 @@ import React from 'react';
 import { Button } from './ui/Button';
 import { motion } from 'framer-motion';
 import { Gamepad2, Trophy, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 export function HeroSection() {
     return (
-        <section className="relative overflow-hidden pt-20 pb-32 md:pt-32 md:pb-48">
-            {/* Background Gradient Mesh */}
+        <section className="relative pt-24 pb-20 md:pt-32 md:pb-48">
+            {/* Immersive Background Mesh & Floating Elements */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 bg-background">
-                <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary/20 rounded-full blur-[120px] opacity-20 dark:opacity-40" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-purple-500/20 rounded-full blur-[120px] opacity-20 dark:opacity-40" />
+                <motion.div
+                    animate={{
+                        scale: [1, 1.2, 1],
+                        rotate: [0, 90, 0],
+                        opacity: [0.2, 0.4, 0.2]
+                    }}
+                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] bg-primary/20 rounded-full blur-[120px]"
+                />
+                <motion.div
+                    animate={{
+                        scale: [1, 1.3, 1],
+                        rotate: [0, -90, 0],
+                        opacity: [0.2, 0.4, 0.2]
+                    }}
+                    transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+                    className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] bg-purple-500/20 rounded-full blur-[120px]"
+                />
+                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.02] dark:opacity-[0.05]" />
             </div>
 
-            <div className="container relative z-10 text-center">
+            <div className="container relative z-10 text-center px-4">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
                 >
-                    <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary mb-6">
-                        <span className="flex h-2 w-2 rounded-full bg-primary mr-2"></span>
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="inline-flex items-center rounded-2xl border border-primary/20 bg-primary/5 backdrop-blur-md px-4 py-2 text-[10px] sm:text-sm font-black text-primary mb-8 tracking-[0.2em] uppercase shadow-[0_0_20px_rgba(59,130,246,0.1)]"
+                    >
+                        <span className="flex h-2 w-2 rounded-full bg-primary mr-3 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]"></span>
                         Season 1 Registrations Open
-                    </div>
+                    </motion.div>
 
-                    <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/70 dark:from-white dark:to-white/70">
-                        Compete. Win. <br />
-                        <span className="text-primary">Become a Legend.</span>
+                    <h1 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter mb-8 text-foreground leading-[0.9] flex flex-col items-center">
+                        <span className="block italic opacity-90">COMPETE.</span>
+                        <span className="block text-primary drop-shadow-[0_0_30px_rgba(59,130,246,0.3)]">WIN.</span>
+                        <span className="block text-3xl sm:text-4xl md:text-5xl font-bold tracking-widest mt-4 text-muted-foreground uppercase">Become a Legend.</span>
                     </h1>
 
-                    <p className="mt-4 text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+                    <p className="mt-4 text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed px-2">
                         The ultimate esports platform for competitive gamers. Join tournaments, climb the leaderboards, and win real cash prizes across your favorite titles.
                     </p>
 
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center mb-20">
-                        <Link href="/tournaments">
-                            <Button size="lg" className="w-full sm:w-auto text-base px-8 h-12 shadow-lg shadow-primary/20">
-                                Join Tournament
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-24 max-w-xs sm:max-w-none mx-auto">
+                        <Link href="/tournaments" className="w-full sm:w-auto">
+                            <Button size="lg" className="w-full sm:w-auto h-14 px-10 text-base font-black tracking-wider rounded-2xl shadow-[0_8px_25px_rgba(59,130,246,0.4)] hover:scale-105 transition-transform active:scale-95">
+                                START BATTLE
                             </Button>
                         </Link>
-                        <Link href="/tournaments">
-                            <Button variant="outline" size="lg" className="w-full sm:w-auto text-base px-8 h-12">
-                                View Matches
+                        <Link href="/about" className="w-full sm:w-auto">
+                            <Button variant="outline" size="lg" className="w-full sm:w-auto h-14 px-10 text-base font-black tracking-wider rounded-2xl bg-background/50 backdrop-blur-sm border-border hover:bg-muted/50 transition-all">
+                                ELITE ACCESS
                             </Button>
                         </Link>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto text-left">
-                        <div className="p-8 rounded-2xl border bg-card/50 backdrop-blur-sm hover:border-primary/50 transition-all duration-300 group shadow-sm hover:shadow-md">
-                            <div className="bg-primary/10 p-3 rounded-xl w-fit mb-6 group-hover:bg-primary/20 transition-colors">
-                                <Trophy className="w-8 h-8 text-primary" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-3">Huge Prize Pools</h3>
-                            <p className="text-muted-foreground leading-relaxed">Compete for massive cash rewards in daily, weekly, and monthly tournament circuits.</p>
-                        </div>
-                        <div className="p-8 rounded-2xl border bg-card/50 backdrop-blur-sm hover:border-primary/50 transition-all duration-300 group shadow-sm hover:shadow-md">
-                            <div className="bg-primary/10 p-3 rounded-xl w-fit mb-6 group-hover:bg-primary/20 transition-colors">
-                                <Gamepad2 className="w-8 h-8 text-primary" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-3">Premium Titles</h3>
-                            <p className="text-muted-foreground leading-relaxed">Official support for Valorant, BGMI, PUBG, and Free Fire with integrated stat tracking.</p>
-                        </div>
-                        <div className="p-8 rounded-2xl border bg-card/50 backdrop-blur-sm hover:border-primary/50 transition-all duration-300 group shadow-sm hover:shadow-md">
-                            <div className="bg-primary/10 p-3 rounded-xl w-fit mb-6 group-hover:bg-primary/20 transition-colors">
-                                <Users className="w-8 h-8 text-primary" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-3">Pro Community</h3>
-                            <p className="text-muted-foreground leading-relaxed">Join a community of 50,000+ competitive gamers. Find a team or build your own dynasty.</p>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto text-left">
+                        {[
+                            { icon: Trophy, title: "Huge Prize Pools", desc: "Compete for massive cash rewards in daily, weekly, and monthly tournament circuits.", color: "text-yellow-500", bg: "bg-yellow-500/10" },
+                            { icon: Gamepad2, title: "Premium Titles", desc: "Official support for Valorant, BGMI, PUBG, and Free Fire with integrated stat tracking.", color: "text-blue-500", bg: "bg-blue-500/10" },
+                            { icon: Users, title: "Pro Community", desc: "Join a community of 50,000+ competitive gamers. Find a team or build your own dynasty.", color: "text-purple-500", bg: "bg-purple-500/10" },
+                        ].map((item, idx) => (
+                            <motion.div
+                                key={idx}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.4 + idx * 0.1 }}
+                                className="p-8 rounded-[2.5rem] border border-border/50 bg-card/30 backdrop-blur-md hover:border-primary/30 transition-all duration-500 group relative overflow-hidden"
+                            >
+                                <div className={cn("p-4 rounded-2xl w-fit mb-6 group-hover:scale-110 transition-transform duration-500", item.bg)}>
+                                    <item.icon className={cn("w-8 h-8", item.color)} />
+                                </div>
+                                <h3 className="text-2xl font-black mb-3 italic tracking-tight">{item.title}</h3>
+                                <p className="text-muted-foreground leading-relaxed text-sm font-medium">{item.desc}</p>
+                                {/* Decorative gradient hover */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                            </motion.div>
+                        ))}
                     </div>
                 </motion.div>
             </div>

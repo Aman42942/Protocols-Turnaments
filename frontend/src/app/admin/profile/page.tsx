@@ -116,7 +116,7 @@ export default function AdminProfilePage() {
                             Security Settings
                         </CardTitle>
                         <CardDescription>
-                            Set a password to enable "Hybrid Login" (Google + Email/Password).
+                            Set a password to enable &quot;Hybrid Login&quot; (Google + Email/Password).
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

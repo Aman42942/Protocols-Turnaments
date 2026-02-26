@@ -266,4 +266,105 @@ export class EmailService {
       this.baseTemplate('Password Reset', content),
     );
   }
+
+  async sendTournamentCreatedNotification(
+    email: string,
+    name: string,
+    tournament: {
+      id: string;
+      title: string;
+      game: string;
+      prizePool: number;
+      entryFee: number;
+      startDate: Date;
+    },
+  ) {
+    const tournamentLink = `${(this.configService.get('FRONTEND_URL') || 'http://localhost:3000').replace(/\/$/, '')}/tournaments/${tournament.id}`;
+    const formattedDate = new Intl.DateTimeFormat('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(tournament.startDate));
+
+    const content = `
+      <p style="color:#94a3b8;font-size:16px;text-align:center;margin:0 0 20px 0;">
+        Hi <strong style="color:#e2e8f0;">${name || 'Warrior'}</strong>, a new arena has opened!
+      </p>
+      <div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:16px;padding:24px;margin:0 0 24px 0;">
+        <h2 style="color:#ffffff;font-size:20px;margin:0 0 16px 0;text-align:center;">${tournament.title}</h2>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="color:#64748b;padding:8px 0;font-size:14px;">🎮 Game:</td>
+            <td style="color:#e2e8f0;padding:8px 0;font-size:14px;text-align:right;font-weight:bold;">${tournament.game}</td>
+          </tr>
+          <tr>
+            <td style="color:#64748b;padding:8px 0;font-size:14px;">🏆 Prize Pool:</td>
+            <td style="color:#22c55e;padding:8px 0;font-size:14px;text-align:right;font-weight:bold;">₹${tournament.prizePool.toLocaleString()}</td>
+          </tr>
+          <tr>
+            <td style="color:#64748b;padding:8px 0;font-size:14px;">🎟️ Entry Fee:</td>
+            <td style="color:#f59e0b;padding:8px 0;font-size:14px;text-align:right;font-weight:bold;">₹${tournament.entryFee}</td>
+          </tr>
+          <tr>
+            <td style="color:#64748b;padding:8px 0;font-size:14px;">📅 Starts On:</td>
+            <td style="color:#e2e8f0;padding:8px 0;font-size:14px;text-align:right;">${formattedDate}</td>
+          </tr>
+        </table>
+      </div>
+      <div style="text-align:center;margin:30px 0;">
+        <a href="${tournamentLink}" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:14px 40px;border-radius:8px;font-size:18px;font-weight:bold;text-decoration:none;display:inline-block;box-shadow:0 10px 20px rgba(99,102,241,0.3);">
+          Join Tournament Now
+        </a>
+      </div>
+      <p style="color:#64748b;font-size:12px;text-align:center;margin:24px 0 0 0;">
+        Slots are filling fast! Don't miss your chance to win.
+      </p>`;
+
+    await this.sendMail(
+      email,
+      `🏆 New Tournament: ${tournament.title} is LIVE!`,
+      this.baseTemplate('New Tournament Added', content),
+    );
+  }
+
+  async sendLoginSuccessEmail(
+    email: string,
+    name: string,
+    ip: string,
+    time: string,
+  ) {
+    const content = `
+      <p style="color:#94a3b8;font-size:16px;text-align:center;margin:0 0 30px 0;">
+        Hi <strong style="color:#e2e8f0;">${name || 'Warrior'}</strong>, we're glad to see you back!
+      </p>
+      <div style="text-align:center;margin:0 0 24px 0;">
+        <div style="display:inline-block;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);padding:12px 32px;border-radius:12px;">
+          <span style="color:#22c55e;font-size:18px;font-weight:bold;">✅ Login Successful</span>
+        </div>
+      </div>
+      <div style="background:rgba(15,23,42,0.5);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:20px;margin:0 0 24px 0;">
+        <p style="color:#94a3b8;font-size:14px;margin:0 0 12px 0;text-align:center;">Security Details:</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="color:#64748b;padding:8px 0;font-size:14px;">📍 Device IP:</td>
+            <td style="color:#e2e8f0;padding:8px 0;font-size:14px;text-align:right;font-family:monospace;">${ip || 'Unknown'}</td>
+          </tr>
+          <tr>
+            <td style="color:#64748b;padding:8px 0;font-size:14px;">🕐 Time:</td>
+            <td style="color:#e2e8f0;padding:8px 0;font-size:14px;text-align:right;">${time}</td>
+          </tr>
+        </table>
+      </div>
+      <p style="color:#64748b;font-size:12px;text-align:center;margin:0;">
+        Ready to compete? Head over to the tournament lobby and join an active arena!
+      </p>`;
+
+    await this.sendMail(
+      email,
+      '🎮 Successful Login - Protocol Tournament',
+      this.baseTemplate('Welcome Back!', content),
+    );
+  }
 }

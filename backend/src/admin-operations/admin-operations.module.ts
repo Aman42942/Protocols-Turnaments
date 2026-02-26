@@ -5,11 +5,19 @@ import { OperationsGateway } from './gateways/operations.gateway';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { WalletModule } from '../wallet/wallet.module';
+import { AuthModule } from '../auth/auth.module';
+import { OrganizerModule } from '../organizer/organizer.module';
 
 @Module({
-    imports: [PrismaModule, PaymentsModule, WalletModule],
-    controllers: [OperationsController],
-    providers: [OperationsService, OperationsGateway],
-    exports: [OperationsService],
+  imports: [
+    PrismaModule,
+    PaymentsModule,
+    WalletModule,
+    AuthModule,
+    OrganizerModule,
+  ],
+  controllers: [OperationsController],
+  providers: [OperationsService, OperationsGateway],
+  exports: [OperationsService],
 })
-export class AdminOperationsModule { }
+export class AdminOperationsModule {}

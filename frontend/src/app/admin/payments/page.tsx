@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import {
     IndianRupee, CreditCard, ArrowUpRight, Loader2,
-    CheckCircle, XCircle, Clock, QrCode, AlertCircle
+    CheckCircle, XCircle, Clock, QrCode, AlertCircle, Settings, RotateCcw
 } from 'lucide-react';
 import api from '@/lib/api';
+import { AdminPaymentSettings } from '@/components/admin/AdminPaymentSettings';
 
 interface PendingDeposit {
     id: string;
@@ -35,6 +36,7 @@ interface Transaction {
     method?: string;
     reference?: string;
     description?: string;
+    metadata?: string;
     createdAt: string;
     wallet: {
         user: {
@@ -50,7 +52,7 @@ export default function AdminPaymentsPage() {
     const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
-    const [tab, setTab] = useState<'pending' | 'all'>('pending');
+    const [tab, setTab] = useState<'pending' | 'all' | 'settings'>('pending');
 
     useEffect(() => {
         fetchData();
@@ -93,6 +95,21 @@ export default function AdminPaymentsPage() {
             await fetchData();
         } catch (err: any) {
             alert(err.response?.data?.message || 'Failed to reject');
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleRefund = async (txId: string) => {
+        if (!confirm('Are you sure you want to refund this transaction? This will also cancel the tournament registration and credit money back to the user\'s wallet.')) return;
+        setProcessingId(txId);
+        try {
+            // Using the new tournament admin refund endpoint 
+            await api.post(`/tournaments/admin/refund/${txId}`);
+            alert('Refund processed successfully!');
+            await fetchData();
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Failed to process refund. Ensure the transaction has tournament metadata.');
         } finally {
             setProcessingId(null);
         }
@@ -153,8 +170,8 @@ export default function AdminPaymentsPage() {
                 <button
                     onClick={() => setTab('pending')}
                     className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'pending'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                         }`}
                 >
                     <Clock className="inline h-4 w-4 mr-1" />
@@ -163,12 +180,22 @@ export default function AdminPaymentsPage() {
                 <button
                     onClick={() => setTab('all')}
                     className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'all'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                         }`}
                 >
                     <CreditCard className="inline h-4 w-4 mr-1" />
                     All Transactions
+                </button>
+                <button
+                    onClick={() => setTab('settings')}
+                    className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'settings'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }`}
+                >
+                    <Settings className="inline h-4 w-4 mr-1" />
+                    Payment Settings
                 </button>
             </div>
 
@@ -254,6 +281,7 @@ export default function AdminPaymentsPage() {
                                         <th className="p-4">Status</th>
                                         <th className="p-4 text-right">Amount</th>
                                         <th className="p-4 text-right">Date</th>
+                                        <th className="p-4 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
@@ -279,8 +307,8 @@ export default function AdminPaymentsPage() {
                                                 <td className="p-4 font-mono text-xs">{tx.reference || '—'}</td>
                                                 <td className="p-4">
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tx.status === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                                            tx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                                        tx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                                                         }`}>
                                                         {tx.status}
                                                     </span>
@@ -290,6 +318,24 @@ export default function AdminPaymentsPage() {
                                                     {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}₹{tx.amount}
                                                 </td>
                                                 <td className="p-4 text-right text-muted-foreground text-xs">{formatDate(tx.createdAt)}</td>
+                                                <td className="p-4 text-right">
+                                                    {(tx.status === 'COMPLETED' && (tx.type === 'DEPOSIT' || tx.type === 'ENTRY_FEE')) && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500"
+                                                            onClick={() => handleRefund(tx.id)}
+                                                            disabled={processingId === tx.id}
+                                                            title="Refund Transaction"
+                                                        >
+                                                            {processingId === tx.id ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                            ) : (
+                                                                <RotateCcw className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    )}
+                                                </td>
                                             </tr>
                                         ))
                                     )}
@@ -298,6 +344,13 @@ export default function AdminPaymentsPage() {
                         </div>
                     </CardContent>
                 </Card>
+            )}
+
+            {/* Payment Settings Tab */}
+            {tab === 'settings' && (
+                <div className="max-w-2xl">
+                    <AdminPaymentSettings />
+                </div>
             )}
         </div>
     );

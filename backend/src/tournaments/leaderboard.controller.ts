@@ -4,7 +4,7 @@ import { LeaderboardService } from './leaderboard.service';
 
 @Controller('leaderboard')
 export class LeaderboardController {
-  constructor(private leaderboardService: LeaderboardService) { }
+  constructor(private leaderboardService: LeaderboardService) {}
 
   @Get()
   async getLeaderboard(@Query('limit') limit: string) {

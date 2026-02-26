@@ -21,7 +21,7 @@ export class WalletController {
   constructor(
     private walletService: WalletService,
     private readonly activityLogService: ActivityLogService,
-  ) {}
+  ) { }
 
   @Get()
   async getWallet(@Request() req) {
@@ -153,5 +153,26 @@ export class WalletController {
       Number(page) || 1,
       Number(limit) || 20,
     );
+  }
+
+  @Post('admin/upi-settings')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  async updateUpiSettings(
+    @Body() body: { upiId: string; merchantName: string },
+    @Request() req,
+  ) {
+    const result = await this.walletService.updateUpiSettings(
+      body.upiId,
+      body.merchantName,
+    );
+    await this.activityLogService.log(
+      req.user.userId,
+      'UPDATE_UPI_SETTINGS',
+      { upiId: body.upiId, merchantName: body.merchantName },
+      undefined,
+      req.ip,
+    );
+    return result;
   }
 }

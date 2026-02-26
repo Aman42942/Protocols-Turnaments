@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,7 +12,7 @@ import {
     Wallet, IndianRupee, ArrowUpRight, ArrowDownLeft, QrCode, Loader2,
     CheckCircle, XCircle, Clock, CreditCard, Building2, Smartphone,
     Shield, Zap, Copy, ExternalLink, TrendingUp, History, ChevronRight,
-    Gift, Star, AlertCircle, Globe, Banknote
+    Gift, Star, AlertCircle, Globe, Banknote, Trophy, Target, MessageCircle
 } from 'lucide-react';
 
 interface WalletData {
@@ -40,6 +41,7 @@ interface UpiDetails {
 const QUICK_AMOUNTS = [50, 100, 250, 500, 1000, 2000];
 
 export default function WalletPage() {
+    const router = useRouter();
     const [wallet, setWallet] = useState<WalletData | null>(null);
     const [loading, setLoading] = useState(true);
     const [upiDetails, setUpiDetails] = useState<UpiDetails | null>(null);
@@ -65,17 +67,6 @@ export default function WalletPage() {
 
     const [cashfree, setCashfree] = useState<any>(null);
 
-    useEffect(() => {
-        loadData();
-        // Initialize Cashfree SDK
-        import('@cashfreepayments/cashfree-js').then((module) => {
-            const cf = module.load({
-                mode: "sandbox" // or "production" based on env, ideally fetched from backend config
-            });
-            setCashfree(cf);
-        });
-    }, []);
-
     const loadData = async () => {
         try {
             const [walletRes, upiRes, userRes] = await Promise.allSettled([
@@ -83,15 +74,32 @@ export default function WalletPage() {
                 api.get('/wallet/upi-details'),
                 api.get('/users/me'),
             ]);
-            if (walletRes.status === 'fulfilled') setWallet(walletRes.value.data);
-            if (upiRes.status === 'fulfilled') setUpiDetails(upiRes.value.data);
-            if (userRes.status === 'fulfilled') setCurrentUser(userRes.value.data);
+            if (walletRes.status === 'fulfilled') setWallet(walletRes.value.data as any);
+            if (upiRes.status === 'fulfilled') setUpiDetails(upiRes.value.data as any);
+            if (userRes.status === 'fulfilled') setCurrentUser(userRes.value.data as any);
         } catch (err) {
             console.error('Failed to load wallet:', err);
         } finally {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        loadData();
+        // Initialize Cashfree SDK from window (loaded via layout Script)
+        const initCashfree = () => {
+            if (typeof window !== 'undefined' && (window as any).Cashfree) {
+                const cf = (window as any).Cashfree({
+                    mode: "production" // Match your backend .env CASHFREE_ENV="PRODUCTION"
+                });
+                setCashfree(cf);
+            } else {
+                // Retry in 1 second if not loaded yet
+                setTimeout(initCashfree, 1000);
+            }
+        };
+        initCashfree();
+    }, []);
 
     const handleCashfreeDeposit = async () => {
         const amount = parseFloat(depositAmount);
@@ -295,10 +303,10 @@ export default function WalletPage() {
                             <Button
                                 size="lg"
                                 className="bg-white text-primary hover:bg-white/90 font-bold shadow-lg flex-1 sm:flex-none"
-                                onClick={() => { setShowDeposit(true); setShowWithdraw(false); }}
+                                onClick={() => router.push('/tournaments')}
                             >
-                                <ArrowDownLeft className="h-5 w-5 mr-2" />
-                                Add Money
+                                <Trophy className="h-5 w-5 mr-2" />
+                                Join Tournaments
                             </Button>
                             <Button
                                 size="lg"
@@ -316,313 +324,22 @@ export default function WalletPage() {
                 {/* ===== SECURITY BADGES ===== */}
                 <div className="flex flex-wrap gap-3 justify-center">
                     {[
-                        { icon: Shield, label: '100% Secure', color: 'text-green-500' },
-                        { icon: Zap, label: 'Instant Deposits', color: 'text-yellow-500' },
-                        { icon: Globe, label: 'UPI + Bank Transfer', color: 'text-blue-500' },
+                        { icon: Shield, label: 'Secure Payments', color: 'text-green-500' },
+                        { icon: Target, label: 'Direct Entry', color: 'text-yellow-500' },
+                        { icon: MessageCircle, label: 'Instant Help', color: 'text-blue-500' },
                     ].map((b, i) => (
                         <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border text-sm">
                             <b.icon className={`h-4 w-4 ${b.color}`} />
                             <span className="font-medium">{b.label}</span>
                         </div>
                     ))}
+                    <p className="w-full text-center text-xs text-muted-foreground mt-2 italic">
+                        Note: Funds are now added directly when you join a tournament. No need to deposit in advance!
+                    </p>
                 </div>
 
-                {/* ===== DEPOSIT PANEL ===== */}
-                {showDeposit && (
-                    <Card className="border-primary/20 shadow-xl overflow-hidden">
-                        <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle className="text-xl flex items-center gap-2">
-                                        <ArrowDownLeft className="h-5 w-5 text-green-500" />
-                                        Add Money to Wallet
-                                    </CardTitle>
-                                    <CardDescription>Choose your preferred payment method</CardDescription>
-                                </div>
-                                <Button variant="ghost" size="sm" onClick={() => { setShowDeposit(false); setDepositStep('amount'); }}>✕</Button>
-                            </div>
+                {/* Deposit functionality removed in favor of direct tournament registration payments */}
 
-                            {/* Stepper */}
-                            <div className="flex items-center gap-2 mt-4">
-                                {['Select Amount', 'Make Payment', 'Verify'].map((step, i) => {
-                                    const stepIndex = ['amount', 'pay', 'verify'].indexOf(depositStep);
-                                    return (
-                                        <React.Fragment key={i}>
-                                            <div className={`flex items-center gap-2 ${i <= stepIndex ? 'text-primary' : 'text-muted-foreground'}`}>
-                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i <= stepIndex ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>
-                                                    {i < stepIndex ? '✓' : i + 1}
-                                                </div>
-                                                <span className="text-sm font-medium hidden sm:inline">{step}</span>
-                                            </div>
-                                            {i < 2 && <div className={`flex-1 h-0.5 ${i < stepIndex ? 'bg-primary' : 'bg-muted'}`} />}
-                                        </React.Fragment>
-                                    );
-                                })}
-                            </div>
-                        </CardHeader>
-
-                        <CardContent className="p-6 space-y-6">
-                            {/* Step 1: Amount */}
-                            {depositStep === 'amount' && (
-                                <>
-                                    {/* Payment Method Selection */}
-                                    <div>
-                                        <label className="text-sm font-semibold text-muted-foreground mb-3 block">PAYMENT METHOD</label>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                                            {[
-                                                { id: 'razorpay' as const, name: 'Online (Cashfree)', icon: CreditCard, desc: 'Cards, UPI, NetBanking', badge: 'Auto-Verify' },
-                                                { id: 'upi_qr' as const, name: 'Manual UPI QR', icon: QrCode, desc: 'Scan & Pay manually' },
-                                                { id: 'bank' as const, name: 'Bank Transfer', icon: Building2, desc: 'NEFT/IMPS/RTGS' },
-                                            ].map(m => (
-                                                <button
-                                                    key={m.id}
-                                                    onClick={() => setSelectedMethod(m.id)}
-                                                    className={`relative p-4 rounded-xl border-2 text-left transition-all ${selectedMethod === m.id
-                                                        ? 'border-primary bg-primary/5 shadow-md'
-                                                        : 'border-border hover:border-primary/30'}`}
-                                                >
-                                                    {m.badge && (
-                                                        <span className="absolute top-2 right-2 px-2 py-0.5 bg-primary text-white text-[10px] font-bold rounded-full">
-                                                            {m.badge}
-                                                        </span>
-                                                    )}
-                                                    <m.icon className={`h-7 w-7 mb-2 ${selectedMethod === m.id ? 'text-primary' : 'text-muted-foreground'}`} />
-                                                    <p className="font-bold text-sm">{m.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{m.desc}</p>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Amount Input */}
-                                    <div>
-                                        <label className="text-sm font-semibold text-muted-foreground mb-3 block">ENTER AMOUNT</label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-muted-foreground">₹</span>
-                                            <Input
-                                                type="number"
-                                                placeholder="0.00"
-                                                value={depositAmount}
-                                                onChange={(e) => setDepositAmount(e.target.value)}
-                                                className="text-3xl font-bold pl-10 h-16 border-2 text-center"
-                                                min="10"
-                                            />
-                                        </div>
-                                        <p className="text-xs text-muted-foreground mt-2">Minimum deposit: ₹10</p>
-                                    </div>
-
-                                    {/* Quick Amount Buttons */}
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {QUICK_AMOUNTS.map(amt => (
-                                            <button
-                                                key={amt}
-                                                onClick={() => setDepositAmount(amt.toString())}
-                                                className={`py-3 rounded-xl border-2 font-bold text-sm transition-all ${depositAmount === amt.toString()
-                                                    ? 'border-primary bg-primary/10 text-primary'
-                                                    : 'border-border hover:border-primary/30'}`}
-                                            >
-                                                ₹{amt}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    {/* Bonus Badge */}
-                                    {parseFloat(depositAmount) >= 500 && (
-                                        <div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
-                                            <Gift className="h-6 w-6 text-green-500" />
-                                            <div>
-                                                <p className="text-sm font-bold text-green-600">Bonus Eligible!</p>
-                                                <p className="text-xs text-muted-foreground">Deposits of ₹500+ may qualify for promotional bonuses.</p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <Button
-                                        size="lg"
-                                        className="w-full h-14 text-lg font-bold"
-                                        disabled={!depositAmount || parseFloat(depositAmount) < 10 || submitting}
-                                        onClick={() => {
-                                            if (selectedMethod === 'razorpay') {
-                                                handleCashfreeDeposit();
-                                            } else {
-                                                setDepositStep('pay');
-                                            }
-                                        }}
-                                    >
-                                        {submitting ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                                        {selectedMethod === 'razorpay' ? 'Secure Checkout' : `Continue — ₹${depositAmount || '0'}`}
-                                        {selectedMethod !== 'razorpay' && <ChevronRight className="h-5 w-5 ml-2" />}
-                                    </Button>
-                                </>
-                            )}
-
-                            {/* Step 2: Pay */}
-                            {depositStep === 'pay' && (
-                                <>
-                                    <div className="text-center">
-                                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full mb-4">
-                                            <IndianRupee className="h-5 w-5 text-primary" />
-                                            <span className="text-2xl font-extrabold text-primary">₹{depositAmount}</span>
-                                        </div>
-                                    </div>
-
-                                    {selectedMethod === 'upi_qr' && (
-                                        <div className="space-y-4">
-                                            {/* QR Code Placeholder */}
-                                            <div className="bg-white p-6 rounded-2xl mx-auto max-w-xs border shadow-sm">
-                                                <div className="aspect-square bg-white rounded-xl flex items-center justify-center border-2 border-dashed border-primary/20">
-                                                    <div className="text-center">
-                                                        {upiDetails ? (
-                                                            <QRCodeSVG
-                                                                value={generateUpiLink(depositAmount)}
-                                                                size={200}
-                                                                level="H"
-                                                                includeMargin={true}
-                                                                className="mx-auto"
-                                                            />
-                                                        ) : (
-                                                            <div className="flex flex-col items-center justify-center h-full">
-                                                                <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-                                                                <p className="text-xs text-muted-foreground">Loading QR...</p>
-                                                            </div>
-                                                        )}
-                                                        <p className="text-sm font-medium text-foreground mt-3">Scan with any UPI app</p>
-                                                        <a
-                                                            href={generateUpiLink(depositAmount)}
-                                                            className="inline-flex items-center gap-1 mt-2 text-xs text-primary font-medium hover:underline"
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                        >
-                                                            <ExternalLink className="h-3 w-3" /> Open in UPI App
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-center space-y-2">
-                                                <p className="text-xs text-muted-foreground">Pay to UPI ID:</p>
-                                                <button
-                                                    onClick={() => copyToClipboard(upiDetails?.upiId || '')}
-                                                    className="inline-flex items-center gap-2 px-4 py-2 bg-muted rounded-lg font-mono font-bold text-sm hover:bg-muted/80 transition"
-                                                >
-                                                    {upiDetails?.upiId || 'Loading...'}
-                                                    <Copy className="h-4 w-4 text-primary" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {selectedMethod === 'upi_id' && (
-                                        <div className="space-y-4 max-w-md mx-auto">
-                                            <div className="p-5 bg-muted/50 rounded-xl border">
-                                                <p className="text-sm font-medium mb-3">Send ₹{depositAmount} to this UPI ID:</p>
-                                                <button
-                                                    onClick={() => copyToClipboard(upiDetails?.upiId || '')}
-                                                    className="w-full flex items-center justify-between p-4 bg-background rounded-lg border-2 border-primary/20 hover:border-primary/50 transition"
-                                                >
-                                                    <span className="font-mono font-bold text-lg">{upiDetails?.upiId}</span>
-                                                    <Copy className="h-5 w-5 text-primary" />
-                                                </button>
-                                                <p className="text-xs text-muted-foreground mt-2">
-                                                    Merchant: {upiDetails?.merchantName}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {selectedMethod === 'bank' && (
-                                        <div className="space-y-3 max-w-md mx-auto">
-                                            <div className="p-5 bg-muted/50 rounded-xl border space-y-3">
-                                                <p className="text-sm font-bold">Bank Transfer Details:</p>
-                                                {[
-                                                    { label: 'Account Name', value: upiDetails?.merchantName || 'Protocol Tournament' },
-                                                    { label: 'UPI ID', value: upiDetails?.upiId || 'Loading...' },
-                                                    { label: 'Method', value: 'NEFT / IMPS / RTGS' },
-                                                ].map((item, i) => (
-                                                    <div key={i} className="flex justify-between items-center py-2 border-b border-border last:border-0">
-                                                        <span className="text-xs text-muted-foreground">{item.label}</span>
-                                                        <button
-                                                            onClick={() => copyToClipboard(item.value)}
-                                                            className="flex items-center gap-2 font-mono text-sm font-medium hover:text-primary transition"
-                                                        >
-                                                            {item.value} <Copy className="h-3 w-3" />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-sm">
-                                        <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
-                                        <p className="text-muted-foreground">
-                                            After payment, note the <span className="font-bold text-foreground">UTR/Transaction Reference Number</span> from your payment app.
-                                        </p>
-                                    </div>
-
-                                    <div className="flex gap-3">
-                                        <Button variant="outline" onClick={() => setDepositStep('amount')} className="flex-1">
-                                            Back
-                                        </Button>
-                                        <Button className="flex-1" onClick={() => setDepositStep('verify')}>
-                                            I&apos;ve Paid — Enter UTR
-                                            <ChevronRight className="h-4 w-4 ml-1" />
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
-
-                            {/* Step 3: Verify */}
-                            {depositStep === 'verify' && (
-                                <>
-                                    <div className="text-center mb-4">
-                                        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                                            <Shield className="h-8 w-8 text-primary" />
-                                        </div>
-                                        <h3 className="text-lg font-bold">Verify Your Payment</h3>
-                                        <p className="text-sm text-muted-foreground">Enter the UTR number from your payment confirmation.</p>
-                                    </div>
-
-                                    <div className="max-w-md mx-auto space-y-4">
-                                        <div className="p-4 bg-muted/50 rounded-xl flex justify-between items-center">
-                                            <span className="text-sm text-muted-foreground">Amount Paid</span>
-                                            <span className="font-bold text-lg">₹{depositAmount}</span>
-                                        </div>
-
-                                        <div>
-                                            <label className="text-sm font-semibold mb-2 block">UTR / Transaction Reference Number</label>
-                                            <Input
-                                                placeholder="Enter 12-digit UTR number"
-                                                value={utrNumber}
-                                                onChange={(e) => setUtrNumber(e.target.value)}
-                                                className="h-14 text-lg font-mono text-center tracking-widest border-2"
-                                            />
-                                            <p className="text-xs text-muted-foreground mt-2">
-                                                📍 Find this in your UPI app → Transaction History → Details
-                                            </p>
-                                        </div>
-
-                                        <div className="flex gap-3">
-                                            <Button variant="outline" onClick={() => setDepositStep('pay')} className="flex-1">
-                                                Back
-                                            </Button>
-                                            <Button
-                                                className="flex-1 h-14 font-bold text-base"
-                                                onClick={handleDeposit}
-                                                disabled={submitting || !utrNumber.trim()}
-                                            >
-                                                {submitting ? (
-                                                    <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Submitting...</>
-                                                ) : (
-                                                    <><CheckCircle className="h-5 w-5 mr-2" /> Submit for Verification</>
-                                                )}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
 
                 {/* ===== WITHDRAW PANEL ===== */}
                 {showWithdraw && (

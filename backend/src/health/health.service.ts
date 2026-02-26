@@ -8,7 +8,7 @@ export class HealthService {
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
-  ) { }
+  ) {}
 
   async check() {
     const start = Date.now();
@@ -43,7 +43,8 @@ export class HealthService {
       total: os.totalmem(),
       free: os.freemem(),
       usedPercentage: (
-        ((os.totalmem() - os.freemem()) / os.totalmem()) * 100
+        ((os.totalmem() - os.freemem()) / os.totalmem()) *
+        100
       ).toFixed(2),
     };
 

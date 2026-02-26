@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BrandingProvider } from "@/context/ThemeContext";
 import { SocketProvider } from "@/context/SocketContext";
@@ -76,15 +77,17 @@ export default function RootLayout({
           <BrandingProvider>
             <SocketProvider>
               <Navbar />
-              <main className="min-h-screen flex flex-col">
+              <main className="min-h-screen flex flex-col pb-32 md:pb-0">
                 {children}
               </main>
               <Footer />
+              <MobileBottomNav />
             </SocketProvider>
           </BrandingProvider>
         </ThemeProvider>
 
         <Script id="razorpay-checkout" src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+        <Script id="cashfree-sdk" src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="lazyOnload" />
       </body>
     </html>
   );

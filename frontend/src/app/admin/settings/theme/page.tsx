@@ -123,7 +123,7 @@ export default function ThemeSettingsPage() {
                             <Palette className="h-8 w-8 text-primary" />
                             Theme Customization
                         </h1>
-                        <p className="text-muted-foreground">Customize your platform's look and feel.</p>
+                        <p className="text-muted-foreground">Customize your platform&apos;s look and feel.</p>
                     </div>
                 </div>
                 <Button onClick={handleSave} disabled={saving} size="lg">

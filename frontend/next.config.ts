@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ws://localhost:4000 http://localhost:4000 https://vitals.vercel-insights.com https://protocols-turnaments.onrender.com wss://protocols-turnaments.onrender.com;"
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ws://localhost:4000 http://localhost:4000 ws://127.0.0.1:4000 http://127.0.0.1:4000 https://vitals.vercel-insights.com https://protocols-turnaments.onrender.com wss://protocols-turnaments.onrender.com;"
           }
         ]
       }

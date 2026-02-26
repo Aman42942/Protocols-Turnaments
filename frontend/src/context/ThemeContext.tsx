@@ -36,25 +36,31 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     const [theme, setTheme] = useState<ThemeSettings | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchTheme = async () => {
+    const fetchTheme = async (retries = 3) => {
         try {
             const res = await api.get('/theme');
             setTheme(res.data);
             applyTheme(res.data);
         } catch (error) {
-            console.error('Failed to load theme:', error);
-            // Apply default theme if fetch fails - Default to BLUE (Protocol Brand)
-            applyTheme({
-                siteName: "Protocol Tournaments",
-                primaryColor: "#3b82f6", // Blue
-                secondaryColor: "#1e293b", // Slate-800
-                accentColor: "#f59e0b", // Amber
-                backgroundColor: "#020617", // Slate-950
-                heroTitle: "Compete. Win. Become a Legend.",
-                heroSubtitle: "The ultimate esports platform for competitive gamers. Join tournaments, climb the leaderboards, and win real cash prizes."
-            });
+            if (retries > 0) {
+                console.log(`Failed to load theme, retrying (${retries} left)...`);
+                setTimeout(() => fetchTheme(retries - 1), 2000);
+            } else {
+                console.error('Failed to load theme after multiple attempts:', error);
+                // Apply default theme if fetch fails - Default to BLUE (Protocol Brand)
+                applyTheme({
+                    siteName: "Protocol Tournaments",
+                    primaryColor: "#3b82f6", // Blue
+                    secondaryColor: "#1e293b", // Slate-800
+                    accentColor: "#f59e0b", // Amber
+                    backgroundColor: "#020617", // Slate-950
+                    heroTitle: "Compete. Win. Become a Legend.",
+                    heroSubtitle: "The ultimate esports platform for competitive gamers. Join tournaments, climb the leaderboards, and win real cash prizes."
+                });
+            }
         } finally {
-            setLoading(false);
+            if (retries === 0) setLoading(false);
+            else if (!loading) setLoading(false); // only if we succeeded or ran out
         }
     };
 

@@ -7,6 +7,8 @@ import { io } from 'socket.io-client';
 import api from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
 import LeaderboardEmptyState from '@/components/LeaderboardEmptyState';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 interface Player {
     id: string;
@@ -123,8 +125,8 @@ export default function LeaderboardPage() {
                                 key={game}
                                 onClick={() => setFilter(game === 'FREE FIRE' ? 'Free Fire' : game === 'ALL' ? 'ALL' : titleCase(game))}
                                 className={`px-4 py-2 rounded-full text-sm font-bold tracking-wide transition-all duration-300 border ${(filter === game || (game === 'FREE FIRE' && filter === 'Free Fire') || (game === 'VALORANT' && filter === 'Valorant') || (game === 'PUBG' && filter === 'PUBG') || (game === 'BGMI' && filter === 'BGMI'))
-                                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105'
-                                        : 'bg-card border-border hover:bg-accent hover:text-accent-foreground'
+                                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105'
+                                    : 'bg-card border-border hover:bg-accent hover:text-accent-foreground'
                                     }`}
                             >
                                 {game}
@@ -180,9 +182,9 @@ export default function LeaderboardPage() {
                                                     <td className="p-5">
                                                         <div className="flex items-center gap-3">
                                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ring-2 ${player.rank === 1 ? 'bg-yellow-100 text-yellow-700 ring-yellow-500' :
-                                                                    player.rank === 2 ? 'bg-gray-100 text-gray-700 ring-gray-400' :
-                                                                        player.rank === 3 ? 'bg-orange-100 text-orange-700 ring-orange-500' :
-                                                                            'bg-muted text-muted-foreground ring-transparent'
+                                                                player.rank === 2 ? 'bg-gray-100 text-gray-700 ring-gray-400' :
+                                                                    player.rank === 3 ? 'bg-orange-100 text-orange-700 ring-orange-500' :
+                                                                        'bg-muted text-muted-foreground ring-transparent'
                                                                 }`}>
                                                                 {player.avatar ? (
                                                                     <img src={player.avatar} alt={player.name} className="w-full h-full rounded-full object-cover" />
@@ -215,28 +217,63 @@ export default function LeaderboardPage() {
                                     </table>
                                 </div>
 
-                                {/* Mobile Cards */}
-                                <div className="md:hidden divide-y divide-border">
+                                {/* Mobile Cards - High Fidelity */}
+                                <div className="md:hidden space-y-3 p-4">
                                     {filteredPlayers.map((player, index) => (
-                                        <div key={index} className="p-4 flex items-center justify-between active:bg-muted/10">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-8 flex justify-center">
+                                        <motion.div
+                                            key={index}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: index * 0.05 }}
+                                            className={cn(
+                                                "relative flex items-center justify-between p-4 rounded-3xl border border-border/40 bg-card/40 backdrop-blur-md overflow-hidden group active:scale-[0.98] transition-transform",
+                                                player.rank <= 3 && "border-primary/20 bg-primary/5"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-4 relative z-10">
+                                                <div className="w-10 h-10 flex items-center justify-center shrink-0">
                                                     {getRankIcon(player.rank)}
                                                 </div>
+                                                <div className="relative">
+                                                    <div className={cn(
+                                                        "w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black ring-2",
+                                                        player.rank === 1 ? 'bg-yellow-500/10 text-yellow-500 ring-yellow-500/20' :
+                                                            player.rank === 2 ? 'bg-gray-400/10 text-gray-400 ring-gray-400/20' :
+                                                                player.rank === 3 ? 'bg-orange-500/10 text-orange-500 ring-orange-500/20' :
+                                                                    'bg-muted text-muted-foreground ring-transparent'
+                                                    )}>
+                                                        {player.avatar ? (
+                                                            <img src={player.avatar} alt={player.name} className="w-full h-full rounded-2xl object-cover" />
+                                                        ) : (
+                                                            player.name.charAt(0).toUpperCase()
+                                                        )}
+                                                    </div>
+                                                    {player.rank <= 3 && (
+                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-background flex items-center justify-center">
+                                                            <div className="w-1 h-1 bg-white rounded-full animate-ping" />
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <div>
-                                                    <p className="font-bold text-foreground">{player.name}</p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-[10px] font-bold uppercase text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                                    <p className="font-black text-foreground tracking-tight">{player.name}</p>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className="text-[10px] font-black uppercase text-primary/80 tracking-widest bg-primary/5 px-2 py-0.5 rounded-lg border border-primary/10">
                                                             {player.game}
                                                         </span>
+                                                        {getLastMatchTrend(index)}
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-lg font-black text-primary font-mono">{player.points}</p>
-                                                <p className="text-[10px] text-green-600 dark:text-green-400 font-mono tracking-widest">{player.winRate}</p>
+                                            <div className="text-right relative z-10">
+                                                <p className="text-xl font-black text-foreground font-mono tracking-tighter">{player.points.toLocaleString()}</p>
+                                                <p className="text-[10px] font-black text-green-500 font-mono tracking-widest uppercase opacity-80">{player.winRate} WR</p>
                                             </div>
-                                        </div>
+
+                                            {/* Decorative Background for Top 3 */}
+                                            {player.rank <= 3 && (
+                                                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+                                            )}
+                                        </motion.div>
                                     ))}
                                 </div>
                             </CardContent>

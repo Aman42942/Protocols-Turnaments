@@ -6,9 +6,9 @@ import { ComplianceService } from './compliance.service';
 import { ComplianceController } from './compliance.controller';
 
 @Module({
-    imports: [PrismaModule],
-    providers: [OrganizerService, ComplianceService],
-    controllers: [OrganizerController, ComplianceController],
-    exports: [OrganizerService, ComplianceService],
+  imports: [PrismaModule],
+  providers: [OrganizerService, ComplianceService],
+  controllers: [OrganizerController, ComplianceController],
+  exports: [OrganizerService, ComplianceService],
 })
-export class OrganizerModule { }
+export class OrganizerModule {}
