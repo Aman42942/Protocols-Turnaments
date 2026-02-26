@@ -396,7 +396,7 @@ export class TournamentsService {
           select: { id: true, name: true, email: true, createdAt: true },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { registeredAt: 'desc' },
     });
 
     return { tournament, participants };
