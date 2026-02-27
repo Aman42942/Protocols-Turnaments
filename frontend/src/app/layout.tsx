@@ -56,6 +56,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -76,9 +78,10 @@ export default function RootLayout({
           <BrandingProvider>
             <SocketProvider>
               <Navbar />
-              <main className="min-h-screen flex flex-col">
+              <main className="min-h-screen flex flex-col pb-20 md:pb-0">
                 {children}
               </main>
+              <MobileBottomNav />
               <Footer />
             </SocketProvider>
           </BrandingProvider>

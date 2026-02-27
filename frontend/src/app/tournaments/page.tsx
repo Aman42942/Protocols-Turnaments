@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { TournamentCard } from '@/components/TournamentCard';
 
 interface Tournament {
     id: string;
@@ -32,13 +33,6 @@ const GAMES = [
     { key: 'BGMI', label: 'BGMI', icon: Flame },
     { key: 'FREEFIRE', label: 'Free Fire', icon: Zap },
 ];
-
-const GAME_STYLES: Record<string, { gradient: string; accent: string; glow: string }> = {
-    'VALORANT': { gradient: 'from-red-600/20 via-rose-500/10 to-transparent', accent: 'text-red-400', glow: 'shadow-red-500/10' },
-    'PUBG': { gradient: 'from-yellow-600/20 via-amber-500/10 to-transparent', accent: 'text-yellow-400', glow: 'shadow-yellow-500/10' },
-    'BGMI': { gradient: 'from-blue-600/20 via-sky-500/10 to-transparent', accent: 'text-blue-400', glow: 'shadow-blue-500/10' },
-    'FREEFIRE': { gradient: 'from-orange-600/20 via-amber-500/10 to-transparent', accent: 'text-orange-400', glow: 'shadow-orange-500/10' },
-};
 
 export default function TournamentsPage() {
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -71,34 +65,6 @@ export default function TournamentsPage() {
             if (sortBy === 'spots') return (b.maxTeams - (b._count?.teams || 0)) - (a.maxTeams - (a._count?.teams || 0));
             return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
         });
-
-    const getTimeLeft = (dateStr: string) => {
-        const diff = new Date(dateStr).getTime() - Date.now();
-        if (diff <= 0) return null;
-        const d = Math.floor(diff / 86400000);
-        const h = Math.floor((diff % 86400000) / 3600000);
-        if (d > 0) return `${d}d ${h}h`;
-        const m = Math.floor((diff % 3600000) / 60000);
-        return `${h}h ${m}m`;
-    };
-
-    const getTierBadge = (tier: string) => {
-        switch (tier) {
-            case 'HIGH': return <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] border-0"><Crown className="h-3 w-3 mr-1" />HIGH</Badge>;
-            case 'MEDIUM': return <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-[10px] border-0"><Star className="h-3 w-3 mr-1" />MED</Badge>;
-            default: return <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-[10px] border-0">LOW</Badge>;
-        }
-    };
-
-    const getStatusBadge = (status: string) => {
-        switch (status?.toUpperCase()) {
-            case 'LIVE': case 'ONGOING':
-                return <span className="flex items-center gap-1 text-[10px] font-bold text-red-500"><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />LIVE</span>;
-            case 'COMPLETED':
-                return <span className="text-[10px] font-bold text-gray-400">ENDED</span>;
-            default: return null;
-        }
-    };
 
     // Stats
     const totalPrize = tournaments.reduce((a, t) => a + t.prizePool, 0);
@@ -217,99 +183,22 @@ export default function TournamentsPage() {
                 {!loading && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredTournaments.length > 0 ? (
-                            filteredTournaments.map(t => {
-                                const registered = t._count?.teams || 0;
-                                const fillPercent = Math.min((registered / t.maxTeams) * 100, 100);
-                                const isFull = registered >= t.maxTeams;
-                                const timeLeft = getTimeLeft(t.startDate);
-                                const style = GAME_STYLES[t.game.toUpperCase()] || GAME_STYLES['VALORANT'];
-
-                                return (
-                                    <Link key={t.id} href={`/tournaments/${t.id}`}>
-                                        <Card className={`overflow-hidden hover:shadow-xl ${style.glow} hover:border-primary/30 transition-all duration-300 cursor-pointer h-full group border-border/50`}>
-                                            {/* Game Banner */}
-                                            <div className={`relative h-28 bg-gradient-to-br ${style.gradient} border-b flex items-center justify-center`}>
-                                                <div className="text-center">
-                                                    <Gamepad2 className={`h-8 w-8 mx-auto mb-1 ${style.accent} opacity-60 group-hover:opacity-100 transition`} />
-                                                    <span className={`text-sm font-bold tracking-widest ${style.accent}`}>{t.game}</span>
-                                                </div>
-
-                                                {/* Status overlay */}
-                                                <div className="absolute top-3 left-3">
-                                                    {getStatusBadge(t.status)}
-                                                </div>
-                                                <div className="absolute top-3 right-3">
-                                                    {getTierBadge(t.tier)}
-                                                </div>
-
-                                                {/* Countdown */}
-                                                {timeLeft && (
-                                                    <div className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-1 rounded-md bg-background/80 backdrop-blur text-[10px] font-medium">
-                                                        <Timer className="h-3 w-3 text-primary" />
-                                                        <span>{timeLeft}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <CardHeader className="pb-2 pt-4">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <Badge variant="outline" className="text-[10px] px-2 py-0">{t.gameMode}</Badge>
-                                                </div>
-                                                <CardTitle className="line-clamp-1 text-lg group-hover:text-primary transition">{t.title}</CardTitle>
-                                                <CardDescription className="flex items-center gap-1.5 text-xs">
-                                                    <Calendar className="w-3 h-3" />
-                                                    {new Date(t.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                                </CardDescription>
-                                            </CardHeader>
-
-                                            <CardContent className="pb-3 space-y-3">
-                                                {/* Prize + Entry */}
-                                                <div className="flex gap-3">
-                                                    <div className="flex-1 p-2.5 rounded-lg bg-yellow-500/10 text-center">
-                                                        <Trophy className="h-4 w-4 mx-auto text-yellow-500 mb-1" />
-                                                        <p className="text-sm font-bold">₹{t.prizePool.toLocaleString('en-IN')}</p>
-                                                        <p className="text-[10px] text-muted-foreground">Prize</p>
-                                                    </div>
-                                                    <div className="flex-1 p-2.5 rounded-lg bg-green-500/10 text-center">
-                                                        <Wallet className="h-4 w-4 mx-auto text-green-500 mb-1" />
-                                                        <p className="text-sm font-bold">{t.entryFeePerPerson > 0 ? `₹${t.entryFeePerPerson}` : 'FREE'}</p>
-                                                        <p className="text-[10px] text-muted-foreground">Entry</p>
-                                                    </div>
-                                                </div>
-
-                                                {/* Progress bar */}
-                                                <div>
-                                                    <div className="flex items-center justify-between text-xs mb-1.5">
-                                                        <span className="text-muted-foreground flex items-center gap-1">
-                                                            <Users className="h-3 w-3" /> {registered}/{t.maxTeams}
-                                                        </span>
-                                                        <span className={`font-medium ${isFull ? 'text-red-500' : fillPercent > 70 ? 'text-orange-500' : 'text-muted-foreground'}`}>
-                                                            {isFull ? '🔥 Full' : `${t.maxTeams - registered} left`}
-                                                        </span>
-                                                    </div>
-                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                                        <div
-                                                            className={`h-full rounded-full transition-all duration-700 ${isFull ? 'bg-red-500' : fillPercent > 70 ? 'bg-orange-500' : 'bg-primary'}`}
-                                                            style={{ width: `${fillPercent}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-
-                                            <CardFooter className="pt-0">
-                                                <Button
-                                                    className="w-full group-hover:shadow-md transition-all"
-                                                    variant={isFull ? "outline" : "default"}
-                                                    disabled={isFull}
-                                                >
-                                                    {isFull ? '🔒 Full' : 'View & Register'}
-                                                    {!isFull && <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-0.5 transition-transform" />}
-                                                </Button>
-                                            </CardFooter>
-                                        </Card>
-                                    </Link>
-                                );
-                            })
+                            filteredTournaments.map(t => (
+                                <TournamentCard
+                                    key={t.id}
+                                    id={t.id}
+                                    title={t.title}
+                                    game={t.game}
+                                    tier={t.tier as any}
+                                    entryFee={t.entryFeePerPerson}
+                                    prizePool={t.prizePool}
+                                    startDate={t.startDate}
+                                    maxTeams={t.maxTeams}
+                                    registeredTeams={t._count?.teams || 0}
+                                    gameMode={t.gameMode}
+                                    status={t.status}
+                                />
+                            ))
                         ) : (
                             <div className="col-span-full text-center py-20 bg-muted/30 rounded-2xl border border-dashed">
                                 <Filter className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-40" />

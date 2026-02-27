@@ -1,6 +1,10 @@
+"use client";
 import React from 'react';
-import { Trophy, Calendar, Users, Clock } from 'lucide-react';
-import { Button } from './ui/Button';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Trophy, Users, Calendar, Gamepad2, Timer } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 interface TournamentCardProps {
@@ -13,84 +17,84 @@ interface TournamentCardProps {
     startDate: string;
     maxTeams: number;
     registeredTeams: number;
-    image: string;
+    gameMode: string;
+    status: string;
 }
 
 export function TournamentCard({
-    id,
-    title,
-    game,
-    tier,
-    entryFee,
-    prizePool,
-    startDate,
-    maxTeams,
-    registeredTeams,
-    image,
+    id, title, game, tier, entryFee, prizePool, startDate, maxTeams, registeredTeams, gameMode, status
 }: TournamentCardProps) {
-    const tierColors = {
-        LOW: 'text-green-400 border-green-500/30 bg-green-500/10',
-        MEDIUM: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10',
-        HIGH: 'text-red-500 border-red-500/30 bg-red-500/10',
-    };
+    const isFull = registeredTeams >= maxTeams;
+    const fillPercent = Math.min((registeredTeams / maxTeams) * 100, 100);
 
     return (
-        <div className="group relative rounded-xl bg-[#0a0a16] border border-white/10 overflow-hidden hover:border-[#00f0ff]/50 transition-all duration-300 shadow-lg hover:shadow-[#00f0ff]/20">
-            <div className="h-48 overflow-hidden relative">
-                <img
-                    src={image}
-                    alt={title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a16] to-transparent opacity-80" />
-                <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold border ${tierColors[tier]} backdrop-blur-sm`}>
-                    {tier} TIER
-                </div>
-                <div className="absolute bottom-4 left-4">
-                    <span className="text-[#00f0ff] text-sm font-bold tracking-wider">{game}</span>
-                    <h3 className="text-xl font-bold text-white leading-tight">{title}</h3>
-                </div>
-            </div>
-
-            <div className="p-5 space-y-4">
-                <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center text-gray-400 gap-2">
-                        <Trophy className="w-4 h-4 text-[#fcee0a]" />
-                        <span>Prize Pool</span>
+        <Link href={`/tournaments/${id}`} className="block h-full group">
+            <Card className="overflow-hidden rounded-[1.5rem] border-border/50 bg-card/50 hover:bg-card hover:border-primary/30 transition-all duration-300 h-full flex flex-col">
+                {/* Header Section */}
+                <div className="relative h-32 bg-muted/20 flex flex-col items-center justify-center border-b border-border/10 overflow-hidden">
+                    <div className="absolute top-3 left-3 flex gap-2">
+                        <Badge variant="outline" className="bg-background/80 text-[9px] font-bold tracking-wider">{game}</Badge>
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[9px] font-bold">{tier}</Badge>
                     </div>
-                    <span className="text-[#fcee0a] font-bold text-lg">₹{prizePool}</span>
-                </div>
 
-                <div className="flex justify-between items-center text-sm border-b border-white/10 pb-4">
-                    <div className="flex items-center text-gray-400 gap-2">
-                        <Users className="w-4 h-4" />
-                        <span>Slots</span>
+                    <div className="p-3 rounded-2xl bg-primary/5 group-hover:scale-105 transition-transform duration-300">
+                        <Gamepad2 className="h-8 w-8 text-primary/60" />
                     </div>
-                    <span className="text-white">{registeredTeams}/{maxTeams} Teams</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
-                    <div className="flex items-center gap-1.5">
+                <CardHeader className="pt-5 pb-2 px-5">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="secondary" className="text-[10px] font-bold bg-muted text-muted-foreground">{gameMode}</Badge>
+                    </div>
+                    <CardTitle className="text-lg font-bold tracking-tight line-clamp-1 group-hover:text-primary transition-colors">{title}</CardTitle>
+                    <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
                         <Calendar className="w-3.5 h-3.5" />
-                        <span>{startDate}</span>
+                        {new Date(startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </div>
-                    <div className="flex items-center gap-1.5 justify-end">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>Registration Open</span>
-                    </div>
-                </div>
+                </CardHeader>
 
-                <div className="flex items-center justify-between pt-2">
-                    <div className="text-white font-bold">
-                        Entry: <span className={entryFee === 0 ? "text-green-400" : "text-white"}>{entryFee === 0 ? "FREE" : `₹${entryFee}`}</span>
+                <CardContent className="px-5 py-4 flex-grow space-y-4">
+                    {/* Prize Info */}
+                    <div className="flex gap-2">
+                        <div className="flex-1 p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
+                            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-0.5">Prize Pool</p>
+                            <p className="text-lg font-black tracking-tight">₹{prizePool.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div className="flex-1 p-3 rounded-xl bg-primary/5 border border-primary/10 text-right">
+                            <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-0.5">Entry</p>
+                            <p className="text-lg font-black tracking-tight">{entryFee > 0 ? `₹${entryFee}` : 'FREE'}</p>
+                        </div>
                     </div>
-                    <Link href={`/tournaments/${id}`}>
-                        <Button variant="outline" className="border border-[#00f0ff] text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black">
-                            Join Now
-                        </Button>
-                    </Link>
-                </div>
-            </div>
-        </div>
+
+                    {/* Progress */}
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between text-[11px] font-bold">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                                <Users className="h-3 w-3" /> {registeredTeams} / {maxTeams}
+                            </span>
+                            <span className={isFull ? 'text-red-500' : 'text-primary'}>
+                                {isFull ? 'FULL' : `${maxTeams - registeredTeams} Slots Left`}
+                            </span>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                                className={cn("h-full transition-all duration-500", isFull ? 'bg-red-500' : 'bg-primary')}
+                                style={{ width: `${fillPercent}%` }}
+                            />
+                        </div>
+                    </div>
+                </CardContent>
+
+                <CardFooter className="px-5 pb-5 pt-0">
+                    <Button
+                        className="w-full h-11 rounded-xl font-bold tracking-tight text-sm"
+                        variant={isFull ? "outline" : "default"}
+                        disabled={isFull}
+                    >
+                        {isFull ? 'REGISTRATION CLOSED' : 'REGISTER NOW'}
+                    </Button>
+                </CardFooter>
+            </Card>
+        </Link>
     );
 }
