@@ -129,8 +129,17 @@
   }
 
   body {
-    @apply bg-background text-foreground overflow-x-hidden;
+    @apply bg-background text-foreground overflow-x-hidden antialiased;
+    text-rendering: optimizeLegibility;
   }
+
+  .gpu-accel {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform;
+  }
+
 
   .container {
     margin-inline: auto;

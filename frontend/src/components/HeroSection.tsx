@@ -13,8 +13,9 @@ export function HeroSection() {
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 bg-background">
                 {/* Simplified background mesh - much better for performance */}
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-purple-500/10 pointer-events-none" />
-                <div className="absolute top-[-20%] left-[-20%] w-[100%] h-[100%] bg-primary/5 rounded-full blur-[80px] pointer-events-none will-change-transform" />
-                <div className="absolute bottom-[-20%] right-[-20%] w-[100%] h-[100%] bg-purple-500/5 rounded-full blur-[80px] pointer-events-none will-change-transform" />
+                <div className="absolute top-[-20%] left-[-20%] w-[100%] h-[100%] bg-primary/5 rounded-full blur-[80px] pointer-events-none gpu-accel" />
+                <div className="absolute bottom-[-20%] right-[-20%] w-[100%] h-[100%] bg-purple-500/5 rounded-full blur-[80px] pointer-events-none gpu-accel" />
+
                 <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.02] dark:opacity-[0.05]" />
             </div>
 

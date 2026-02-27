@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { TournamentCard } from '@/components/TournamentCard';
 
 interface Tournament {
     id: string;
@@ -229,130 +230,22 @@ export default function TournamentsPage() {
                 {!loading && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredTournaments.length > 0 ? (
-                            filteredTournaments.map(t => {
-                                const registered = t._count?.teams || 0;
-                                const fillPercent = Math.min((registered / t.maxTeams) * 100, 100);
-                                const isFull = registered >= t.maxTeams;
-                                const timeLeft = getTimeLeft(t.startDate);
-                                const style = GAME_STYLES[t.game.toUpperCase()] || GAME_STYLES['VALORANT'];
-
-                                return (
-                                    <motion.div
-                                        key={t.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        whileHover={{ y: -5 }}
-                                        transition={{ duration: 0.3 }}
-                                    >
-                                        <Link href={`/tournaments/${t.id}`}>
-                                            <Card className={`overflow-hidden rounded-[2rem] border-border/40 bg-card/40 backdrop-blur-md hover:bg-card/60 hover:border-primary/40 transition-all duration-500 cursor-pointer h-full group`}>
-                                                {/* Game Banner - Immersive */}
-                                                <div className={`relative h-40 bg-gradient-to-br ${style.gradient} border-b border-border/20 flex items-center justify-center overflow-hidden`}>
-                                                    {/* Background Glow */}
-                                                    <div className={`absolute inset-0 opacity-20 bg-radial-gradient from-current to-transparent ${style.accent}`} />
-
-                                                    <div className="relative text-center z-10">
-                                                        <div className={cn("p-4 rounded-3xl bg-background/20 backdrop-blur-md border border-white/10 mb-2 group-hover:scale-110 transition-transform duration-500", style.glow)}>
-                                                            <Gamepad2 className={cn("h-10 w-10 mx-auto", style.accent)} />
-                                                        </div>
-                                                        <span className={cn("text-xs font-black tracking-[0.2em] uppercase", style.accent)}>{t.game}</span>
-                                                    </div>
-
-                                                    {/* Status overlay */}
-                                                    <div className="absolute top-4 left-4 z-20">
-                                                        {getStatusBadge(t.status)}
-                                                    </div>
-                                                    <div className="absolute top-4 right-4 z-20">
-                                                        {getTierBadge(t.tier)}
-                                                    </div>
-
-                                                    {/* Countdown - Premium Label */}
-                                                    {timeLeft && (
-                                                        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between px-3 py-2 rounded-xl bg-background/60 backdrop-blur-lg border border-white/10">
-                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Starts In</span>
-                                                            <div className="flex items-center gap-1.5 text-xs font-black text-primary">
-                                                                <Timer className="h-3.5 w-3.5" />
-                                                                <span>{timeLeft}</span>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <CardHeader className="pb-4 pt-6 px-6">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/20 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-lg">{t.gameMode}</Badge>
-                                                    </div>
-                                                    <CardTitle className="text-xl font-bold tracking-tight line-clamp-1 mb-1">{t.title}</CardTitle>
-                                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                                        <div className="p-1 rounded-md bg-muted">
-                                                            <Calendar className="w-3 h-3" />
-                                                        </div>
-                                                        <span className="text-xs font-medium">
-                                                            {new Date(t.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {new Date(t.startDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
-                                                    </div>
-                                                </CardHeader>
-
-                                                <CardContent className="pb-6 px-6 space-y-6">
-                                                    {/* Prize Pool - Big Display */}
-                                                    <div className="p-4 rounded-2xl bg-gradient-to-br from-yellow-500/5 to-amber-500/10 border border-yellow-500/10 relative overflow-hidden group/prize">
-                                                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover/prize:scale-125 transition-transform duration-700">
-                                                            <Trophy className="h-16 w-16 text-yellow-500" />
-                                                        </div>
-                                                        <p className="text-[10px] font-black text-yellow-500/70 uppercase tracking-[0.2em] mb-1">Guaranteed Prize</p>
-                                                        <h4 className="text-3xl font-black text-foreground tracking-tighter">₹{t.prizePool.toLocaleString('en-IN')}</h4>
-                                                    </div>
-
-                                                    {/* Registration Stats */}
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-2">
-                                                                <Users className="h-4 w-4 text-muted-foreground" />
-                                                                <span className="text-sm font-bold">{registered} <span className="text-muted-foreground font-medium">/ {t.maxTeams} Teams</span></span>
-                                                            </div>
-                                                            <Badge variant="outline" className={cn(
-                                                                "font-black text-[10px] rounded-lg border-0",
-                                                                isFull ? 'bg-red-500/10 text-red-500' : fillPercent > 70 ? 'bg-orange-500/10 text-orange-500' : 'bg-primary/10 text-primary'
-                                                            )}>
-                                                                {isFull ? 'FULL' : `${Math.round(fillPercent)}% FILLED`}
-                                                            </Badge>
-                                                        </div>
-                                                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                                            <motion.div
-                                                                initial={{ width: 0 }}
-                                                                animate={{ width: `${fillPercent}%` }}
-                                                                className={cn(
-                                                                    "h-full rounded-full",
-                                                                    isFull ? 'bg-red-500' : fillPercent > 70 ? 'bg-orange-500' : 'bg-primary shadow-[0_0_10px_rgba(59,130,246,0.5)]'
-                                                                )}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </CardContent>
-
-                                                <CardFooter className="pb-6 px-6 pt-0 flex gap-3">
-                                                    <div className="flex flex-col justify-center">
-                                                        <span className="text-[10px] uppercase font-black text-muted-foreground tracking-widest pl-1">Entry</span>
-                                                        <p className={cn("text-lg font-black", t.entryFeePerPerson > 0 ? "text-foreground" : "text-green-500")}>
-                                                            {t.entryFeePerPerson > 0 ? `₹${t.entryFeePerPerson}` : 'FREE'}
-                                                        </p>
-                                                    </div>
-                                                    <Button
-                                                        className={cn(
-                                                            "grow h-12 rounded-xl font-bold tracking-wide transition-all",
-                                                            !isFull && "shadow-lg shadow-primary/20"
-                                                        )}
-                                                        variant={isFull ? "secondary" : "default"}
-                                                        disabled={isFull}
-                                                    >
-                                                        {isFull ? 'REGISTRATION CLOSED' : 'JOIN TOURNAMENT'}
-                                                    </Button>
-                                                </CardFooter>
-                                            </Card>
-                                        </Link>
-                                    </motion.div>
-                                );
-                            })
+                            filteredTournaments.map(t => (
+                                <TournamentCard
+                                    key={t.id}
+                                    id={t.id}
+                                    title={t.title}
+                                    game={t.game}
+                                    tier={t.tier}
+                                    entryFee={t.entryFeePerPerson}
+                                    prizePool={t.prizePool}
+                                    startDate={t.startDate}
+                                    maxTeams={t.maxTeams}
+                                    registeredTeams={t._count?.teams || 0}
+                                    gameMode={t.gameMode}
+                                    status={t.status}
+                                />
+                            ))
                         ) : (
                             <div className="col-span-full text-center py-20 bg-muted/30 rounded-2xl border border-dashed">
                                 <Filter className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-40" />

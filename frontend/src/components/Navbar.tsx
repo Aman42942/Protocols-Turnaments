@@ -22,11 +22,11 @@ export function Navbar() {
         const previous = scrollY.getPrevious();
         if (previous === undefined) return;
 
-        // Only trigger state change if we cross a significant threshold to reduce re-renders
+        // Throttled: Only update if scroll distance is significant
         const diff = latest - previous;
-        if (latest > 150 && diff > 10 && !hidden) {
+        if (latest > 150 && diff > 15 && !hidden) {
             setHidden(true);
-        } else if ((diff < -10 || latest <= 50) && hidden) {
+        } else if ((diff < -15 || latest <= 50) && hidden) {
             setHidden(false);
         }
     });
@@ -121,7 +121,7 @@ export function Navbar() {
                 }}
                 animate={hidden ? "hidden" : "visible"}
                 transition={{ duration: 0.35, ease: "easeInOut" }}
-                className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/40"
+                className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 gpu-accel"
             >
                 <div className="container flex h-16 items-center justify-between">
                     <div className="flex items-center gap-2 md:gap-6">
