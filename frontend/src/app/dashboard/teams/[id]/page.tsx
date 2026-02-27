@@ -69,7 +69,27 @@ export default function TeamDetailsPage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handleKick = async (userId: string) => {
+        if (!confirm('Kick this player from the squad?')) return;
+        try {
+            await api.delete(`/teams/${id}/members/${userId}`);
+            await fetchData();
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Failed to kick member');
+        }
+    };
+
+    const handleRoleUpdate = async (userId: string, newRole: string) => {
+        try {
+            await api.patch(`/teams/${id}/members/${userId}/role`, { role: newRole });
+            await fetchData();
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Failed to update role');
+        }
+    };
+
     const isLeader = team?.leaderId === currentUser?.id;
+    const isCoLeader = team?.members.find(m => m.user?.id === currentUser?.id)?.role === 'COLEADER';
 
     if (loading) {
         return (
@@ -222,10 +242,29 @@ export default function TeamDetailsPage() {
                                                 </div>
                                                 <span className="text-[8px] font-mono text-gray-600 uppercase">Power Level 100</span>
                                             </div>
-                                            {isLeader && member.user?.id !== currentUser?.id && (
-                                                <button className="p-2.5 rounded-xl bg-red-500/5 text-red-500/40 hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+
+                                            {/* Action Buttons for Leaders/Co-Leaders */}
+                                            {member.user?.id !== currentUser?.id && (
+                                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {isLeader && (
+                                                        <button
+                                                            onClick={() => handleRoleUpdate(member.user!.id, member.role === 'COLEADER' ? 'MEMBER' : 'COLEADER')}
+                                                            title={member.role === 'COLEADER' ? 'Demote to Member' : 'Promote to Co-Leader'}
+                                                            className="p-2.5 rounded-xl bg-primary/5 text-primary/40 hover:text-primary hover:bg-primary/10 transition-all shadow-sm"
+                                                        >
+                                                            {member.role === 'COLEADER' ? <Shield className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                                                        </button>
+                                                    )}
+                                                    {(isLeader || (isCoLeader && member.role === 'MEMBER')) && (
+                                                        <button
+                                                            onClick={() => handleKick(member.user!.id)}
+                                                            title="Kick from Squad"
+                                                            className="p-2.5 rounded-xl bg-red-500/5 text-red-500/40 hover:text-red-500 hover:bg-red-500/10 transition-all shadow-sm"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </motion.div>

@@ -26,9 +26,10 @@ export class TeamsController {
     return this.teamsService.create(req.user.userId, createTeamDto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get()
-  findAll() {
-    return this.teamsService.findAll();
+  findAll(@Request() req) {
+    return this.teamsService.findAll(req.user.userId);
   }
 
   @Get(':id')
@@ -51,6 +52,32 @@ export class TeamsController {
   @Post('invite/:code/join')
   joinByCode(@Request() req, @Param('code') code: string) {
     return this.teamsService.joinByCode(req.user.userId, code);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/members/:userId')
+  kickMember(
+    @Request() req,
+    @Param('id') teamId: string,
+    @Param('userId') targetUserId: string,
+  ) {
+    return this.teamsService.kickMember(req.user.userId, teamId, targetUserId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/members/:userId/role')
+  updateMemberRole(
+    @Request() req,
+    @Param('id') teamId: string,
+    @Param('userId') targetUserId: string,
+    @Body() body: { role: string },
+  ) {
+    return this.teamsService.updateMemberRole(
+      req.user.userId,
+      teamId,
+      targetUserId,
+      body.role,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

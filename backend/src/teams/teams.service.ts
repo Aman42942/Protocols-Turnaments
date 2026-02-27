@@ -37,13 +37,40 @@ export class TeamsService {
         },
       });
 
-      return team;
+      // Fetch the created team with members to return a complete object
+      return prisma.team.findUnique({
+        where: { id: team.id },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, avatar: true },
+              },
+            },
+          },
+        },
+      });
     });
   }
 
-  findAll() {
+  findAll(userId: string) {
     return this.prisma.team.findMany({
-      include: { _count: { select: { members: true } } },
+      where: {
+        members: {
+          some: { userId }
+        }
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, avatar: true },
+            },
+          },
+        },
+        _count: { select: { members: true } },
+      },
+      orderBy: { createdAt: 'desc' }
     });
   }
 
@@ -112,6 +139,59 @@ export class TeamsService {
   async joinByCode(userId: string, code: string) {
     const team = await this.findByInviteCode(code);
     return this.join(userId, team.id);
+  }
+
+  async kickMember(actorId: string, teamId: string, targetUserId: string) {
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      include: { members: true },
+    });
+
+    if (!team) throw new NotFoundException('Team not found');
+
+    const actor = team.members.find(m => m.userId === actorId);
+    const target = team.members.find(m => m.userId === targetUserId);
+
+    if (!actor) throw new BadRequestException('You are not a member of this team');
+    if (!target) throw new BadRequestException('Target user is not in this team');
+
+    // Logic: ONLY LEADER can kick anybody. COLEADER can kick MEMBERS.
+    if (actor.role === 'LEADER') {
+      // Leader can kick anyone except themselves (they should disband)
+      if (actorId === targetUserId) throw new BadRequestException('Leader cannot kick themselves. Disband the team instead.');
+    } else if (actor.role === 'COLEADER') {
+      if (target.role !== 'MEMBER') {
+        throw new ForbiddenException('Co-Leaders can only kick regular members');
+      }
+    } else {
+      throw new ForbiddenException('Only Leaders and Co-Leaders can kick members');
+    }
+
+    return this.prisma.teamMember.delete({
+      where: { id: target.id }
+    });
+  }
+
+  async updateMemberRole(leaderId: string, teamId: string, targetUserId: string, newRole: string) {
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      include: { members: true },
+    });
+
+    if (!team) throw new NotFoundException('Team not found');
+    if (team.leaderId !== leaderId) throw new ForbiddenException('Only the Team Leader can manage roles');
+
+    const target = team.members.find(m => m.userId === targetUserId);
+    if (!target) throw new BadRequestException('Target user is not in this team');
+
+    if (!['MEMBER', 'COLEADER'].includes(newRole)) {
+      throw new BadRequestException('Invalid role. Use MEMBER or COLEADER');
+    }
+
+    return this.prisma.teamMember.update({
+      where: { id: target.id },
+      data: { role: newRole }
+    });
   }
 
   update(id: string, updateTeamDto: UpdateTeamDto) {
