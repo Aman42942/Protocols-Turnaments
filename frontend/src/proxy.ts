@@ -110,6 +110,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
 }
 
+export default proxy;
+
 // See "Matching Paths" below to learn more
 export const config = {
     matcher: ['/admin/:path*', '/secure-admin-login'],
