@@ -28,6 +28,7 @@ interface Team {
     gameType: string;
     maxMembers: number;
     members: TeamMember[];
+    createdAt?: string;
     _count: { members: number };
 }
 
@@ -187,15 +188,15 @@ export default function TeamDetailsPage() {
                                         key={member.id}
                                         initial={{ x: -20, opacity: 0 }}
                                         animate={{ x: 0, opacity: 1 }}
-                                        className="flex items-center justify-between p-5 rounded-2xl bg-white/[0.02] border border-white/5 group hover:border-yellow-500/20 hover:bg-white/5 transition-all"
+                                        className="flex items-center justify-between p-5 rounded-2xl bg-muted/5 border border-border group hover:border-yellow-500/20 hover:bg-muted/20 transition-all"
                                     >
                                         <div className="flex items-center gap-5">
                                             <div className="relative">
-                                                <div className="w-14 h-14 rounded-2xl bg-black border border-white/10 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform">
+                                                <div className="w-14 h-14 rounded-2xl bg-muted border border-border flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform">
                                                     {member.user?.avatar ? (
                                                         <img src={member.user.avatar} className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <span className="text-xl font-black text-gray-700">{(member.user?.name || 'U').charAt(0).toUpperCase()}</span>
+                                                        <span className="text-xl font-black text-muted-foreground">{(member.user?.name || 'U').charAt(0).toUpperCase()}</span>
                                                     )}
                                                 </div>
                                                 {member.role === 'LEADER' && (
@@ -205,10 +206,10 @@ export default function TeamDetailsPage() {
                                                 )}
                                             </div>
                                             <div>
-                                                <p className="font-black uppercase text-base text-white group-hover:text-yellow-500 transition-colors">{member.user?.name || 'Unknown User'}</p>
+                                                <p className="font-black uppercase text-base text-foreground group-hover:text-yellow-500 transition-colors">{member.user?.name || 'Unknown User'}</p>
                                                 <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">{member.role}</span>
-                                                    <span className="w-1 h-1 rounded-full bg-gray-800" />
+                                                    <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">{member.role}</span>
+                                                    <span className="w-1 h-1 rounded-full bg-border" />
                                                     <span className="text-[9px] font-mono text-green-500 uppercase tracking-widest">Active</span>
                                                 </div>
                                             </div>
