@@ -45,7 +45,7 @@ export function TournamentCard({
             className="group relative h-full"
         >
             <Link href={`/tournaments/${id}`} className="block h-full">
-                <div className="relative h-full flex flex-col rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/40 overflow-hidden shadow-2xl transition-all duration-300 group-hover:border-primary/40 group-hover:shadow-primary/10">
+                <div className="relative h-full flex flex-col rounded-[2.5rem] bg-card/60 backdrop-blur-sm border border-border/40 overflow-hidden shadow-2xl transition-all duration-300 group-hover:border-primary/40 group-hover:shadow-primary/10 will-change-transform translate-z-0">
 
                     {/* Media Container */}
                     <div className="relative h-56 overflow-hidden">

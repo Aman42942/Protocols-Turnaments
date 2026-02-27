@@ -55,7 +55,7 @@ export function FeatureSection() {
                             viewport={{ once: true, amount: 0.2 }}
                             className="snap-center shrink-0 w-[280px] md:w-auto"
                         >
-                            <Card className="h-full border-border/40 bg-card/40 backdrop-blur-md hover:bg-card/60 hover:border-primary/40 transition-all duration-500 rounded-[2.5rem] overflow-hidden group">
+                            <Card className="h-full border-border/40 bg-card/60 backdrop-blur-sm hover:bg-card/80 hover:border-primary/40 transition-all duration-500 rounded-[2.5rem] overflow-hidden group will-change-transform translate-z-0">
                                 <CardHeader className="pt-8 px-8">
                                     <div className="bg-primary/10 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
                                         <feature.icon className="w-8 h-8 text-primary" />

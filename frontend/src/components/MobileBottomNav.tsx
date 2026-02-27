@@ -25,7 +25,7 @@ export function MobileBottomNav() {
 
     return (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] md:hidden w-[90%] max-w-md">
-            <nav className="relative flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-xl border border-border/50 rounded-[2rem] shadow-[0_8px_32px_rgba(0,0,0,0.3)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.8)] overflow-visible">
+            <nav className="relative flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-xl border border-border/50 rounded-[2rem] shadow-[0_8px_32px_rgba(0,0,0,0.3)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.8)] overflow-visible will-change-transform translate-z-0">
                 {navItems.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;

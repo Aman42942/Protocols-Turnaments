@@ -20,7 +20,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         // Connect to the backend URL (ensure this matches your .env or backend port)
         // Assuming backend is on port 3001 or proxied via Next.js rewrites
         // For local dev, simpler to point directly if CORS allowed.
-        const socketInstance = io("http://localhost:3001", {
+        const socketInstance = io(process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:4000", {
             transports: ["websocket"],
             autoConnect: true,
             reconnection: true,
