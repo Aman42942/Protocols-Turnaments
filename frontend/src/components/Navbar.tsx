@@ -229,7 +229,7 @@ export function Navbar() {
                                 <div className="space-y-1">
                                     <p className="px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-3">Competition</p>
                                     <SidebarLink href="/tournaments?type=solo" icon={User} label="Solo Matchups" active={false} onClick={() => setIsOpen(false)} />
-                                    <SidebarLink href="/tournaments?type=team" icon={Users} label="Team Clans" active={false} onClick={() => setIsOpen(false)} />
+                                    <SidebarLink href="/dashboard/teams" icon={Users} label="My Teams" active={pathname === '/dashboard/teams'} onClick={() => setIsOpen(false)} />
                                 </div>
 
                                 <div className="space-y-1">
