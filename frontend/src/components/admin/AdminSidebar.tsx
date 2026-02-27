@@ -23,9 +23,9 @@ const NAV_ITEMS = [
 function ScanLine() {
     return (
         <motion.div
-            className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent pointer-events-none z-0"
-            animate={{ y: [0, 280, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+            className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent pointer-events-none z-0 hidden md:block"
+            animate={{ y: [0, 480, 0] }}
+            transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
         />
     );
 }
@@ -121,8 +121,8 @@ export function AdminSidebar({ isOpen, setIsOpen }: AdminSidebarProps) {
                                         <motion.div
                                             className="ml-auto w-1.5 h-1.5 rounded-full"
                                             style={{ background: item.color }}
-                                            animate={{ scale: [1, 1.4, 1], opacity: [1, 0.6, 1] }}
-                                            transition={{ duration: 2, repeat: Infinity }}
+                                            animate={{ opacity: [1, 0.4, 1] }}
+                                            transition={{ duration: 3, repeat: Infinity }}
                                         />
                                     )}
 
@@ -206,7 +206,7 @@ export function AdminSidebar({ isOpen, setIsOpen }: AdminSidebarProps) {
                                                     <Icon className="w-5 h-5" style={{ color: active ? item.color : undefined }} />
                                                 </div>
                                                 <span className={cn('font-semibold', active ? 'text-foreground' : 'text-muted-foreground')}>{item.name}</span>
-                                                {active && <motion.div className="ml-auto w-2 h-2 rounded-full" style={{ background: item.color }} animate={{ scale: [1, 1.4, 1] }} transition={{ duration: 1.5, repeat: Infinity }} />}
+                                                {active && <motion.div className="ml-auto w-2 h-2 rounded-full" style={{ background: item.color }} animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 3, repeat: Infinity }} />}
                                             </motion.div>
                                         </Link>
                                     );
@@ -233,8 +233,8 @@ export function AdminSidebar({ isOpen, setIsOpen }: AdminSidebarProps) {
                 {/* Top glow line */}
                 <motion.div
                     className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
-                    animate={{ opacity: [0.4, 1, 0.4] }}
-                    transition={{ duration: 3, repeat: Infinity }}
+                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 4, repeat: Infinity }}
                 />
                 <div className="flex items-center justify-around px-1">
                     {NAV_ITEMS.slice(0, 5).map((item) => {

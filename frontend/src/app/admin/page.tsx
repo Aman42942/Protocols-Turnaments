@@ -22,8 +22,8 @@ function GlitchCounter({ value, prefix = '' }: { value: number; prefix?: string 
         started.current = true;
 
         let cur = 0;
-        const duration = 1200;
-        const steps = 60;
+        const duration = 800;
+        const steps = 30;
         const inc = value / steps;
         const interval = duration / steps;
 
@@ -59,12 +59,10 @@ function HUDCard({ children, color, className = '' }: { children: React.ReactNod
             <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 rounded-bl-sm opacity-60 transition-opacity group-hover:opacity-100" style={{ borderColor: color }} />
             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 rounded-br-sm opacity-60 transition-opacity group-hover:opacity-100" style={{ borderColor: color }} />
 
-            {/* Bottom glow on hover */}
-            <motion.div
-                className="absolute bottom-0 left-0 right-0 h-px"
+            {/* Static glow on hover - better for performance than infinite animation */}
+            <div
+                className="absolute bottom-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                 style={{ background: `linear-gradient(to right, transparent, ${color}, transparent)` }}
-                animate={{ opacity: [0.3, 0.8, 0.3] }}
-                transition={{ duration: 3, repeat: Infinity }}
             />
             {children}
         </div>
@@ -172,9 +170,10 @@ export default function AdminDashboard() {
                     const value = stats?.[cfg.key] || 0;
                     return (
                         <motion.div key={i}
-                            initial={{ opacity: 0, y: 24, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{ delay: i * 0.1, type: 'spring', stiffness: 180 }}
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            whileInView={{ opacity: 1, scale: 1 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: i * 0.05 }}
                         >
                             <HUDCard color={cfg.color}>
                                 <div className="p-4">

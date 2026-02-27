@@ -14,7 +14,7 @@ import {
 import { ADMIN_ROLES } from '@/lib/roles';
 
 interface TeamMember { userId: string; role: string; user: { id: string; name: string; avatar: string | null }; }
-interface Team { id: string; name: string; logo: string | null; leaderId: string; gameType: string; members: TeamMember[]; }
+interface Team { id: string; name: string; logo: string | null; leaderId: string; gameType: string; members: TeamMember[]; createdAt?: string; }
 interface Participant {
     id: string;
     userId: string;
@@ -167,7 +167,7 @@ export default function AdminTeamsPage({ params }: { params: { id: string } }) {
 
                         return (
                             <Card key={team.id} className={`relative overflow-hidden transition-all ${isDisqualified ? 'opacity-50 border-dashed' :
-                                    hasFraud ? 'border-red-500/40 bg-red-500/5' : ''
+                                hasFraud ? 'border-red-500/40 bg-red-500/5' : ''
                                 }`}>
                                 {hasFraud && !isDisqualified && (
                                     <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-500 to-orange-500" />
