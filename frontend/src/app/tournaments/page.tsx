@@ -8,11 +8,8 @@ import {
     Search, Filter, Trophy, Calendar, Users, Wallet, Loader2, Gamepad2,
     Swords, Timer, Flame, Star, Crown, ChevronRight, SlidersHorizontal, Zap
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { TournamentCard } from '@/components/TournamentCard';
 
 interface Tournament {
     id: string;
@@ -118,26 +115,20 @@ export default function TournamentsPage() {
                             <p className="text-muted-foreground text-lg">Find your next battle. Compete for real prizes.</p>
                         </div>
 
-                        {/* Quick Stats - Horizontal Scroll on Mobile with Snap */}
-                        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide snap-x snap-mandatory">
+                        {/* Quick Stats - Horizontal Scroll on Mobile */}
+                        <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
                             {[
                                 { label: 'Active', value: tournaments.filter(t => !['COMPLETED', 'CANCELLED'].includes(t.status?.toUpperCase())).length, icon: Gamepad2 },
                                 { label: 'Live Now', value: liveCount, icon: Flame },
                                 { label: 'Total Prizes', value: `₹${(totalPrize / 1000).toFixed(0)}K`, icon: Trophy },
                             ].map((s, i) => (
-                                <motion.div
-                                    key={i}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-card/50 backdrop-blur-sm border shadow-sm shrink-0 snap-center min-w-[140px]"
-                                >
-                                    <div className="p-2 rounded-xl bg-primary/10">
-                                        <s.icon className="h-5 w-5 text-primary" />
-                                    </div>
+                                <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/50 border shrink-0">
+                                    <s.icon className="h-4 w-4 text-primary" />
                                     <div>
-                                        <p className="text-xl font-black leading-none">{s.value}</p>
-                                        <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">{s.label}</p>
+                                        <p className="text-lg font-bold leading-none">{s.value}</p>
+                                        <p className="text-[10px] text-muted-foreground">{s.label}</p>
                                     </div>
-                                </motion.div>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -176,23 +167,19 @@ export default function TournamentsPage() {
                         </div>
                     </div>
 
-                    {/* Game Filter Pills - Snap Scroll */}
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide snap-x">
+                    {/* Game Filter Pills */}
+                    <div className="flex gap-2 overflow-x-auto pb-1">
                         {GAMES.map(game => (
-                            <motion.button
+                            <button
                                 key={game.key}
-                                whileTap={{ scale: 0.95 }}
                                 onClick={() => setSelectedGame(game.key)}
-                                className={cn(
-                                    "flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold whitespace-nowrap transition-all border snap-start",
-                                    selectedGame === game.key
-                                        ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
-                                        : "bg-background text-muted-foreground hover:bg-muted border-border"
-                                )}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${selectedGame === game.key
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border'}`}
                             >
                                 <game.icon className="h-4 w-4" />
                                 {game.label}
-                            </motion.button>
+                            </button>
                         ))}
                     </div>
 
@@ -230,22 +217,99 @@ export default function TournamentsPage() {
                 {!loading && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredTournaments.length > 0 ? (
-                            filteredTournaments.map(t => (
-                                <TournamentCard
-                                    key={t.id}
-                                    id={t.id}
-                                    title={t.title}
-                                    game={t.game}
-                                    tier={t.tier}
-                                    entryFee={t.entryFeePerPerson}
-                                    prizePool={t.prizePool}
-                                    startDate={t.startDate}
-                                    maxTeams={t.maxTeams}
-                                    registeredTeams={t._count?.teams || 0}
-                                    gameMode={t.gameMode}
-                                    status={t.status}
-                                />
-                            ))
+                            filteredTournaments.map(t => {
+                                const registered = t._count?.teams || 0;
+                                const fillPercent = Math.min((registered / t.maxTeams) * 100, 100);
+                                const isFull = registered >= t.maxTeams;
+                                const timeLeft = getTimeLeft(t.startDate);
+                                const style = GAME_STYLES[t.game.toUpperCase()] || GAME_STYLES['VALORANT'];
+
+                                return (
+                                    <Link key={t.id} href={`/tournaments/${t.id}`}>
+                                        <Card className={`overflow-hidden hover:shadow-xl ${style.glow} hover:border-primary/30 transition-all duration-300 cursor-pointer h-full group border-border/50`}>
+                                            {/* Game Banner */}
+                                            <div className={`relative h-28 bg-gradient-to-br ${style.gradient} border-b flex items-center justify-center`}>
+                                                <div className="text-center">
+                                                    <Gamepad2 className={`h-8 w-8 mx-auto mb-1 ${style.accent} opacity-60 group-hover:opacity-100 transition`} />
+                                                    <span className={`text-sm font-bold tracking-widest ${style.accent}`}>{t.game}</span>
+                                                </div>
+
+                                                {/* Status overlay */}
+                                                <div className="absolute top-3 left-3">
+                                                    {getStatusBadge(t.status)}
+                                                </div>
+                                                <div className="absolute top-3 right-3">
+                                                    {getTierBadge(t.tier)}
+                                                </div>
+
+                                                {/* Countdown */}
+                                                {timeLeft && (
+                                                    <div className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-1 rounded-md bg-background/80 backdrop-blur text-[10px] font-medium">
+                                                        <Timer className="h-3 w-3 text-primary" />
+                                                        <span>{timeLeft}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <CardHeader className="pb-2 pt-4">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Badge variant="outline" className="text-[10px] px-2 py-0">{t.gameMode}</Badge>
+                                                </div>
+                                                <CardTitle className="line-clamp-1 text-lg group-hover:text-primary transition">{t.title}</CardTitle>
+                                                <CardDescription className="flex items-center gap-1.5 text-xs">
+                                                    <Calendar className="w-3 h-3" />
+                                                    {new Date(t.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                </CardDescription>
+                                            </CardHeader>
+
+                                            <CardContent className="pb-3 space-y-3">
+                                                {/* Prize + Entry */}
+                                                <div className="flex gap-3">
+                                                    <div className="flex-1 p-2.5 rounded-lg bg-yellow-500/10 text-center">
+                                                        <Trophy className="h-4 w-4 mx-auto text-yellow-500 mb-1" />
+                                                        <p className="text-sm font-bold">₹{t.prizePool.toLocaleString('en-IN')}</p>
+                                                        <p className="text-[10px] text-muted-foreground">Prize</p>
+                                                    </div>
+                                                    <div className="flex-1 p-2.5 rounded-lg bg-green-500/10 text-center">
+                                                        <Wallet className="h-4 w-4 mx-auto text-green-500 mb-1" />
+                                                        <p className="text-sm font-bold">{t.entryFeePerPerson > 0 ? `₹${t.entryFeePerPerson}` : 'FREE'}</p>
+                                                        <p className="text-[10px] text-muted-foreground">Entry</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Progress bar */}
+                                                <div>
+                                                    <div className="flex items-center justify-between text-xs mb-1.5">
+                                                        <span className="text-muted-foreground flex items-center gap-1">
+                                                            <Users className="h-3 w-3" /> {registered}/{t.maxTeams}
+                                                        </span>
+                                                        <span className={`font-medium ${isFull ? 'text-red-500' : fillPercent > 70 ? 'text-orange-500' : 'text-muted-foreground'}`}>
+                                                            {isFull ? '🔥 Full' : `${t.maxTeams - registered} left`}
+                                                        </span>
+                                                    </div>
+                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-700 ${isFull ? 'bg-red-500' : fillPercent > 70 ? 'bg-orange-500' : 'bg-primary'}`}
+                                                            style={{ width: `${fillPercent}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+
+                                            <CardFooter className="pt-0">
+                                                <Button
+                                                    className="w-full group-hover:shadow-md transition-all"
+                                                    variant={isFull ? "outline" : "default"}
+                                                    disabled={isFull}
+                                                >
+                                                    {isFull ? '🔒 Full' : 'View & Register'}
+                                                    {!isFull && <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-0.5 transition-transform" />}
+                                                </Button>
+                                            </CardFooter>
+                                        </Card>
+                                    </Link>
+                                );
+                            })
                         ) : (
                             <div className="col-span-full text-center py-20 bg-muted/30 rounded-2xl border border-dashed">
                                 <Filter className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-40" />
