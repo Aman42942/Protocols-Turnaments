@@ -14,7 +14,6 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { LiveLeaderboard } from '@/components/tournament/LiveLeaderboard';
 import { TournamentActivityFeed } from '@/components/tournament/TournamentActivityFeed';
-import { UpiPaymentFallback } from '@/components/payment/UpiPaymentFallback';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -110,12 +109,9 @@ export default function TournamentDetailPage() {
     const [tournament, setTournament] = useState<Tournament | null>(null);
     const [loading, setLoading] = useState(true);
     const [registering, setRegistering] = useState(false);
-    const [showUpiModal, setShowUpiModal] = useState(false);
-    const [upiAmount, setUpiAmount] = useState(0);
     const [registered, setRegistered] = useState(false);
     const [walletBalance, setWalletBalance] = useState<number | null>(null);
     const [activeTab, setActiveTab] = useState<'overview' | 'leaderboard' | 'rules' | 'players'>('overview');
-    const [showPaymentChoice, setShowPaymentChoice] = useState(false);
     const [cashfree, setCashfree] = useState<any>(null);
 
     useEffect(() => {
@@ -170,14 +166,13 @@ export default function TournamentDetailPage() {
             return;
         }
 
-        // Case 2: PAID Entry -> Choice
-        setShowPaymentChoice(true);
+        // Case 2: PAID Entry -> Direct Cashfree
+        handleCashfreeRegister();
     };
 
     const handleCashfreeRegister = async () => {
         if (!cashfree || !tournament) return;
         setRegistering(true);
-        setShowPaymentChoice(false);
         try {
             // Step 1: Create Order
             const orderRes = await api.post(`/tournaments/${params.id}/create-order`);
@@ -285,76 +280,6 @@ export default function TournamentDetailPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* ===== PAYMENT CHOICE MODAL ===== */}
-            {showPaymentChoice && tournament && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
-                    <Card className="w-full max-w-md border-primary/20 shadow-2xl animate-in zoom-in duration-200">
-                        <CardHeader className="text-center pb-2">
-                            <CardTitle className="text-2xl font-black">Choose Payment Method</CardTitle>
-                            <CardDescription>Select how you want to pay the ₹{tournament.entryFeePerPerson} entry fee</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4 p-6">
-                            <button
-                                onClick={handleCashfreeRegister}
-                                className="w-full group relative p-4 rounded-2xl border-2 border-primary/20 bg-primary/5 hover:border-primary hover:bg-primary/10 transition-all text-left"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 rounded-xl bg-primary/20 text-primary">
-                                        <Zap className="h-6 w-6" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-lg">Online Payment</p>
-                                        <p className="text-xs text-muted-foreground italic">Fastest — Instant Registration</p>
-                                    </div>
-                                    <ChevronRight className="h-5 w-5 ml-auto text-muted-foreground group-hover:text-primary transition-colors" />
-                                </div>
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    setUpiAmount(tournament.entryFeePerPerson);
-                                    setShowUpiModal(true);
-                                    setShowPaymentChoice(false);
-                                }}
-                                className="w-full group relative p-4 rounded-2xl border-2 border-orange-500/20 bg-orange-500/5 hover:border-orange-500 hover:bg-orange-500/10 transition-all text-left"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 rounded-xl bg-orange-500/20 text-orange-500">
-                                        <Shield className="h-6 w-6" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-lg text-orange-500">Emergency UPI QR</p>
-                                        <p className="text-xs text-muted-foreground italic">Manual — Reliable Fallback</p>
-                                    </div>
-                                    <ChevronRight className="h-5 w-5 ml-auto text-muted-foreground group-hover:text-orange-500 transition-colors" />
-                                </div>
-                            </button>
-
-                            <Button
-                                variant="ghost"
-                                className="w-full mt-2"
-                                onClick={() => setShowPaymentChoice(false)}
-                            >
-                                Cancel
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
-
-            {/* ===== UPI EMERGENCY FALLBACK ===== */}
-            {showUpiModal && tournament && (
-                <UpiPaymentFallback
-                    amount={upiAmount}
-                    tournamentName={tournament.title}
-                    tournamentId={params.id as string}
-                    onClose={() => setShowUpiModal(false)}
-                    onConfirm={() => {
-                        setShowUpiModal(false);
-                        fetchTournament(); // Refresh to show "You're Registered"
-                    }}
-                />
-            )}
             {/* ===== IMMERSIVE HERO BANNER ===== */}
             <div className={`relative overflow-hidden bg-gradient-to-br ${gameColor.gradient} border-b min-h-[40vh] flex flex-col justify-end pb-12`}>
                 <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.05] dark:opacity-[0.1]" />

@@ -38,22 +38,13 @@ interface UpiDetails {
     merchantName: string;
 }
 
-const QUICK_AMOUNTS = [50, 100, 250, 500, 1000, 2000];
+
 
 export default function WalletPage() {
     const router = useRouter();
     const [wallet, setWallet] = useState<WalletData | null>(null);
     const [loading, setLoading] = useState(true);
     const [upiDetails, setUpiDetails] = useState<UpiDetails | null>(null);
-
-    // Deposit state
-    const [showDeposit, setShowDeposit] = useState(false);
-    const [depositAmount, setDepositAmount] = useState('');
-    const [selectedMethod, setSelectedMethod] = useState<'cashfree' | 'upi_qr' | 'upi_id' | 'bank'>('cashfree');
-    const [utrNumber, setUtrNumber] = useState('');
-    const [depositStep, setDepositStep] = useState<'amount' | 'pay' | 'verify'>('amount');
-    const [submitting, setSubmitting] = useState(false);
-    const [depositSuccess, setDepositSuccess] = useState(false);
 
     // Withdraw state
     const [showWithdraw, setShowWithdraw] = useState(false);
@@ -101,90 +92,7 @@ export default function WalletPage() {
         initCashfree();
     }, []);
 
-    const handleCashfreeDeposit = async () => {
-        const amount = parseFloat(depositAmount);
-        if (!amount || amount < 10) return alert('Minimum deposit is ₹10');
-        if (!cashfree) return alert('Cashfree SDK failed to load. Please refresh.');
 
-        setSubmitting(true);
-        try {
-            // 1. Create Order in Backend
-            const { data } = await api.post('/payments/create-order', { amount });
-
-            // 2. Open Cashfree Checkout
-            const checkoutOptions = {
-                paymentSessionId: data.payment_session_id,
-                redirectTarget: "_modal", // Open in modal
-            };
-
-            cashfree.checkout(checkoutOptions).then((result: any) => {
-                if (result.error) {
-                    console.log("User has closed the popup or there is some payment error");
-                    console.log(result.error);
-                    alert('Payment cancelled or failed.');
-                    setSubmitting(false);
-                }
-                if (result.redirect) {
-                    console.log("Payment will be redirected");
-                    setSubmitting(false);
-                }
-                if (result.paymentDetails) {
-                    console.log("Payment has been completed");
-                    verifyCashfreePayment(data.order_id);
-                }
-            });
-
-        } catch (err: any) {
-            alert(err.response?.data?.message || 'Failed to initiate payment');
-            setSubmitting(false);
-        }
-    };
-
-    const verifyCashfreePayment = async (orderId: string) => {
-        try {
-            const verifyRes = await api.post('/payments/verify', {
-                order_id: orderId
-            });
-
-            if (verifyRes.data.success) {
-                setDepositSuccess(true);
-                setTimeout(() => {
-                    setShowDeposit(false);
-                    setDepositSuccess(false);
-                    setDepositAmount('');
-                    loadData();
-                    setSubmitting(false);
-                }, 3000);
-            }
-        } catch (err: any) {
-            alert(err.response?.data?.message || 'Verification failed. Please contact support.');
-            setSubmitting(false);
-        }
-    };
-
-    const handleDeposit = async () => {
-        if (!utrNumber.trim()) return alert('Please enter UTR/Transaction Reference Number');
-        setSubmitting(true);
-        try {
-            await api.post('/wallet/qr-deposit', {
-                amount: parseFloat(depositAmount),
-                utrNumber: utrNumber.trim(),
-            });
-            setDepositSuccess(true);
-            setTimeout(() => {
-                setShowDeposit(false);
-                setDepositStep('amount');
-                setDepositAmount('');
-                setUtrNumber('');
-                setDepositSuccess(false);
-                loadData();
-            }, 3000);
-        } catch (err: any) {
-            alert(err.response?.data?.message || 'Deposit failed');
-        } finally {
-            setSubmitting(false);
-        }
-    };
 
     const handleWithdraw = async () => {
         if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) return alert('Enter valid amount');
@@ -256,27 +164,7 @@ export default function WalletPage() {
         );
     }
 
-    // ===== DEPOSIT SUCCESS =====
-    if (depositSuccess) {
-        return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <div className="text-center max-w-md mx-auto">
-                    <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6 animate-pulse">
-                        <CheckCircle className="h-10 w-10 text-green-500" />
-                    </div>
-                    <h2 className="text-2xl font-bold mb-2">Deposit Request Submitted!</h2>
-                    <p className="text-muted-foreground mb-4">
-                        Your deposit of <span className="font-bold text-primary">₹{depositAmount}</span> is being verified.
-                        Amount will be credited within 5-10 minutes.
-                    </p>
-                    <div className="p-4 bg-muted/50 rounded-xl text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4 inline mr-2" />
-                        UTR: <span className="font-mono font-bold text-foreground">{utrNumber}</span>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -312,7 +200,7 @@ export default function WalletPage() {
                                 size="lg"
                                 variant="outline"
                                 className="bg-transparent border-white/30 text-white hover:bg-white/10 font-bold flex-1 sm:flex-none"
-                                onClick={() => { setShowWithdraw(true); setShowDeposit(false); }}
+                                onClick={() => { setShowWithdraw(true); }}
                             >
                                 <ArrowUpRight className="h-5 w-5 mr-2" />
                                 Withdraw
