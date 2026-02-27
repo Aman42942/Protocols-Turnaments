@@ -20,9 +20,13 @@ export function Navbar() {
 
     useMotionValueEvent(scrollY, "change", (latest) => {
         const previous = scrollY.getPrevious();
-        if (previous !== undefined && latest > previous && latest > 150) {
+        if (previous === undefined) return;
+
+        // Only trigger state change if we cross a significant threshold to reduce re-renders
+        const diff = latest - previous;
+        if (latest > 150 && diff > 10 && !hidden) {
             setHidden(true);
-        } else {
+        } else if ((diff < -10 || latest <= 50) && hidden) {
             setHidden(false);
         }
     });
@@ -97,8 +101,8 @@ export function Navbar() {
         <>
             {/* Announcements */}
             {announcements.length > 0 && (
-                <div className="bg-primary text-primary-foreground px-4 py-2 text-sm font-medium text-center relative overflow-hidden">
-                    <div className="animate-marquee whitespace-nowrap">
+                <div className="bg-primary text-primary-foreground px-4 py-2 text-[10px] md:text-sm font-bold text-center relative overflow-hidden">
+                    <div className="animate-marquee whitespace-nowrap will-change-transform">
                         {announcements.map((a, i) => (
                             <span key={a.id} className="mx-4 inline-flex items-center gap-2">
                                 <span className="uppercase text-[10px] bg-background/20 px-1 rounded">{a.type}</span>

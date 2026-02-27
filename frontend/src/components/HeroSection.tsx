@@ -13,21 +13,19 @@ export function HeroSection() {
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 bg-background">
                 <motion.div
                     animate={{
-                        scale: [1, 1.2, 1],
-                        rotate: [0, 90, 0],
-                        opacity: [0.2, 0.4, 0.2]
+                        scale: [1, 1.1, 1],
+                        opacity: [0.3, 0.5, 0.3]
                     }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] bg-primary/20 rounded-full blur-[120px]"
+                    transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute top-[-20%] left-[-20%] w-[100%] h-[100%] bg-primary/20 rounded-full blur-[120px]"
                 />
                 <motion.div
                     animate={{
-                        scale: [1, 1.3, 1],
-                        rotate: [0, -90, 0],
+                        scale: [1, 1.2, 1],
                         opacity: [0.2, 0.4, 0.2]
                     }}
-                    transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                    className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] bg-purple-500/20 rounded-full blur-[120px]"
+                    transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute bottom-[-20%] right-[-20%] w-[100%] h-[100%] bg-purple-500/20 rounded-full blur-[120px]"
                 />
                 <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.02] dark:opacity-[0.05]" />
             </div>

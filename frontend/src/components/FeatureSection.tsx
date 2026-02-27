@@ -33,8 +33,9 @@ export function FeatureSection() {
             <div className="container">
                 <div className="text-center mb-12">
                     <motion.h2
-                        initial={{ opacity: 0, scale: 0.9 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
                         whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true, margin: "-50px" }}
                         className="text-4xl md:text-5xl font-black tracking-tighter mb-4 italic"
                     >
                         PROTOCOL <span className="text-primary">EDGE</span>
@@ -48,10 +49,10 @@ export function FeatureSection() {
                     {features.map((feature, index) => (
                         <motion.div
                             key={index}
-                            initial={{ opacity: 0, x: 20 }}
-                            whileInView={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            viewport={{ once: true }}
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            viewport={{ once: true, amount: 0.2 }}
                             className="snap-center shrink-0 w-[280px] md:w-auto"
                         >
                             <Card className="h-full border-border/40 bg-card/40 backdrop-blur-md hover:bg-card/60 hover:border-primary/40 transition-all duration-500 rounded-[2.5rem] overflow-hidden group">
