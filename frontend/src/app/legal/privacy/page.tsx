@@ -26,7 +26,7 @@ export default function PrivacyPolicy() {
                             <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
                                 <li><strong>Account Info</strong>: Email, username, and encrypted password.</li>
                                 <li><strong>Game Data</strong>: In-game IDs (e.g., Valorant Riot ID) for match verification.</li>
-                                <li><strong>Payment Info</strong>: Transaction IDs and history. We do NOT store your full credit card or bank details; these are handled securely by Razorpay.</li>
+                                <li><strong>Payment Info</strong>: Transaction IDs and history. We do NOT store your full credit card or bank details; these are handled securely by Cashfree.</li>
                             </ul>
                         </section>
 

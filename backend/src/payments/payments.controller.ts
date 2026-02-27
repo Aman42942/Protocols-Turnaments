@@ -10,7 +10,7 @@ export class PaymentsController {
     private readonly paymentsService: PaymentsService,
     private readonly walletService: WalletService,
     private readonly notificationsService: NotificationsService,
-  ) {}
+  ) { }
 
   @UseGuards(JwtAuthGuard)
   @Post('create-order')
@@ -51,26 +51,29 @@ export class PaymentsController {
 
   @Post('webhook')
   async handleWebhook(@Request() req, @Body() body: any) {
-    const signature = req.headers['x-razorpay-signature'];
-    const isValid = await this.paymentsService.verifyWebhook(body, signature);
+    // Note: Cashfree webhooks should be verified here using their specific signature
+    // For now, we use a basic placeholder as requested by the transition
+    const isValid = await this.paymentsService.verifyWebhook(
+      body,
+      req.headers['x-webhook-signature'],
+    );
 
     if (!isValid) {
       return { status: 'failed', message: 'Invalid signature' };
     }
 
-    // Handle specific events like payment.captured
-    if (body.event === 'payment.captured') {
-      const paymentId = body.payload.payment.entity.id;
-      const amount = body.payload.payment.entity.amount / 100; // to INR
-      const userId = body.payload.payment.entity.notes?.userId;
+    // Cashfree Webhook logic for 'ORDER_PAID'
+    if (body.type === 'ORDER_PAID' || body.event === 'order.paid') {
+      const orderId = body.data?.order?.order_id || body.order_id;
+      const amount = body.data?.order?.order_amount || body.order_amount;
+      const userId = body.data?.customer_details?.customer_id || body.customer_id;
 
-      if (userId) {
-        // Only credit if not already done via verify (idempotency check in deposit)
+      if (userId && amount) {
         await this.walletService.deposit(
           userId,
           amount,
-          'RAZORPAY_WEBHOOK',
-          paymentId,
+          'CASHFREE_WEBHOOK',
+          orderId,
         );
       }
     }

@@ -8,7 +8,7 @@ Welcome to **Protocol Tournaments**, a world-class esports platform built with N
 - **Team Management**: Create teams, invite members, and manage your roster.
 - **Authentication**: Secure JWT-based login and registration.
 - **Admin Dashboard**: Manage tournaments and view platform statistics.
-- **Mock Integrations**: Simulated Payment Gateway (Razorpay) and Game API verification.
+- **Secure Payments**: Integrated with Cashfree PG for automated entry fee processing and winnings.
 
 ## 🛠️ Tech Stack
 - **Frontend**: Next.js 15, Tailwind CSS, Framer Motion, Axios.

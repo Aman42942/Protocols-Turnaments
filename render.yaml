@@ -11,12 +11,12 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
-      - key: RAZORPAY_KEY_ID
+      - key: CASHFREE_APP_ID
         sync: false
-      - key: RAZORPAY_KEY_SECRET
+      - key: CASHFREE_SECRET_KEY
         sync: false
-      - key: RAZORPAY_WEBHOOK_SECRET
-        sync: false
+      - key: CASHFREE_ENV
+        default: "PRODUCTION"
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_URL

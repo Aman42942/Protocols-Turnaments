@@ -87,7 +87,8 @@ export default function RootLayout({
           </BrandingProvider>
         </ThemeProvider>
 
-        <Script id="razorpay-checkout" src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+        {/* Cashfree SDK v3 */}
+        <Script id="cashfree-sdk" src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="lazyOnload" />
       </body>
     </html>
   );

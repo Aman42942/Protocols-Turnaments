@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://checkout.razorpay.com; connect-src 'self' ws://localhost:4000 http://localhost:4000 ws://127.0.0.1:4000 http://127.0.0.1:4000 https://vitals.vercel-insights.com https://tournament-backend-t0t9.onrender.com wss://tournament-backend-t0t9.onrender.com https://api.razorpay.com;"
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://sdk.cashfree.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://sdk.cashfree.com https://sandbox.cashfree.com https://payments.cashfree.com; connect-src 'self' ws://localhost:4000 http://localhost:4000 ws://127.0.0.1:4000 http://127.0.0.1:4000 https://vitals.vercel-insights.com https://tournament-backend-t0t9.onrender.com wss://tournament-backend-t0t9.onrender.com https://api.cashfree.com https://sandbox.cashfree.com;"
           }
         ]
       }

@@ -49,7 +49,7 @@ export default function WalletPage() {
     // Deposit state
     const [showDeposit, setShowDeposit] = useState(false);
     const [depositAmount, setDepositAmount] = useState('');
-    const [selectedMethod, setSelectedMethod] = useState<'razorpay' | 'upi_qr' | 'upi_id' | 'bank'>('razorpay');
+    const [selectedMethod, setSelectedMethod] = useState<'cashfree' | 'upi_qr' | 'upi_id' | 'bank'>('cashfree');
     const [utrNumber, setUtrNumber] = useState('');
     const [depositStep, setDepositStep] = useState<'amount' | 'pay' | 'verify'>('amount');
     const [submitting, setSubmitting] = useState(false);
