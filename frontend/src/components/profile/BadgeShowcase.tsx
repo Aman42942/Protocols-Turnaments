@@ -21,6 +21,42 @@ export interface AchievementBadge {
     color: string;        // Tailwind gradient string
 }
 
+export const ALL_BADGES: AchievementBadge[] = [
+    // ── RANKS (Game-like Hierarchy) ────────────────
+    {
+        id: 'rank_bronze', name: 'Bronze III', description: 'Complete your first match', tier: 'rank', category: 'Rank', emoji: '🥉', color: 'from-orange-800 to-orange-950',
+    },
+    {
+        id: 'rank_silver', name: 'Silver I', description: 'Participate in 5 tournaments', tier: 'rank', category: 'Rank', emoji: '🥈', color: 'from-gray-400 to-gray-600',
+    },
+    {
+        id: 'rank_gold', name: 'Gold IV', description: 'Participate in 15 tournaments', tier: 'rank', category: 'Rank', emoji: '🥇', color: 'from-yellow-400 to-amber-600',
+    },
+    {
+        id: 'rank_platinum', name: 'Platinum II', description: 'Participate in 30 tournaments', tier: 'rank', category: 'Rank', emoji: '💎', color: 'from-cyan-400 to-blue-600',
+    },
+    {
+        id: 'rank_diamond', name: 'Diamond Master', description: 'Participate in 50 tournaments', tier: 'rank', category: 'Rank', emoji: '💠', color: 'from-blue-400 to-indigo-600',
+    },
+    {
+        id: 'rank_heroic', name: 'Heroic Ruler', description: 'Participate in 100 tournaments', tier: 'rank', category: 'Rank', emoji: '🚩', color: 'from-red-500 to-orange-700',
+    },
+    {
+        id: 'rank_grandmaster', name: 'Grandmaster', description: 'Join 250 tournaments and lead the arena', tier: 'rank', category: 'Rank', emoji: '👑', color: 'from-yellow-300 to-red-600',
+    },
+
+    // ── PERFORMANCE ──────────────────────────────
+    {
+        id: 'first_blood', name: 'First Entry', description: 'Join your first paid tournament', tier: 'rare', category: 'Performance', emoji: '🩸', color: 'from-red-600 to-red-900',
+    },
+    {
+        id: 'wallet_warrior', name: 'Wallet Warrior', description: 'Have more than ₹500 in your wallet', tier: 'rare', category: 'Wealth', emoji: '💰', color: 'from-green-400 to-emerald-600',
+    },
+    {
+        id: 'veteran', name: 'Veteran Player', description: 'Account age over 30 days', tier: 'special', category: 'Milestone', emoji: '🎖️', color: 'from-blue-600 to-purple-600',
+    }
+];
+
 // ─── Tier Styling ───────────────────────────────────────────────────────────
 const TIER_CONFIG: Record<BadgeTier, {
     label: string;
@@ -199,55 +235,31 @@ function BadgeCard({ badge, compact = false }: { badge: AchievementBadge; compac
 export function BadgeShowcase({ user, compact = false }: { user?: any; compact?: boolean }) {
     const badges = useMemo(() => {
         const matchesCount = user?.teams?.length || 0;
-        const prizePoolsContributed = 0; // Placeholder for actual contribution
         const walletBalance = user?.wallet?.balance || 0;
+        const accountAgeDays = user?.createdAt ? (Date.now() - new Date(user.createdAt).getTime()) / (24 * 60 * 60 * 1000) : 0;
 
-        const badgeList: AchievementBadge[] = [
-            // ── RANKS (Game-like Hierarchy) ────────────────
-            {
-                id: 'rank_bronze', name: 'Bronze III', description: 'Complete your first match', tier: 'rank', category: 'Rank', emoji: '🥉', color: 'from-orange-800 to-orange-950',
-                earned: matchesCount >= 1, progress: { current: matchesCount, max: 1 }
-            },
-            {
-                id: 'rank_silver', name: 'Silver I', description: 'Participate in 5 tournaments', tier: 'rank', category: 'Rank', emoji: '🥈', color: 'from-gray-400 to-gray-600',
-                earned: matchesCount >= 5, progress: { current: matchesCount, max: 5 }
-            },
-            {
-                id: 'rank_gold', name: 'Gold IV', description: 'Participate in 15 tournaments', tier: 'rank', category: 'Rank', emoji: '🥇', color: 'from-yellow-400 to-amber-600',
-                earned: matchesCount >= 15, progress: { current: matchesCount, max: 15 }
-            },
-            {
-                id: 'rank_platinum', name: 'Platinum II', description: 'Participate in 30 tournaments', tier: 'rank', category: 'Rank', emoji: '💎', color: 'from-cyan-400 to-blue-600',
-                earned: matchesCount >= 30, progress: { current: matchesCount, max: 30 }
-            },
-            {
-                id: 'rank_diamond', name: 'Diamond Master', description: 'Participate in 50 tournaments', tier: 'rank', category: 'Rank', emoji: '💠', color: 'from-blue-400 to-indigo-600',
-                earned: matchesCount >= 50, progress: { current: matchesCount, max: 50 }
-            },
-            {
-                id: 'rank_heroic', name: 'Heroic Ruler', description: 'Participate in 100 tournaments', tier: 'rank', category: 'Rank', emoji: '🚩', color: 'from-red-500 to-orange-700',
-                earned: matchesCount >= 100, progress: { current: matchesCount, max: 100 }
-            },
-            {
-                id: 'rank_grandmaster', name: 'Grandmaster', description: 'Join 250 tournaments and lead the arena', tier: 'rank', category: 'Rank', emoji: '👑', color: 'from-yellow-300 to-red-600',
-                earned: matchesCount >= 250, progress: { current: matchesCount, max: 250 }
-            },
+        return ALL_BADGES.map(badge => {
+            let earned = false;
+            let current = 0;
+            let max = 0;
 
-            // ── PERFORMANCE ──────────────────────────────
-            {
-                id: 'first_blood', name: 'First Entry', description: 'Join your first paid tournament', tier: 'rare', category: 'Performance', emoji: '🩸', color: 'from-red-600 to-red-900',
-                earned: false // Dynamic check later
-            },
-            {
-                id: 'wallet_warrior', name: 'Wallet Warrior', description: 'Have more than ₹500 in your wallet', tier: 'rare', category: 'Wealth', emoji: '💰', color: 'from-green-400 to-emerald-600',
-                earned: walletBalance >= 500, progress: { current: Math.min(walletBalance, 500), max: 500 }
-            },
-            {
-                id: 'veteran', name: 'Veteran Player', description: 'Account age over 30 days', tier: 'special', category: 'Milestone', emoji: '🎖️', color: 'from-blue-600 to-purple-600',
-                earned: user?.createdAt ? (Date.now() - new Date(user.createdAt).getTime()) > 30 * 24 * 60 * 60 * 1000 : false
-            }
-        ];
-        return badgeList;
+            if (badge.id === 'rank_bronze') { earned = matchesCount >= 1; current = matchesCount; max = 1; }
+            if (badge.id === 'rank_silver') { earned = matchesCount >= 5; current = matchesCount; max = 5; }
+            if (badge.id === 'rank_gold') { earned = matchesCount >= 15; current = matchesCount; max = 15; }
+            if (badge.id === 'rank_platinum') { earned = matchesCount >= 30; current = matchesCount; max = 30; }
+            if (badge.id === 'rank_diamond') { earned = matchesCount >= 50; current = matchesCount; max = 50; }
+            if (badge.id === 'rank_heroic') { earned = matchesCount >= 100; current = matchesCount; max = 100; }
+            if (badge.id === 'rank_grandmaster') { earned = matchesCount >= 250; current = matchesCount; max = 250; }
+
+            if (badge.id === 'wallet_warrior') { earned = walletBalance >= 500; current = Math.min(walletBalance, 500); max = 500; }
+            if (badge.id === 'veteran') { earned = accountAgeDays >= 30; current = Math.min(accountAgeDays, 30); max = 30; }
+
+            return {
+                ...badge,
+                earned,
+                progress: max > 0 ? { current, max } : undefined
+            };
+        });
     }, [user]);
 
     const earned = badges.filter(b => b.earned);
