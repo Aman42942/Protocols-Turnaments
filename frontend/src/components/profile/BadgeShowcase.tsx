@@ -1,11 +1,12 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 
 // ─── Badge Tier Config ──────────────────────────────────────────────────────
-type BadgeTier = 'legendary' | 'epic' | 'rare' | 'common' | 'special';
+type BadgeTier = 'legendary' | 'epic' | 'rare' | 'common' | 'special' | 'rank';
 
 export interface AchievementBadge {
     id: string;
@@ -18,7 +19,6 @@ export interface AchievementBadge {
     progress?: { current: number; max: number };
     emoji: string;
     color: string;        // Tailwind gradient string
-    glow: string;         // Box shadow color
 }
 
 // ─── Tier Styling ───────────────────────────────────────────────────────────
@@ -39,6 +39,15 @@ const TIER_CONFIG: Record<BadgeTier, {
         text: 'text-yellow-300',
         ring: 'ring-yellow-400/50',
         shimmer: 'from-yellow-400/0 via-yellow-300/40 to-yellow-400/0',
+    },
+    rank: {
+        label: 'Ranked',
+        border: 'border-orange-500/60',
+        bg: 'from-orange-950/60 via-red-900/30 to-orange-950/60',
+        glow: 'shadow-[0_0_30px_-5px_rgba(249,115,22,0.6)]',
+        text: 'text-orange-300',
+        ring: 'ring-orange-500/50',
+        shimmer: 'from-orange-400/0 via-red-300/40 to-orange-400/0',
     },
     epic: {
         label: 'Epic',
@@ -78,35 +87,6 @@ const TIER_CONFIG: Record<BadgeTier, {
     },
 };
 
-// ─── All Available Badges ───────────────────────────────────────────────────
-export const ALL_BADGES: AchievementBadge[] = [
-    // ── LEGENDARY ─────────────────────────
-    { id: 'champion', name: 'Champion', description: 'Won 1st place in any tournament', tier: 'legendary', category: 'Tournament', emoji: '👑', color: 'from-yellow-400 to-amber-600', glow: '#f59e0b', earned: true, earnedDate: 'Jan 2025' },
-    { id: 'unstoppable', name: 'Unstoppable', description: 'Won 5 tournaments in a row', tier: 'legendary', category: 'Streak', emoji: '⚡', color: 'from-yellow-300 to-orange-500', glow: '#f97316', earned: false },
-    { id: 'goat', name: 'G.O.A.T', description: 'Top 1% of all players on leaderboard', tier: 'legendary', category: 'Leaderboard', emoji: '🐐', color: 'from-amber-400 to-yellow-600', glow: '#f59e0b', earned: false },
-
-    // ── EPIC ──────────────────────────────
-    { id: 'mvp', name: 'MVP', description: 'Named Most Valuable Player in a match', tier: 'epic', category: 'Tournament', emoji: '🏆', color: 'from-purple-400 to-fuchsia-600', glow: '#a855f7', earned: true, earnedDate: 'Dec 2024' },
-    { id: 'sharpshooter', name: 'Sharpshooter', description: '50%+ headshot rate in a season', tier: 'epic', category: 'Skill', emoji: '🎯', color: 'from-fuchsia-400 to-pink-600', glow: '#ec4899', earned: true, earnedDate: 'Feb 2025' },
-    { id: 'warlord', name: 'Warlord', description: 'Led a team to 10 victories', tier: 'epic', category: 'Leadership', emoji: '⚔️', color: 'from-red-400 to-rose-600', glow: '#ef4444', earned: false },
-    { id: 'phoenix', name: 'Phoenix', description: 'Won a tournament from last place', tier: 'epic', category: 'Comeback', emoji: '🔥', color: 'from-orange-400 to-red-600', glow: '#f97316', earned: false },
-
-    // ── RARE ──────────────────────────────
-    { id: 'early_bird', name: 'Early Bird', description: 'Joined during the beta phase', tier: 'rare', category: 'Community', emoji: '🐦', color: 'from-blue-400 to-cyan-600', glow: '#06b6d4', earned: true, earnedDate: 'Nov 2023' },
-    { id: 'sweeper', name: 'Tournament Sweep', description: 'Registered in 10+ tournaments', tier: 'rare', category: 'Activity', emoji: '🧹', color: 'from-sky-400 to-blue-600', glow: '#3b82f6', earned: true, earnedDate: 'Mar 2025', progress: { current: 10, max: 10 } },
-    { id: 'team_player', name: 'Team Player', description: 'Played with 5 different teams', tier: 'rare', category: 'Social', emoji: '🤝', color: 'from-indigo-400 to-purple-600', glow: '#6366f1', earned: false, progress: { current: 3, max: 5 } },
-    { id: 'streak_5', name: 'Win Streak', description: '5 consecutive match wins', tier: 'rare', category: 'Streak', emoji: '🔥', color: 'from-orange-400 to-yellow-600', glow: '#f59e0b', earned: true, earnedDate: 'Dec 2024' },
-
-    // ── SPECIAL ───────────────────────────
-    { id: 'verified', name: 'Verified Pro', description: 'Verified professional player', tier: 'special', category: 'Verified', emoji: '✅', color: 'from-emerald-400 to-green-600', glow: '#10b981', earned: true, earnedDate: 'Jan 2025' },
-    { id: 'content_creator', name: 'Content Creator', description: 'Official streamer / content creator', tier: 'special', category: 'Community', emoji: '📹', color: 'from-teal-400 to-emerald-600', glow: '#06b6d4', earned: false },
-
-    // ── COMMON ────────────────────────────
-    { id: 'first_win', name: 'First Win', description: 'Won your very first match', tier: 'common', category: 'Milestone', emoji: '🥇', color: 'from-gray-400 to-slate-600', glow: '#6b7280', earned: true, earnedDate: 'Oct 2023' },
-    { id: 'registered', name: 'Registered', description: 'Created your player account', tier: 'common', category: 'Milestone', emoji: '🎮', color: 'from-gray-400 to-slate-600', glow: '#6b7280', earned: true, earnedDate: 'Oct 2023' },
-    { id: 'profile_complete', name: 'Profile Pro', description: 'Filled out your complete profile', tier: 'common', category: 'Profile', emoji: '📋', color: 'from-gray-400 to-slate-600', glow: '#6b7280', earned: false, progress: { current: 4, max: 5 } },
-];
-
 // ─── Single Badge Card ───────────────────────────────────────────────────────
 function BadgeCard({ badge, compact = false }: { badge: AchievementBadge; compact?: boolean }) {
     const [hovered, setHovered] = useState(false);
@@ -122,7 +102,7 @@ function BadgeCard({ badge, compact = false }: { badge: AchievementBadge; compac
                 className={`relative flex flex-col items-center text-center rounded-2xl border overflow-hidden cursor-pointer transition-all duration-300
                     ${badge.earned
                         ? `bg-gradient-to-b ${tier.bg} ${tier.border} ${tier.glow}`
-                        : 'bg-gray-900/40 border-gray-700/30 opacity-55 grayscale'
+                        : 'bg-gray-800/10 border-gray-800/50 opacity-80 backdrop-blur-sm grayscale-[0.8]'
                     }
                     ${compact ? 'p-3' : 'p-4'}
                 `}
@@ -144,7 +124,7 @@ function BadgeCard({ badge, compact = false }: { badge: AchievementBadge; compac
 
                 {/* Emoji Icon */}
                 <div className={`relative ${compact ? 'text-3xl mb-1.5' : 'text-5xl mb-3'} select-none`}>
-                    <span>{badge.emoji}</span>
+                    <span className={badge.earned ? '' : 'blur-[2px]'}>{badge.earned ? badge.emoji : '🔒'}</span>
                     {badge.earned && (
                         <motion.div
                             animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.9, 0.5] }}
@@ -162,7 +142,7 @@ function BadgeCard({ badge, compact = false }: { badge: AchievementBadge; compac
                 {/* Tier pill */}
                 {!compact && (
                     <span className={`mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${tier.text} bg-black/30`}>
-                        {tier.label}
+                        {badge.earned ? tier.label : 'Locked'}
                     </span>
                 )}
 
@@ -200,9 +180,9 @@ function BadgeCard({ badge, compact = false }: { badge: AchievementBadge; compac
                         className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-3 w-52 pointer-events-none"
                     >
                         <div className={`bg-gray-950 border ${tier.border} rounded-xl p-3 shadow-2xl ${tier.glow}`}>
-                            <p className={`font-black text-sm ${tier.text}`}>{badge.emoji} {badge.name}</p>
-                            <p className={`text-[10px] uppercase font-bold ${tier.text} opacity-70 mb-1`}>{tier.label} · {badge.category}</p>
-                            <p className="text-xs text-gray-400 leading-snug">{badge.description}</p>
+                            <p className={`font-black text-sm ${tier.text}`}>{badge.earned ? badge.emoji : '🔒'} {badge.name}</p>
+                            <p className={`text-[10px] uppercase font-bold ${tier.text} opacity-70 mb-1`}>{badge.earned ? tier.label : 'Locked'} · {badge.category}</p>
+                            <p className="text-xs text-gray-400 leading-snug">{badge.earned ? badge.description : 'Connect and compete to unlock this badge!'}</p>
                             {badge.progress && !badge.earned && (
                                 <p className="text-[10px] text-gray-500 mt-1">Progress: {badge.progress.current}/{badge.progress.max}</p>
                             )}
@@ -215,67 +195,114 @@ function BadgeCard({ badge, compact = false }: { badge: AchievementBadge; compac
     );
 }
 
-// ─── BadgeShowcase Component (for Profile Page) ──────────────────────────────
-export function BadgeShowcase({ compact = false }: { compact?: boolean }) {
-    const earned = ALL_BADGES.filter(b => b.earned);
-    const locked = ALL_BADGES.filter(b => !b.earned);
+// ─── BadgeShowcase Component ────────────────────────────────────────────────
+export function BadgeShowcase({ user, compact = false }: { user?: any; compact?: boolean }) {
+    const badges = useMemo(() => {
+        const matchesCount = user?.teams?.length || 0;
+        const prizePoolsContributed = 0; // Placeholder for actual contribution
+        const walletBalance = user?.wallet?.balance || 0;
+
+        const badgeList: AchievementBadge[] = [
+            // ── RANKS (Game-like Hierarchy) ────────────────
+            {
+                id: 'rank_bronze', name: 'Bronze III', description: 'Complete your first match', tier: 'rank', category: 'Rank', emoji: '🥉', color: 'from-orange-800 to-orange-950',
+                earned: matchesCount >= 1, progress: { current: matchesCount, max: 1 }
+            },
+            {
+                id: 'rank_silver', name: 'Silver I', description: 'Participate in 5 tournaments', tier: 'rank', category: 'Rank', emoji: '🥈', color: 'from-gray-400 to-gray-600',
+                earned: matchesCount >= 5, progress: { current: matchesCount, max: 5 }
+            },
+            {
+                id: 'rank_gold', name: 'Gold IV', description: 'Participate in 15 tournaments', tier: 'rank', category: 'Rank', emoji: '🥇', color: 'from-yellow-400 to-amber-600',
+                earned: matchesCount >= 15, progress: { current: matchesCount, max: 15 }
+            },
+            {
+                id: 'rank_platinum', name: 'Platinum II', description: 'Participate in 30 tournaments', tier: 'rank', category: 'Rank', emoji: '💎', color: 'from-cyan-400 to-blue-600',
+                earned: matchesCount >= 30, progress: { current: matchesCount, max: 30 }
+            },
+            {
+                id: 'rank_diamond', name: 'Diamond Master', description: 'Participate in 50 tournaments', tier: 'rank', category: 'Rank', emoji: '💠', color: 'from-blue-400 to-indigo-600',
+                earned: matchesCount >= 50, progress: { current: matchesCount, max: 50 }
+            },
+            {
+                id: 'rank_heroic', name: 'Heroic Ruler', description: 'Participate in 100 tournaments', tier: 'rank', category: 'Rank', emoji: '🚩', color: 'from-red-500 to-orange-700',
+                earned: matchesCount >= 100, progress: { current: matchesCount, max: 100 }
+            },
+            {
+                id: 'rank_grandmaster', name: 'Grandmaster', description: 'Join 250 tournaments and lead the arena', tier: 'rank', category: 'Rank', emoji: '👑', color: 'from-yellow-300 to-red-600',
+                earned: matchesCount >= 250, progress: { current: matchesCount, max: 250 }
+            },
+
+            // ── PERFORMANCE ──────────────────────────────
+            {
+                id: 'first_blood', name: 'First Entry', description: 'Join your first paid tournament', tier: 'rare', category: 'Performance', emoji: '🩸', color: 'from-red-600 to-red-900',
+                earned: false // Dynamic check later
+            },
+            {
+                id: 'wallet_warrior', name: 'Wallet Warrior', description: 'Have more than ₹500 in your wallet', tier: 'rare', category: 'Wealth', emoji: '💰', color: 'from-green-400 to-emerald-600',
+                earned: walletBalance >= 500, progress: { current: Math.min(walletBalance, 500), max: 500 }
+            },
+            {
+                id: 'veteran', name: 'Veteran Player', description: 'Account age over 30 days', tier: 'special', category: 'Milestone', emoji: '🎖️', color: 'from-blue-600 to-purple-600',
+                earned: user?.createdAt ? (Date.now() - new Date(user.createdAt).getTime()) > 30 * 24 * 60 * 60 * 1000 : false
+            }
+        ];
+        return badgeList;
+    }, [user]);
+
+    const earned = badges.filter(b => b.earned);
+    const locked = badges.filter(b => !b.earned);
 
     return (
         <Card className="border-border/40 bg-card/40 backdrop-blur-md overflow-hidden">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 px-6 pt-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <span className="text-xl">🏅</span>
-                            Badges & Achievements
+                        <CardTitle className="text-2xl font-black italic tracking-tight uppercase flex items-center gap-2">
+                            Achievements
                         </CardTitle>
-                        <CardDescription className="text-xs mt-0.5">
-                            {earned.length} earned · {locked.length} remaining
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest mt-1 text-muted-foreground italic">
+                            {earned.length} badges earned · {locked.length} to unlock · Tournament Tier: {earned.length > 0 ? earned[earned.length - 1].name : 'Unranked'}
                         </CardDescription>
                     </div>
-                    <Link href="/badges">
-                        <button className="text-xs text-muted-foreground hover:text-primary transition-colors font-medium">
-                            View All →
-                        </button>
-                    </Link>
                 </div>
                 {/* Overall progress bar */}
-                <div className="mt-3">
-                    <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                        <span>Overall Completion</span>
-                        <span>{Math.round((earned.length / ALL_BADGES.length) * 100)}%</span>
+                <div className="mt-4">
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                        <span>Rank Progression</span>
+                        <span className="text-primary italic">{Math.round((earned.length / badges.length) * 100)}% Complete</span>
                     </div>
                     <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                         <motion.div
                             initial={{ width: 0 }}
-                            animate={{ width: `${(earned.length / ALL_BADGES.length) * 100}%` }}
+                            animate={{ width: `${(earned.length / badges.length) * 100}%` }}
                             transition={{ duration: 1.5, ease: 'easeOut', delay: 0.3 }}
-                            className="h-full rounded-full bg-gradient-to-r from-yellow-400 via-purple-500 to-blue-400"
+                            className="h-full rounded-full bg-gradient-to-r from-orange-600 via-primary to-blue-400"
                         />
                     </div>
                 </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6 pt-2">
                 {/* Earned row */}
-                <div className="mb-4">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
-                        <div className="h-px flex-1 bg-white/10" />
-                        ✨ Earned
-                        <div className="h-px flex-1 bg-white/10" />
+                {earned.length > 0 && (
+                    <div className="mb-8">
+                        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 mb-6 flex items-center gap-4">
+                            <span className="shrink-0 text-primary italic">Unlocked Legend</span>
+                            <div className="h-px flex-1 bg-gradient-to-r from-primary/20 to-transparent" />
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                            {earned.map(b => <BadgeCard key={b.id} badge={b} compact={compact} />)}
+                        </div>
                     </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                        {earned.map(b => <BadgeCard key={b.id} badge={b} compact={compact} />)}
-                    </div>
-                </div>
+                )}
 
                 {/* Locked section */}
                 <div>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
-                        <div className="h-px flex-1 bg-white/5" />
-                        🔒 Locked
-                        <div className="h-px flex-1 bg-white/5" />
+                    <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 mb-6 flex items-center gap-4">
+                        <span className="shrink-0 italic">Battle Vault (Locked)</span>
+                        <div className="h-px flex-1 bg-gradient-to-r from-muted/20 to-transparent" />
                     </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                         {locked.map(b => <BadgeCard key={b.id} badge={b} compact={compact} />)}
                     </div>
                 </div>

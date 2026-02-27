@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -112,9 +113,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 <span className="text-[9px] font-black text-green-500 uppercase tracking-wider">Live</span>
                             </motion.div>
                             <ThemeToggle />
-                            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-[10px] shadow-lg shadow-primary/30">
-                                {user?.name?.charAt(0).toUpperCase() || 'A'}
-                            </div>
+                            <Link href="/admin/profile">
+                                <motion.div
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-[10px] shadow-lg shadow-primary/30 cursor-pointer"
+                                >
+                                    {user?.name?.charAt(0).toUpperCase() || 'A'}
+                                </motion.div>
+                            </Link>
                         </div>
                     </div>
                 </header>

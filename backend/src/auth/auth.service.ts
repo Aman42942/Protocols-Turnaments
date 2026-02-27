@@ -62,6 +62,7 @@ export class AuthService {
       email: createAuthDto.email,
       password: hashedPassword,
       name: createAuthDto.name,
+      bgmiId: (createAuthDto as any).ign || (createAuthDto as any).gameId, // Map to BGMI as default if not specified
       role: 'USER',
       emailVerified: false,
       emailVerifyCode: verifyCode,
@@ -157,14 +158,16 @@ export class AuthService {
 
     // Auto-login after verification
     const { password, ...userWithoutPassword } = user;
+    const tokens = await this.getTokens(
+      userWithoutPassword.id,
+      userWithoutPassword.email,
+      userWithoutPassword.role,
+    );
     return {
       message: 'Email verified successfully!',
       verified: true,
-      ...(await this.getTokens(
-        userWithoutPassword.id,
-        userWithoutPassword.email,
-        userWithoutPassword.role,
-      )),
+      ...tokens,
+      user: userWithoutPassword,
     };
   }
 
@@ -206,7 +209,9 @@ export class AuthService {
   async login(userOrBody: any, ip?: string) {
     // If called from OAuth flow, user is already validated
     if (userOrBody.id) {
-      return this.getTokens(userOrBody.id, userOrBody.email, userOrBody.role);
+      const tokens = await this.getTokens(userOrBody.id, userOrBody.email, userOrBody.role);
+      const { password, ...userWithoutPassword } = userOrBody;
+      return { ...tokens, user: userWithoutPassword };
     }
 
     const { email, password } = userOrBody;
@@ -350,11 +355,12 @@ export class AuthService {
     );
 
     const { password, ...userWithoutPassword } = user;
-    return this.getTokens(
+    const tokens = await this.getTokens(
       userWithoutPassword.id,
       userWithoutPassword.email,
       userWithoutPassword.role,
     );
+    return { ...tokens, user: userWithoutPassword };
   }
 
   async resendLoginOTP(email: string) {
@@ -486,11 +492,12 @@ export class AuthService {
     );
 
     const { password, ...userWithoutPassword } = user;
-    return this.getTokens(
+    const tokens = await this.getTokens(
       userWithoutPassword.id,
       userWithoutPassword.email,
       userWithoutPassword.role,
     );
+    return { ...tokens, user: userWithoutPassword };
   }
 
   async disable2FA(userId: string, code: string) {

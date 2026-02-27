@@ -43,6 +43,8 @@ export default function RegisterPage() {
                 email: formData.email,
                 password: formData.password,
                 name: formData.name,
+                ign: formData.ign,
+                gameId: formData.gameId
             });
 
             if (res.data.requiresVerification) {
