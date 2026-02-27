@@ -20,7 +20,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   /** Publisher client — dedicated connection for publishing events */
   private publisher: Redis;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly config: ConfigService) { }
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -30,12 +30,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     this.subscriber = this.createClient('SUB', options);
     this.publisher = this.createClient('PUB', options);
 
-    // Wait for all connections to be ready before the app starts
-    await Promise.all([
+    // DANGER: Non-blocking connection to prevent server hang if Redis is down
+    Promise.all([
       this.waitReady(this.client, 'MAIN'),
       this.waitReady(this.subscriber, 'SUB'),
       this.waitReady(this.publisher, 'PUB'),
-    ]);
+    ]).catch(err => {
+      this.logger.error('Redis initialization failed, but continuing... Features like leaderboard might not work.', err.message);
+    });
   }
 
   async onModuleDestroy() {

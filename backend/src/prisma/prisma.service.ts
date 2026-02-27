@@ -10,7 +10,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   }
 
   async onModuleInit() {
-    let retries = 5;
+    let retries = 3; // Reduced for faster feedback
     while (retries > 0) {
       try {
         await this.$connect();
@@ -22,8 +22,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
           `Failed to connect to the database. Retries left: ${retries}`,
           err,
         );
-        if (retries === 0) throw err;
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        if (retries === 0) {
+          this.logger.warn('Database unavailable. App might be limited.');
+          // Do not throw error here, let the app start in degraded mode if possible
+          // Some health checks will report this.
+        }
+        await new Promise((resolve) => setTimeout(resolve, 3000));
       }
     }
   }
