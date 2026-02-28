@@ -59,6 +59,7 @@ export class PaymentsController {
     const isValid = await this.paymentsService.verifyWebhook(
       body,
       req.headers['x-webhook-signature'],
+      req.headers['x-webhook-timestamp'],
     );
 
     if (!isValid) {

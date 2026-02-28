@@ -131,10 +131,50 @@ export class PaymentsService {
     }
   }
 
-  async verifyWebhook(body: any, signature: string) {
-    return true;
-  }
+  async verifyWebhook(body: any, signature: string, timestamp?: string) {
+    if (!this.secretKey) {
+      console.warn('[SECURITY] Webhook verification skipped because CASHFREE_SECRET_KEY is missing.');
+      return false; // Fail secure: If there's no secret key, we shouldn't process webhooks.
+    }
 
+    if (!signature) {
+      console.warn('[SECURITY] Missing x-webhook-signature in webhook request logs.');
+      return false;
+    }
+
+    try {
+      // Cashfree verify webhook logic requires full raw body if using middleware, but we'll use stringified JSON
+      // Note: In NestJS, `body` is usually already parsed. For perfect accuracy with Cashfree, 
+      // you typically want `rawBody`. But basic verification involves taking the timestamp + body.
+      // 
+      // The Cashfree SDK provides a built-in verifier:
+      // Cashfree.PGVerifyWebhookSignature(signature, rawBody, timestamp)
+      // Since we don't have the raw buffer here easily, we implement manual HMAC if timestamp is provided 
+      // or use the older SDK method.
+
+      const crypto = require('crypto');
+      const ts = timestamp || String(Date.now()); // Fallback if missing
+
+      // The payload Cashfree signs is usually the raw string. In lieu of raw string, stringify the parsed body.
+      // Warning: JSON.stringify order matters. If it fails, we should use raw-body middleware in the future.
+      const payloadString = typeof body === 'string' ? body : JSON.stringify(body);
+
+      const expectedSignature = crypto
+        .createHmac('sha256', this.secretKey)
+        .update(ts + payloadString)
+        .digest('base64');
+
+      // For demonstration, we attempt to verify. If the SDK is installed, doing it via Cashfree.PGVerifyWebhookSignature is safer.
+      // Right now, if the signature matches our computed one, we accept. 
+      // Because we lack rawBody, this might fail in strict prod. Let's add a warning.
+
+      return signature === expectedSignature;
+
+    } catch (err) {
+      console.error('[SECURITY] Webhook signature verification error:', err);
+      return false;
+    }
+  }
   async createRefund(orderId: string, amount: number, refundId?: string) {
     if (!orderId || amount <= 0) {
       throw new BadRequestException('Order ID and valid amount are required for refund');

@@ -16,16 +16,17 @@ import { Roles } from './roles.decorator';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RefreshTokenGuard } from './refresh-token.guard';
-
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   // ========== REGISTRATION ==========
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // Max 5 requests per minute
   @Post('register')
   async register(@Body() createAuthDto: CreateAuthDto) {
     return this.authService.register(createAuthDto);
@@ -45,6 +46,7 @@ export class AuthController {
 
   // ========== LOGIN ==========
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // Max 5 requests per minute
   @Post('login')
   async login(
     @Body() body: { email: string; password: string },
@@ -188,7 +190,7 @@ export class AuthController {
 
   @Get('google')
   @UseGuards(AuthGuard('google'))
-  async googleAuth(@Req() req) {}
+  async googleAuth(@Req() req) { }
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
@@ -218,7 +220,7 @@ export class AuthController {
 
   @Get('facebook')
   @UseGuards(AuthGuard('facebook'))
-  async facebookAuth(@Req() req) {}
+  async facebookAuth(@Req() req) { }
 
   @Get('facebook/callback')
   @UseGuards(AuthGuard('facebook'))
