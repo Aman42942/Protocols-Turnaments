@@ -21,11 +21,24 @@ export default function AdminProfilePage() {
     const [passError, setPassError] = useState('');
 
     useEffect(() => {
+        // First load from localStorage for immediate display
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
             setUser(JSON.parse(storedUser));
         }
-        setLoading(false);
+        // Then fetch full profile from API (includes avatar field)
+        api.get('/users/me')
+            .then(res => {
+                setUser(res.data);
+                // Also update localStorage with latest info
+                const stored = localStorage.getItem('user');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    localStorage.setItem('user', JSON.stringify({ ...parsed, ...res.data }));
+                }
+            })
+            .catch(() => { /* silent - localStorage fallback already set */ })
+            .finally(() => setLoading(false));
     }, []);
 
     const handleSetPassword = async (e: React.FormEvent) => {
