@@ -65,12 +65,13 @@ export class PaymentsController {
       return { status: 'failed', message: 'Invalid signature' };
     }
 
-    // Cashfree Webhook logic for 'ORDER_PAID'
-    if (body.type === 'ORDER_PAID' || body.event === 'order.paid') {
-      const orderId = body.data?.order?.order_id || body.order_id;
-      const amount = body.data?.order?.order_amount || body.order_amount;
-      const userId = body.data?.customer_details?.customer_id || body.customer_id;
+    // Cashfree Webhook logic
+    const event = body.type || body.event;
+    const orderId = body.data?.order?.order_id || body.order_id;
+    const amount = body.data?.order?.order_amount || body.order_amount;
+    const userId = body.data?.customer_details?.customer_id || body.customer_id;
 
+    if (event === 'ORDER_PAID' || event === 'order.paid') {
       if (userId && amount) {
         await this.walletService.deposit(
           userId,
@@ -79,6 +80,14 @@ export class PaymentsController {
           orderId,
         );
       }
+    }
+    else if (event === 'refund.processed') {
+      console.log(`[WEBHOOK] Refund processed for order: ${orderId}`);
+      // Wallet update is usually done synchronously, but we could add extra logging here
+    }
+    else if (event === 'refund.cancelled') {
+      console.log(`[WEBHOOK] Refund cancelled for order: ${orderId}`);
+      // Notify Admin or log error
     }
 
     return { status: 'ok' };
