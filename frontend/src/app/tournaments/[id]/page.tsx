@@ -112,7 +112,6 @@ export default function TournamentDetailPage() {
     const [registered, setRegistered] = useState(false);
     const [walletBalance, setWalletBalance] = useState<number | null>(null);
     const [activeTab, setActiveTab] = useState<'overview' | 'leaderboard' | 'rules' | 'players'>('overview');
-    const [cashfree, setCashfree] = useState<any>(null);
 
     useEffect(() => {
         if (params.id) { fetchTournament(); }
@@ -132,18 +131,6 @@ export default function TournamentDetailPage() {
         } catch (err) { console.error('Failed to fetch tournament:', err); } finally { setLoading(false); }
     };
 
-    useEffect(() => {
-        // Initialize Cashfree SDK
-        const initCashfree = () => {
-            if (typeof window !== 'undefined' && (window as any).Cashfree) {
-                const cf = (window as any).Cashfree({ mode: "production" });
-                setCashfree(cf);
-            } else {
-                setTimeout(initCashfree, 1000);
-            }
-        };
-        initCashfree();
-    }, []);
 
     const handleRegister = async () => {
         const token = localStorage.getItem('token');
@@ -166,25 +153,21 @@ export default function TournamentDetailPage() {
             return;
         }
 
-        // Case 2: PAID Entry -> Direct Cashfree
+        // Case 2: PAID Entry -> Cashfree hosted payment page (redirect)
         handleCashfreeRegister();
     };
 
     const handleCashfreeRegister = async () => {
-        if (!cashfree || !tournament) return;
+        if (!tournament) return;
         setRegistering(true);
         try {
-            // Step 1: Create Order
+            // Step 1: Create Order on backend
             const orderRes = await api.post(`/tournaments/${params.id}/create-order`);
-            const { payment_session_id, order_id } = orderRes.data;
+            const { payment_session_id } = orderRes.data;
 
-            // Step 2: Open Checkout
-            await cashfree.checkout({
-                paymentSessionId: payment_session_id,
-                returnUrl: `${window.location.origin}/tournaments/${params.id}?order_id={order_id}`,
-            });
-
-            // Note: Registration verification happens in the background or on return
+            // Step 2: Redirect to Cashfree hosted payment page
+            // This bypasses domain whitelisting — works on all domains
+            window.location.href = `https://payments.cashfree.com/order/#/?payment_session_id=${payment_session_id}`;
         } catch (err: any) {
             alert(err.response?.data?.message || 'Payment initiation failed');
             setRegistering(false);
