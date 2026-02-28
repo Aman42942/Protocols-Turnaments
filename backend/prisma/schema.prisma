@@ -46,6 +46,7 @@ model User {
   teams              TeamMember[]
   tournaments        TournamentParticipant[]
   wallet             Wallet?
+  invitations        TeamInvitation[]
 }
 
 model Tournament {
@@ -101,6 +102,7 @@ model Team {
   members             TeamMember[]
   leaderboardEntries  TournamentLeaderboard[]
   tournaments         TournamentParticipant[]
+  invitations         TeamInvitation[]
 }
 
 model TeamMember {
@@ -111,6 +113,19 @@ model TeamMember {
   joinedAt DateTime @default(now())
   team     Team     @relation(fields: [teamId], references: [id])
   user     User     @relation(fields: [userId], references: [id])
+}
+
+model TeamInvitation {
+  id         String   @id @default(uuid())
+  teamId     String
+  userId     String
+  inviterId  String
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
 }
 
 model TournamentParticipant {

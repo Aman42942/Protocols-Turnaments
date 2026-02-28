@@ -9,9 +9,10 @@ import {
     Loader2, Users, Crown, UserPlus, Trash2,
     Shield, Gamepad2, Copy, Check, ChevronLeft,
     Target, Zap, Globe, Terminal, ShieldCheck,
-    MoreVertical, Info
+    MoreVertical, Info, X, LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import InviteModal from '@/components/InviteModal';
 
 interface TeamMember {
     id: string;
@@ -41,6 +42,8 @@ export default function TeamDetailsPage() {
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [invitations, setInvitations] = useState<any[]>([]);
 
     const fetchData = useCallback(async () => {
         try {
@@ -57,9 +60,19 @@ export default function TeamDetailsPage() {
         }
     }, [id]);
 
+    const fetchInvitations = useCallback(async () => {
+        try {
+            const res = await api.get(`/teams/${id}/invitations`);
+            setInvitations(res.data);
+        } catch (err) {
+            console.error('Failed to load invitations:', err);
+        }
+    }, [id]);
+
     useEffect(() => {
         fetchData();
-    }, [fetchData]);
+        fetchInvitations();
+    }, [fetchData, fetchInvitations]);
 
     const copyInviteLink = () => {
         if (!team) return;
@@ -85,6 +98,25 @@ export default function TeamDetailsPage() {
             await fetchData();
         } catch (err: any) {
             alert(err.response?.data?.message || 'Failed to update role');
+        }
+    };
+
+    const handleCancelInvite = async (invitationId: string) => {
+        try {
+            await api.delete(`/teams/${id}/invitations/${invitationId}`);
+            await fetchInvitations();
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Failed to cancel invitation');
+        }
+    };
+
+    const handleLeaveTeam = async () => {
+        if (!confirm('Are you sure you want to leave this squad?')) return;
+        try {
+            await api.post(`/teams/${id}/leave`);
+            router.push('/dashboard/teams');
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Failed to leave team');
         }
     };
 
@@ -166,8 +198,16 @@ export default function TeamDetailsPage() {
                             onClick={copyInviteLink}
                         >
                             {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
-                            {copied ? 'Link Active' : 'Copy Recruitment Link'}
+                            {copied ? 'Link Active' : 'Copy Link'}
                         </Button>
+                        {(isLeader || isCoLeader) && (
+                            <Button
+                                className="flex-1 lg:flex-none bg-primary text-primary-foreground hover:bg-primary/90 font-black uppercase text-[10px] tracking-widest h-12 px-8 rounded-xl shadow-lg shadow-primary/20"
+                                onClick={() => setIsInviteModalOpen(true)}
+                            >
+                                <UserPlus className="w-4 h-4 mr-2" /> Invite Player
+                            </Button>
+                        )}
                         {isLeader && (
                             <Button
                                 variant="destructive"
@@ -179,6 +219,15 @@ export default function TeamDetailsPage() {
                                 }}
                             >
                                 <Trash2 className="w-4 h-4 mr-2" /> Disband Squad
+                            </Button>
+                        )}
+                        {!isLeader && (
+                            <Button
+                                variant="destructive"
+                                className="flex-1 lg:flex-none bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-destructive-foreground font-black uppercase text-[10px] tracking-widest h-12 px-8 rounded-xl"
+                                onClick={handleLeaveTeam}
+                            >
+                                <LogOut className="w-4 h-4 mr-2" /> Exit Squad
                             </Button>
                         )}
                     </div>
@@ -280,6 +329,46 @@ export default function TeamDetailsPage() {
                                 ))}
                             </div>
                         </div>
+
+                        {/* Pending Invitations Section */}
+                        {invitations.length > 0 && (
+                            <div className="bg-card/30 border border-border/50 rounded-[2.5rem] p-8 backdrop-blur-sm mt-8">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-sm font-black uppercase tracking-tight flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_10px_orange]" />
+                                        Outgoing Recruitment Requests
+                                    </h2>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {invitations.map((invite) => (
+                                        <div key={invite.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/5 border border-border/40 group transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center overflow-hidden">
+                                                    {invite.user?.avatar ? (
+                                                        <img src={invite.user.avatar} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="text-xs font-black text-muted-foreground">{invite.user?.name?.charAt(0)}</span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase text-foreground">{invite.user?.name}</p>
+                                                    <span className="text-[8px] font-mono text-yellow-500 uppercase tracking-widest px-1.5 py-0.5 bg-yellow-500/10 rounded-md">{invite.status}</span>
+                                                </div>
+                                            </div>
+                                            {(isLeader || isCoLeader) && (
+                                                <button
+                                                    onClick={() => handleCancelInvite(invite.id)}
+                                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                                    title="Cancel Invitation"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Sidebar: Recruitment & Intel */}
@@ -348,6 +437,15 @@ export default function TeamDetailsPage() {
                     </div>
                 </div>
             </div>
+
+            <InviteModal
+                isOpen={isInviteModalOpen}
+                onClose={() => setIsInviteModalOpen(false)}
+                teamId={id}
+                onInviteSent={() => {
+                    fetchInvitations();
+                }}
+            />
         </div>
     );
 }

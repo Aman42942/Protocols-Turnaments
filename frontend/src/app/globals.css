@@ -80,6 +80,46 @@
   .glass-dark {
     @apply bg-black/40 backdrop-blur-2xl border border-white/5;
   }
+
+  /* Neon RGB Utilities */
+  .neon-blue {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+    border-color: rgba(59, 130, 246, 0.5) !important;
+  }
+
+  .neon-green {
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+    border-color: rgba(34, 197, 94, 0.5) !important;
+  }
+
+  .neon-gold {
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
+    border-color: rgba(234, 179, 8, 0.5) !important;
+  }
+
+  .neon-purple {
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+    border-color: rgba(168, 85, 247, 0.5) !important;
+  }
+
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-move 8s ease infinite;
+  }
+
+  @keyframes gradient-move {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
 }
 
 @layer base {

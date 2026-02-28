@@ -8,6 +8,7 @@ import {
   Param,
   UseGuards,
   Request,
+  Query,
   UnauthorizedException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -23,7 +24,13 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly activityLogService: ActivityLogService,
-  ) {}
+  ) { }
+
+  @Get('search')
+  @UseGuards(AuthGuard('jwt'))
+  async search(@Query('q') q: string, @Request() req) {
+    return this.usersService.search(q, req.user.userId);
+  }
 
   @Get('me')
   @UseGuards(AuthGuard('jwt'))

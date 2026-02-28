@@ -641,15 +641,15 @@ export class AuthService {
       await this.emailService.sendWelcomeEmail(profile.email, user.name || '');
     }
 
-    // Send Login Notification & Email for OAuth
-    await this.emailService.sendLoginSuccessEmail(
+    // Send Login Notification & Email for OAuth (Fire and forget to avoid blocking redirect)
+    this.emailService.sendLoginSuccessEmail(
       user.email,
       user.name || '',
       'Google/OAuth',
       new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
     );
 
-    await this.notificationsService.create(
+    this.notificationsService.create(
       user.id,
       '✅ Login Successful',
       `You logged in via ${user.provider} at ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`,

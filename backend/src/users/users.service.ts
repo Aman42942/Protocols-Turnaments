@@ -4,7 +4,7 @@ import { UserRole, ROLE_HIERARCHY } from '../auth/role.enum';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(data: any) {
     return this.prisma.user.create({ data });
@@ -234,5 +234,26 @@ export class UsersService {
       recentUsers,
       recentTransactions,
     };
+  }
+
+  async search(query: string, currentUserId: string) {
+    if (!query || query.length < 2) return [];
+    return this.prisma.user.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { email: { contains: query, mode: 'insensitive' } },
+        ],
+        NOT: { id: currentUserId },
+        banned: false,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+      },
+      take: 10,
+    });
   }
 }

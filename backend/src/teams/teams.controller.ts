@@ -49,6 +49,12 @@ export class TeamsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post(':id/leave')
+  leave(@Request() req, @Param('id') id: string) {
+    return this.teamsService.leaveTeam(req.user.userId, id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('invite/:code/join')
   joinByCode(@Request() req, @Param('code') code: string) {
     return this.teamsService.joinByCode(req.user.userId, code);
@@ -90,6 +96,53 @@ export class TeamsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.teamsService.remove(id);
+  }
+
+  // ─── TEAM INVITATIONS ───────────────────────────────────────────────────
+  @UseGuards(JwtAuthGuard)
+  @Get('invitations/me')
+  getMyInvitations(@Request() req) {
+    return this.teamsService.getMyInvitations(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/invitations')
+  sendInvitation(
+    @Param('id') id: string,
+    @Body('userId') targetUserId: string,
+    @Request() req,
+  ) {
+    return this.teamsService.sendInvitation(req.user.userId, id, targetUserId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/invitations')
+  getTeamInvitations(@Param('id') id: string) {
+    return this.teamsService.getTeamInvitations(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('invitations/:invitationId/respond')
+  respondToInvitation(
+    @Param('invitationId') invitationId: string,
+    @Body('action') action: 'ACCEPT' | 'DECLINE',
+    @Request() req,
+  ) {
+    return this.teamsService.respondToInvitation(
+      req.user.userId,
+      invitationId,
+      action,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/invitations/:invitationId')
+  cancelInvitation(
+    @Param('id') id: string,
+    @Param('invitationId') invitationId: string,
+    @Request() req,
+  ) {
+    return this.teamsService.cancelInvitation(req.user.userId, id, invitationId);
   }
 
   // ─── ADMIN: View all teams in a tournament ─────────────────────────────────

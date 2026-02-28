@@ -8,7 +8,7 @@ import {
     Users, Plus, Shield, Crown, UserPlus,
     Loader2, Trophy, Trash2, Gamepad2,
     ChevronRight, Zap, Target, Flame, LayoutGrid,
-    Check, Copy, Globe, Terminal, Link as LinkIcon
+    Check, Copy, Globe, Terminal, Link as LinkIcon, Bell
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
@@ -50,9 +50,20 @@ export default function TeamsPage() {
     const [newTeamName, setNewTeamName] = useState('');
     const [selectedGame, setSelectedGame] = useState(GAME_PRESETS[0]);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [inviteCount, setInviteCount] = useState(0);
+
+    const fetchInviteCount = async () => {
+        try {
+            const res = await api.get('/teams/invitations/me');
+            setInviteCount(res.data.length);
+        } catch (err) {
+            console.error('Failed to fetch invite count:', err);
+        }
+    };
 
     useEffect(() => {
         fetchTeams();
+        fetchInviteCount();
     }, []);
 
     const fetchTeams = async () => {
@@ -146,20 +157,32 @@ export default function TeamsPage() {
                         </p>
                     </div>
 
-                    <button
-                        onClick={() => setShowCreate(!showCreate)}
-                        className={cn(
-                            "group relative overflow-hidden px-10 py-5 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] transition-all active:scale-95 flex items-center gap-4",
-                            showCreate
-                                ? 'bg-destructive/10 text-destructive border border-destructive/20 shadow-lg shadow-destructive/10'
-                                : 'bg-primary text-primary-foreground shadow-2xl shadow-primary/20 hover:shadow-primary/40'
-                        )}
-                    >
-                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                        <span className="relative z-10 flex items-center gap-3">
-                            {showCreate ? 'Abort Protocol' : <><Plus className="w-5 h-5 stroke-[3]" /> Assemble Unit</>}
-                        </span>
-                    </button>
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <Link href="/dashboard/teams/invites">
+                            <button className="relative p-5 rounded-[2rem] bg-muted/40 border border-border/40 hover:bg-muted/60 transition-all group">
+                                <Bell className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                {inviteCount > 0 && (
+                                    <span className="absolute top-3 right-3 w-5 h-5 bg-primary text-primary-foreground text-[8px] font-black rounded-full flex items-center justify-center animate-bounce">
+                                        {inviteCount}
+                                    </span>
+                                )}
+                            </button>
+                        </Link>
+                        <button
+                            onClick={() => setShowCreate(!showCreate)}
+                            className={cn(
+                                "group relative overflow-hidden px-10 py-5 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] transition-all active:scale-95 flex items-center gap-4",
+                                showCreate
+                                    ? 'bg-destructive/10 text-destructive border border-destructive/20 shadow-lg shadow-destructive/10'
+                                    : 'bg-primary text-primary-foreground shadow-2xl shadow-primary/20 hover:shadow-primary/40'
+                            )}
+                        >
+                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                            <span className="relative z-10 flex items-center gap-3">
+                                {showCreate ? 'Abort Protocol' : <><Plus className="w-5 h-5 stroke-[3]" /> Assemble Unit</>}
+                            </span>
+                        </button>
+                    </div>
                 </motion.div>
 
                 <AnimatePresence mode="wait">

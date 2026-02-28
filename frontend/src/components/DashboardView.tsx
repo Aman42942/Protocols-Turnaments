@@ -6,6 +6,7 @@ import { Trophy, Crosshair, Users, Timer, ArrowUpRight, Wallet, Loader2, Bell, C
 import { Badge } from '@/components/ui/Badge';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { motion } from 'framer-motion';
 
 interface DashboardData {
     userName: string;
@@ -15,6 +16,28 @@ interface DashboardData {
     notifications: any[];
     upcomingTournaments: any[];
 }
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: any = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+        y: 0,
+        opacity: 1,
+        transition: {
+            type: "spring",
+            stiffness: 100
+        }
+    }
+};
 
 export function DashboardView() {
     const [data, setData] = useState<DashboardData>({
@@ -103,117 +126,160 @@ export function DashboardView() {
     }
 
     return (
-        <div className="pt-8 pb-12">
-            <div className="container">
-                <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+            className="pt-8 pb-12 relative overflow-hidden"
+        >
+            {/* Background Aesthetic Glows */}
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] -z-10 translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] -z-10 -translate-x-1/2 translate-y-1/2" />
+
+            <div className="container px-4 sm:px-6 lg:px-8">
+                <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                        <p className="text-muted-foreground">Welcome back, {data.userName}</p>
+                        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+                            Combat Center
+                        </h1>
+                        <p className="text-muted-foreground mt-1 text-lg">Welcome back, <span className="text-primary font-semibold">{data.userName}</span></p>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-4">
                         <Link href="/dashboard/wallet">
-                            <Button>
-                                <Wallet className="mr-2 h-4 w-4" />
-                                ₹{data.walletBalance.toFixed(2)}
+                            <Button className="neon-blue glass h-12 px-6 rounded-xl border-primary/20 hover:border-primary/50 transition-all duration-300">
+                                <Wallet className="mr-2 h-5 w-5 text-primary" />
+                                <span className="font-orbitron font-bold">₹{data.walletBalance.toFixed(2)}</span>
                             </Button>
                         </Link>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Wallet Balance</CardTitle>
-                            <Wallet className="h-4 w-4 text-green-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">₹{data.walletBalance.toFixed(2)}</div>
-                            <p className="text-xs text-muted-foreground">
-                                <Link href="/dashboard/wallet" className="text-primary hover:underline">Add Money →</Link>
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Tournaments</CardTitle>
-                            <Trophy className="h-4 w-4 text-primary" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{data.tournamentsCount}</div>
-                            <p className="text-xs text-muted-foreground">
-                                <Link href="/tournaments" className="text-primary hover:underline">Browse All →</Link>
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Active Teams</CardTitle>
-                            <Users className="h-4 w-4 text-blue-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{data.teamsCount}</div>
-                            <p className="text-xs text-muted-foreground">
-                                <Link href="/dashboard/teams" className="text-primary hover:underline">Manage Teams →</Link>
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Notifications</CardTitle>
-                            <Bell className="h-4 w-4 text-yellow-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{Array.isArray(data.notifications) ? data.notifications.filter((n: any) => !n.read).length : 0}</div>
-                            <p className="text-xs text-muted-foreground">
-                                <Link href="/notifications" className="text-primary hover:underline">View All →</Link>
-                            </p>
-                        </CardContent>
-                    </Card>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                    <motion.div variants={itemVariants} whileHover={{ y: -5 }} className="h-full">
+                        <Card className="glass-dark border-green-500/20 neon-green transition-all duration-300 h-full overflow-hidden group">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-green-400 uppercase tracking-wider">Treasury</CardTitle>
+                                <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+                                    <Wallet className="h-5 w-5 text-green-500" />
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-bold font-orbitron">₹{data.walletBalance.toFixed(2)}</div>
+                                <div className="mt-4">
+                                    <Link href="/dashboard/wallet" className="text-green-500/80 hover:text-green-400 text-xs font-semibold flex items-center gap-1 group/link">
+                                        REPLENISH FUNDS <ArrowUpRight className="h-3 w-3 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
+                                    </Link>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+
+                    <motion.div variants={itemVariants} whileHover={{ y: -5 }} className="h-full">
+                        <Card className="glass-dark border-primary/20 neon-blue transition-all duration-300 h-full overflow-hidden group">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-primary uppercase tracking-wider">Campaigns</CardTitle>
+                                <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                                    <Trophy className="h-5 w-5 text-primary" />
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-bold font-orbitron">{data.tournamentsCount}</div>
+                                <div className="mt-4">
+                                    <Link href="/tournaments" className="text-primary/80 hover:text-primary text-xs font-semibold flex items-center gap-1 group/link">
+                                        BATTLE LOBBY <ArrowUpRight className="h-3 w-3 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
+                                    </Link>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+
+                    <motion.div variants={itemVariants} whileHover={{ y: -5 }} className="h-full">
+                        <Card className="glass-dark border-purple-500/20 neon-purple transition-all duration-300 h-full overflow-hidden group">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-purple-400 uppercase tracking-wider">Alliances</CardTitle>
+                                <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+                                    <Users className="h-5 w-5 text-purple-500" />
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-bold font-orbitron">{data.teamsCount}</div>
+                                <div className="mt-4">
+                                    <Link href="/dashboard/teams" className="text-purple-500/80 hover:text-purple-400 text-xs font-semibold flex items-center gap-1 group/link">
+                                        SQUAD COMMAND <ArrowUpRight className="h-3 w-3 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
+                                    </Link>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+
+                    <motion.div variants={itemVariants} whileHover={{ y: -5 }} className="h-full">
+                        <Card className="glass-dark border-yellow-500/20 neon-gold transition-all duration-300 h-full overflow-hidden group">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-yellow-500 uppercase tracking-wider">Comms</CardTitle>
+                                <div className="p-2 bg-yellow-500/10 rounded-lg group-hover:bg-yellow-500/20 transition-colors">
+                                    <Bell className="h-5 w-5 text-yellow-500" />
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-bold font-orbitron">{Array.isArray(data.notifications) ? data.notifications.filter((n: any) => !n.read).length : 0}</div>
+                                <div className="mt-4">
+                                    <Link href="/notifications" className="text-yellow-500/80 hover:text-yellow-500 text-xs font-semibold flex items-center gap-1 group/link">
+                                        INTEL FEED <ArrowUpRight className="h-3 w-3 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
+                                    </Link>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Content Area */}
-                    <div className="lg:col-span-2 space-y-8">
+                    <motion.div variants={itemVariants} className="lg:col-span-2 space-y-8">
                         {/* Upcoming Tournaments */}
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle>Upcoming Tournaments</CardTitle>
+                        <Card className="glass-dark border-white/5 overflow-hidden">
+                            <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-4">
+                                <div className="flex items-center gap-2">
+                                    <Calendar className="h-5 w-5 text-primary" />
+                                    <CardTitle className="text-xl font-orbitron tracking-tight">Active Deployments</CardTitle>
+                                </div>
                                 <Link href="/tournaments">
-                                    <Button variant="ghost" size="sm">View All</Button>
+                                    <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10">Browse All</Button>
                                 </Link>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="pt-6">
                                 {data.upcomingTournaments.length === 0 ? (
-                                    <div className="text-center py-8 text-muted-foreground">
-                                        <Gamepad2 className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                                        <p className="font-medium">No upcoming tournaments</p>
-                                        <Link href="/tournaments" className="text-primary text-sm hover:underline">Browse tournaments →</Link>
+                                    <div className="text-center py-12 text-muted-foreground bg-white/5 rounded-xl border border-dashed border-white/10">
+                                        <Gamepad2 className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                                        <p className="font-orbitron text-sm">NO ACTIVE MISSIONS</p>
+                                        <Link href="/tournaments" className="text-primary text-xs hover:underline mt-2 block">FIND COMBAT →</Link>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
                                         {data.upcomingTournaments.map((t: any) => (
                                             <Link key={t.id} href={`/tournaments/${t.id}`}>
-                                                <div className="flex items-center justify-between p-4 border rounded-lg bg-card/50 hover:bg-muted/50 transition-colors cursor-pointer">
+                                                <motion.div
+                                                    whileHover={{ x: 5, backgroundColor: "rgba(255,255,255,0.05)" }}
+                                                    className="flex items-center justify-between p-4 border border-white/5 rounded-xl bg-white/[0.02] transition-all cursor-pointer group"
+                                                >
                                                     <div className="flex items-center gap-4">
-                                                        <div className="bg-primary/10 p-2 rounded-md">
+                                                        <div className="bg-primary/10 p-3 rounded-xl border border-primary/20 group-hover:scale-110 transition-transform">
                                                             <Trophy className="h-6 w-6 text-primary" />
                                                         </div>
                                                         <div>
-                                                            <h3 className="font-semibold">{t.title}</h3>
-                                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                                <Timer className="h-3 w-3" />
-                                                                <span>{formatDate(t.startDate)}</span>
-                                                                <span>•</span>
-                                                                <span>{t.game}</span>
+                                                            <h3 className="font-bold font-orbitron text-lg group-hover:text-primary transition-colors">{t.title}</h3>
+                                                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                                                                <span className="flex items-center gap-1"><Timer className="h-3 w-3" /> {formatDate(t.startDate)}</span>
+                                                                <span className="text-white/10">|</span>
+                                                                <span className="uppercase tracking-widest text-primary/70">{t.game}</span>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-col items-end gap-2">
-                                                        <Badge variant="secondary">₹{t.prizePool} Prize</Badge>
-                                                        <span className="text-xs text-muted-foreground">₹{t.entryFeePerPerson} entry</span>
+                                                        <Badge className="bg-primary hover:bg-primary text-white font-orbitron px-3 py-1">₹{t.prizePool}</Badge>
+                                                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Entry: ₹{t.entryFeePerPerson}</span>
                                                     </div>
-                                                </div>
+                                                </motion.div>
                                             </Link>
                                         ))}
                                     </div>
@@ -222,88 +288,99 @@ export function DashboardView() {
                         </Card>
 
                         {/* Recent Notifications */}
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle>Recent Activity</CardTitle>
+                        <Card className="glass-dark border-white/5">
+                            <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-4">
+                                <div className="flex items-center gap-2">
+                                    <Crosshair className="h-5 w-5 text-yellow-500" />
+                                    <CardTitle className="text-xl font-orbitron tracking-tight">Intel Log</CardTitle>
+                                </div>
                                 <Link href="/notifications">
-                                    <Button variant="ghost" size="sm">View All</Button>
+                                    <Button variant="ghost" size="sm" className="hover:bg-white/5">View History</Button>
                                 </Link>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="pt-6">
                                 {!Array.isArray(data.notifications) || data.notifications.length === 0 ? (
-                                    <div className="text-center py-8 text-muted-foreground">
-                                        <Bell className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                                        <p className="font-medium">No recent activity</p>
+                                    <div className="text-center py-10 opacity-30">
+                                        <Bell className="h-10 w-10 mx-auto mb-2" />
+                                        <p className="text-xs font-orbitron uppercase">Silent Channel</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
                                         {data.notifications.slice(0, 5).map((n: any) => (
-                                            <div key={n.id} className="flex items-start gap-4 pb-4 border-b last:border-0 last:pb-0">
-                                                <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${n.type === 'success' ? 'bg-green-500' :
-                                                    n.type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+                                            <div key={n.id} className="flex items-start gap-4 pb-4 border-b border-white/5 last:border-0 last:pb-0 group">
+                                                <div className={`mt-1 h-2.5 w-2.5 rounded-full shrink-0 shadow-[0_0_8px_rgba(var(--color))] animate-pulse ${n.type === 'success' ? 'bg-green-500 shadow-green-500/50' :
+                                                        n.type === 'warning' ? 'bg-yellow-500 shadow-yellow-500/50' : 'bg-primary shadow-primary/50'
                                                     }`} />
                                                 <div className="space-y-1 flex-1">
-                                                    <p className="text-sm font-medium leading-none">{n.title}</p>
-                                                    <p className="text-xs text-muted-foreground line-clamp-1">{n.message}</p>
+                                                    <p className="text-sm font-bold group-hover:text-primary transition-colors">{n.title}</p>
+                                                    <p className="text-xs text-muted-foreground/80 line-clamp-1">{n.message}</p>
                                                 </div>
-                                                <span className="text-xs text-muted-foreground whitespace-nowrap">{timeAgo(n.createdAt)}</span>
+                                                <span className="text-[10px] font-bold text-muted-foreground/40 uppercase whitespace-nowrap">{timeAgo(n.createdAt)}</span>
                                             </div>
                                         ))}
                                     </div>
                                 )}
                             </CardContent>
                         </Card>
-                    </div>
+                    </motion.div>
 
                     {/* Sidebar */}
-                    <div className="space-y-6">
-                        <Card>
+                    <motion.div variants={itemVariants} className="space-y-6">
+                        <Card className="glass-dark border-primary/10">
                             <CardHeader>
-                                <CardTitle>Quick Actions</CardTitle>
+                                <CardTitle className="font-orbitron text-lg uppercase tracking-wider text-primary/80">Tactical Links</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-2">
+                            <CardContent className="space-y-3">
                                 <Link href="/tournaments">
-                                    <Button className="w-full justify-start" variant="ghost">
-                                        <Trophy className="mr-2 h-4 w-4" /> Find Tournament
+                                    <Button className="w-full justify-between h-12 bg-white/[0.03] hover:bg-primary/10 hover:text-primary border-white/5 transition-all group" variant="outline">
+                                        <span className="flex items-center"><Trophy className="mr-3 h-5 w-5 opacity-70" /> Join Battle</span>
+                                        <ArrowUpRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" />
                                     </Button>
                                 </Link>
                                 <Link href="/dashboard/teams">
-                                    <Button className="w-full justify-start" variant="ghost">
-                                        <Users className="mr-2 h-4 w-4" /> My Teams
+                                    <Button className="w-full justify-between h-12 bg-white/[0.03] hover:bg-purple-500/10 hover:text-purple-400 border-white/5 transition-all group" variant="outline">
+                                        <span className="flex items-center"><Users className="mr-3 h-5 w-5 opacity-70" /> Squad HQ</span>
+                                        <ArrowUpRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" />
                                     </Button>
                                 </Link>
                                 <Link href="/dashboard/wallet">
-                                    <Button className="w-full justify-start" variant="ghost">
-                                        <Wallet className="mr-2 h-4 w-4" /> Add Money
+                                    <Button className="w-full justify-between h-12 bg-white/[0.03] hover:bg-green-500/10 hover:text-green-400 border-white/5 transition-all group" variant="outline">
+                                        <span className="flex items-center"><Wallet className="mr-3 h-5 w-5 opacity-70" /> Treasury</span>
+                                        <ArrowUpRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" />
                                     </Button>
                                 </Link>
                                 <Link href="/settings">
-                                    <Button className="w-full justify-start" variant="ghost">
-                                        <Crosshair className="mr-2 h-4 w-4" /> Link Game IDs
+                                    <Button className="w-full justify-between h-12 bg-white/[0.03] hover:bg-yellow-500/10 hover:text-yellow-400 border-white/5 transition-all group" variant="outline">
+                                        <span className="flex items-center"><Crosshair className="mr-3 h-5 w-5 opacity-70" /> Loadout Ops</span>
+                                        <ArrowUpRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" />
                                     </Button>
                                 </Link>
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-primary/5 border-primary/20">
+                        <Card className="bg-gradient-to-br from-primary/20 via-primary/5 to-purple-500/10 border-primary/20 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <Trophy className="h-24 w-24 rotate-12" />
+                            </div>
                             <CardHeader>
-                                <CardTitle className="text-primary flex items-center gap-2">
-                                    <Trophy className="h-5 w-5" />
-                                    Earn Real Money
+                                <CardTitle className="text-primary font-orbitron flex items-center gap-2">
+                                    GLORY AWAITS
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground mb-4">
-                                    Join tournaments, win matches, and earn real money directly to your wallet. Withdraw anytime!
+                            <CardContent className="relative z-10">
+                                <p className="text-sm text-muted-foreground mb-6 font-medium leading-relaxed">
+                                    Engage in elite competitions, dominate the leaderboard, and claim your share of the massive prize pools.
                                 </p>
                                 <Link href="/tournaments">
-                                    <Button className="w-full">Browse Tournaments</Button>
+                                    <Button className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold font-orbitron shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+                                        DEPLOY TO ARENA
+                                    </Button>
                                 </Link>
                             </CardContent>
                         </Card>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }

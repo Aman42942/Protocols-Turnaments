@@ -173,6 +173,27 @@ export class TeamsService {
     });
   }
 
+  async leaveTeam(userId: string, teamId: string) {
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      include: { members: true },
+    });
+
+    if (!team) throw new NotFoundException('Team not found');
+
+    const member = team.members.find(m => m.userId === userId);
+    if (!member) throw new BadRequestException('You are not a member of this team');
+
+    // Leader cannot leave - must disband or transfer (transfer not implemented)
+    if (member.role === 'LEADER') {
+      throw new BadRequestException('Team Leader cannot leave their squadron. Disband the unit or transfer leadership instead.');
+    }
+
+    return this.prisma.teamMember.delete({
+      where: { id: member.id }
+    });
+  }
+
   async updateMemberRole(leaderId: string, teamId: string, targetUserId: string, newRole: string) {
     const team = await this.prisma.team.findUnique({
       where: { id: teamId },
@@ -269,5 +290,142 @@ export class TeamsService {
       teamName: team.name,
       removedCount: updated.count,
     };
+  }
+
+  // ─── TEAM INVITATIONS ───────────────────────────────────────────────────
+  async sendInvitation(inviterId: string, teamId: string, targetUserId: string) {
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      include: { members: true, _count: { select: { members: true } } },
+    });
+
+    if (!team) throw new NotFoundException('Team not found');
+    const member = team.members.find((m) => m.userId === inviterId);
+    if (!member || (member.role !== 'LEADER' && member.role !== 'COLEADER')) {
+      throw new ForbiddenException(
+        'Only Leaders and Co-Leaders can invite members',
+      );
+    }
+
+    if (team._count.members >= team.maxMembers) {
+      throw new BadRequestException('Team is full');
+    }
+
+    // Check if already a member
+    const alreadyMember = team.members.some((m) => m.userId === targetUserId);
+    if (alreadyMember)
+      throw new BadRequestException('User is already a member of this team');
+
+    // Create invitation (upsert status if already exists)
+    const invitation = await this.prisma.teamInvitation.upsert({
+      where: { teamId_userId: { teamId, userId: targetUserId } },
+      create: { teamId, userId: targetUserId, inviterId, status: 'PENDING' },
+      update: { inviterId, status: 'PENDING', createdAt: new Date() },
+    });
+
+    // Send notification
+    await this.prisma.notification.create({
+      data: {
+        userId: targetUserId,
+        title: 'Team Invitation',
+        message: `You have been invited to join squad "${team.name}"`,
+        type: 'info',
+        link: `/dashboard/teams/invites`,
+      },
+    });
+
+    return invitation;
+  }
+
+  async getMyInvitations(userId: string) {
+    return this.prisma.teamInvitation.findMany({
+      where: { userId, status: 'PENDING' },
+      include: {
+        team: {
+          select: {
+            id: true,
+            name: true,
+            logo: true,
+            gameType: true,
+            inviteCode: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getTeamInvitations(teamId: string) {
+    return this.prisma.teamInvitation.findMany({
+      where: { teamId },
+      include: {
+        user: { select: { id: true, name: true, email: true, avatar: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async respondToInvitation(
+    userId: string,
+    invitationId: string,
+    action: 'ACCEPT' | 'DECLINE',
+  ) {
+    const invitation = await this.prisma.teamInvitation.findUnique({
+      where: { id: invitationId },
+      include: { team: { include: { _count: { select: { members: true } } } } },
+    });
+
+    if (!invitation || invitation.userId !== userId) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    if (action === 'DECLINE') {
+      return this.prisma.teamInvitation.update({
+        where: { id: invitationId },
+        data: { status: 'DECLINED' },
+      });
+    }
+
+    // Action is ACCEPT
+    // Check if team is full
+    if (invitation.team._count.members >= invitation.team.maxMembers) {
+      throw new BadRequestException('Team is full');
+    }
+
+    return this.prisma.$transaction(async (prisma) => {
+      // Add member
+      await prisma.teamMember.create({
+        data: {
+          teamId: invitation.teamId,
+          userId: userId,
+          role: 'MEMBER',
+        },
+      });
+
+      // Update invitation status
+      return prisma.teamInvitation.update({
+        where: { id: invitationId },
+        data: { status: 'ACCEPTED' },
+      });
+    });
+  }
+
+  async cancelInvitation(actorId: string, teamId: string, invitationId: string) {
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      include: { members: true },
+    });
+
+    if (!team) throw new NotFoundException('Team not found');
+    const actor = team.members.find((m) => m.userId === actorId);
+    if (!actor || (actor.role !== 'LEADER' && actor.role !== 'COLEADER')) {
+      throw new ForbiddenException(
+        'Only Leaders and Co-Leaders can cancel invitations',
+      );
+    }
+
+    return this.prisma.teamInvitation.delete({
+      where: { id: invitationId },
+    });
   }
 }
