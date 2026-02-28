@@ -101,6 +101,7 @@ export class TournamentsController {
       req.user.userId,
       user?.email,
       undefined,
+      `${this.paymentsService.getHttpsFrontendUrl()}/tournaments/${id}?order_id={order_id}`,
     );
     return order;
   }
