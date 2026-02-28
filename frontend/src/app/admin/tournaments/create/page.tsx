@@ -517,10 +517,10 @@ export default function CreateTournamentPage() {
                                 </div>
 
                                 {/* Mode + Format */}
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <Label>Game Mode *</Label>
-                                        <Select name="gameMode" value={formData.gameMode} onChange={handleModeChange} className="mt-1">
+                                        <Select name="gameMode" value={formData.gameMode} onChange={handleModeChange} className="mt-1 w-full">
                                             {selectedGame === 'VALORANT' && <option value="TEAM_5V5">5v5 Competitive</option>}
                                             {selectedGame !== 'VALORANT' && (
                                                 <>
@@ -533,7 +533,7 @@ export default function CreateTournamentPage() {
                                     </div>
                                     <div>
                                         <Label>Format *</Label>
-                                        <Select name="format" value={formData.format} onChange={handleChange} className="mt-1">
+                                        <Select name="format" value={formData.format} onChange={handleChange} className="mt-1 w-full">
                                             {gameConfig.formats.map(f => (
                                                 <option key={f} value={f.toUpperCase().replace(/\s+/g, '_').replace(/[()]/g, '')}>{f}</option>
                                             ))}
@@ -542,10 +542,10 @@ export default function CreateTournamentPage() {
                                 </div>
 
                                 {/* Tier + Region */}
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <Label>Tier *</Label>
-                                        <Select name="tier" value={formData.tier} onChange={handleChange} className="mt-1">
+                                        <Select name="tier" value={formData.tier} onChange={handleChange} className="mt-1 w-full">
                                             <option value="LOW">🟢 Low — Casual</option>
                                             <option value="MEDIUM">🟡 Medium — Competitive</option>
                                             <option value="HIGH">🔴 High — Pro/Premier</option>
@@ -553,7 +553,7 @@ export default function CreateTournamentPage() {
                                     </div>
                                     <div>
                                         <Label>Server Region</Label>
-                                        <Select name="region" value={formData.region} onChange={handleChange} className="mt-1">
+                                        <Select name="region" value={formData.region} onChange={handleChange} className="mt-1 w-full">
                                             <option value="">Select Region</option>
                                             {gameConfig.regions.map(r => (
                                                 <option key={r} value={r}>{r}</option>
@@ -563,30 +563,30 @@ export default function CreateTournamentPage() {
                                 </div>
 
                                 {/* Date + Time */}
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <Label>Start Date *</Label>
-                                        <Input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="mt-1" />
+                                        <Input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="mt-1 w-full" />
                                     </div>
                                     <div>
                                         <Label>Start Time *</Label>
-                                        <Input type="time" name="startTime" value={formData.startTime} onChange={handleChange} className="mt-1" />
+                                        <Input type="time" name="startTime" value={formData.startTime} onChange={handleChange} className="mt-1 w-full" />
                                     </div>
                                 </div>
 
                                 {/* Pricing */}
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div>
                                         <Label>Entry Fee (₹)</Label>
-                                        <Input type="number" name="entryFeePerPerson" value={formData.entryFeePerPerson} onChange={handleChange} placeholder="0 = Free" className="mt-1" />
+                                        <Input type="number" name="entryFeePerPerson" value={formData.entryFeePerPerson} onChange={handleChange} placeholder="0 = Free" className="mt-1 w-full" />
                                     </div>
                                     <div>
                                         <Label>Prize Pool (₹)</Label>
-                                        <Input type="number" name="prizePool" value={formData.prizePool} onChange={handleChange} placeholder="Total prize" className="mt-1" />
+                                        <Input type="number" name="prizePool" value={formData.prizePool} onChange={handleChange} placeholder="Total prize" className="mt-1 w-full" />
                                     </div>
                                     <div>
                                         <Label>Max Teams</Label>
-                                        <Input type="number" name="maxTeams" value={formData.maxTeams} onChange={handleChange} className="mt-1" />
+                                        <Input type="number" name="maxTeams" value={formData.maxTeams} onChange={handleChange} className="mt-1 w-full" />
                                     </div>
                                 </div>
 
