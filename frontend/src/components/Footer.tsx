@@ -4,7 +4,7 @@ import { Trophy, Twitter, Instagram, Facebook, Youtube } from 'lucide-react';
 
 export function Footer() {
     return (
-        <footer className="bg-background border-t border-border pt-16 pb-8 mt-auto">
+        <footer className="bg-background border-t border-border pt-16 pb-8 mt-auto hidden md:block">
             <div className="container">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
                     <div className="col-span-1 md:col-span-1">
