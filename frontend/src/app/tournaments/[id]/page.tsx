@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { load } from '@cashfreepayments/cashfree-js';
 import { LiveLeaderboard } from '@/components/tournament/LiveLeaderboard';
 import { TournamentActivityFeed } from '@/components/tournament/TournamentActivityFeed';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -165,11 +166,18 @@ export default function TournamentDetailPage() {
             const orderRes = await api.post(`/tournaments/${params.id}/create-order`);
             const { payment_session_id, cf_env } = orderRes.data;
 
-            // Step 2: Redirect to Cashfree hosted payment page
-            // Choose domain based on environment (Sandbox vs Production)
-            const cfDomain = cf_env === 'PRODUCTION' ? 'payments.cashfree.com' : 'sandbox.cashfree.com';
-            window.location.href = `https://${cfDomain}/pg/view/checkout?payment_session_id=${payment_session_id}`;
+            // Step 2: Initialize Cashfree SDK and Open Checkout
+            const cashfree = await load({
+                mode: cf_env === 'PRODUCTION' ? 'production' : 'sandbox'
+            });
+
+            await cashfree.checkout({
+                paymentSessionId: payment_session_id,
+                redirectTarget: "_self", // Or "_modal" for a popup if supported
+            });
+
         } catch (err: any) {
+            console.error('Cashfree Error:', err);
             alert(err.response?.data?.message || 'Payment initiation failed');
             setRegistering(false);
         }
