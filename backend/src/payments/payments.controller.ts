@@ -3,6 +3,9 @@ import { PaymentsService } from './payments.service';
 import { WalletService } from '../wallet/wallet.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../auth/role.enum';
 
 @Controller('payments')
 export class PaymentsController {
@@ -79,5 +82,44 @@ export class PaymentsController {
     }
 
     return { status: 'ok' };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.ULTIMATE_ADMIN)
+  @Post('admin/refund')
+  async adminRefund(
+    @Body('order_id') orderId: string,
+    @Body('amount') amount: number,
+    @Body('userId') userId: string,
+    @Body('tournamentId') tournamentId?: string,
+    @Body('tournamentTitle') tournamentTitle?: string,
+  ) {
+    // 1. Process Refund via Cashfree
+    const refundResult = await this.paymentsService.createRefund(orderId, amount);
+
+    // 2. Update Wallet
+    if (tournamentId && tournamentTitle) {
+      await this.walletService.refundTournamentEntry(
+        userId,
+        amount,
+        tournamentId,
+        tournamentTitle,
+      );
+    } else {
+      // General refund to wallet
+      await this.walletService.deposit(
+        userId,
+        amount,
+        'CASHFREE_REFUND',
+        orderId,
+        `Refund for order ${orderId}`,
+      );
+    }
+
+    return {
+      success: true,
+      message: 'Refund processed successfully',
+      cashfree: refundResult,
+    };
   }
 }

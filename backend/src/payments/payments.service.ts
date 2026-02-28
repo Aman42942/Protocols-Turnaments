@@ -133,4 +133,38 @@ export class PaymentsService {
   async verifyWebhook(body: any, signature: string) {
     return true;
   }
+
+  async createRefund(orderId: string, amount: number, refundId?: string) {
+    if (!orderId || amount <= 0) {
+      throw new BadRequestException('Order ID and valid amount are required for refund');
+    }
+
+    if (!this.appId || !this.secretKey) {
+      return {
+        refund_id: refundId || `mock_ref_${Date.now()}`,
+        status: 'SUCCESS',
+        amount: amount
+      };
+    }
+
+    const body = {
+      refund_amount: amount,
+      refund_id: refundId || `REF${Date.now()}`,
+      refund_note: 'Tournament registration refund'
+    };
+
+    try {
+      console.log(`[CASHFREE] Creating Refund for Order: ${orderId} | Amount: ₹${amount}`);
+      const response = await axios.post(
+        `${this.baseUrl}/orders/${orderId}/refunds`,
+        body,
+        { headers: this.headers() },
+      );
+      return response.data;
+    } catch (error: any) {
+      const cfError = error.response?.data;
+      console.error('[CASHFREE ERROR] Refund Failed:', JSON.stringify(cfError || error.message));
+      throw new BadRequestException(cfError?.message || 'Refund processing failed');
+    }
+  }
 }
