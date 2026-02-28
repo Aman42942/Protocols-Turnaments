@@ -8,7 +8,7 @@ import Link from 'next/link';
 import {
     Users, ArrowLeft, Loader2, UserX, CheckCircle2,
     AlertTriangle, IndianRupee, Search, ShieldAlert,
-    ShieldCheck, Clock, XCircle, ChevronDown
+    ShieldCheck, Clock, XCircle, ChevronDown, RotateCcw
 } from 'lucide-react';
 import { ADMIN_ROLES } from '@/lib/roles';
 import { Input } from '@/components/ui/Input';
@@ -81,6 +81,38 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
             setTimeout(() => setSuccessMsg(''), 4000);
         } catch (err: any) {
             alert(err.response?.data?.message || 'Failed to kick participant');
+        } finally {
+            setKickingId(null);
+        }
+    };
+
+    const handleKickAndRefund = async () => {
+        if (!confirmingKick) return;
+        if (!confirm(`Are you sure you want to KICK and REFUND ₹${tournament?.entryFeePerPerson} to ${confirmingKick.user.name}? This will process the refund via Cashfree.`)) return;
+
+        setKickingId(confirmingKick.id);
+        try {
+            // 1. Kick the participant
+            await api.delete(`/tournaments/${params.id}/participants/${confirmingKick.id}/kick`, {
+                data: { reason: kickReason || 'Removed and Refunded by Admin' }
+            });
+
+            // 2. Process Refund
+            await api.post('/payments/admin/refund', {
+                order_id: confirmingKick.paymentId, // Assuming paymentId is the Cashfree Order ID
+                amount: tournament?.entryFeePerPerson,
+                userId: confirmingKick.user.id,
+                tournamentId: params.id,
+                tournamentTitle: tournament?.title
+            });
+
+            setSuccessMsg(`Refunded and Removed ${confirmingKick.user.name} successfully!`);
+            setConfirmingKick(null);
+            setKickReason('');
+            await fetchData();
+            setTimeout(() => setSuccessMsg(''), 4000);
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Refund/Kick failed');
         } finally {
             setKickingId(null);
         }
@@ -247,8 +279,8 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                                             <td className="p-4">{getPaymentBadge(p.paymentStatus)}</td>
                                             <td className="p-4">
                                                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.status === 'APPROVED' ? 'bg-green-500/10 text-green-400' :
-                                                        p.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-400' :
-                                                            'bg-gray-500/10 text-gray-400'
+                                                    p.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-400' :
+                                                        'bg-gray-500/10 text-gray-400'
                                                     }`}>
                                                     {p.status}
                                                 </span>
@@ -323,6 +355,23 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                             >
                                 Cancel
                             </Button>
+
+                            {confirmingKick.paymentStatus === 'PAID' && (
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 border-orange-500/50 text-orange-500 hover:bg-orange-500/10"
+                                    onClick={handleKickAndRefund}
+                                    disabled={kickingId === confirmingKick.id}
+                                >
+                                    {kickingId === confirmingKick.id ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <RotateCcw className="w-4 h-4 mr-2" />
+                                    )}
+                                    Kick & Refund
+                                </Button>
+                            )}
+
                             <Button
                                 className="flex-1 bg-red-600 hover:bg-red-500 text-white border-none"
                                 onClick={handleKick}
