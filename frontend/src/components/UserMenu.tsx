@@ -50,12 +50,14 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
                 className="flex items-center gap-2 focus:outline-none"
             >
                 <div className="relative">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center text-white font-bold shadow-md border-2 border-transparent hover:border-primary transition-all">
-                        {user.avatar ? (
-                            <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
-                        ) : (
-                            user.name.charAt(0).toUpperCase()
-                        )}
+                    <div className="rgb-avatar-border w-9 h-9">
+                        <div className="w-full h-full rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center text-white font-bold shadow-md overflow-hidden">
+                            {user.avatar ? (
+                                <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                            ) : (
+                                user.name.charAt(0).toUpperCase()
+                            )}
+                        </div>
                     </div>
                 </div>
             </button>
@@ -66,8 +68,14 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
 
                     {/* Header Section */}
                     <div className="p-4 flex items-center gap-3 border-b border-border">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-xl font-bold">
-                            {user.name.charAt(0).toUpperCase()}
+                        <div className="rgb-avatar-border w-12 h-12 shrink-0">
+                            <div className="w-full h-full rounded-full flex items-center justify-center text-white text-xl font-bold overflow-hidden bg-gradient-to-br from-yellow-400 to-orange-500">
+                                {user.avatar ? (
+                                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    user.name.charAt(0).toUpperCase()
+                                )}
+                            </div>
                         </div>
                         <div className="flex-1">
                             <h3 className="text-foreground font-semibold text-base">{user.name}</h3>

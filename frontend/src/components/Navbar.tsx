@@ -247,16 +247,17 @@ export function Navbar() {
                                 {user ? (
                                     <div className="flex items-center gap-3 px-2 py-2">
                                         <div className="relative shrink-0">
-                                            <div className="w-12 h-12 rounded-xl bg-muted border border-border/50 overflow-hidden shadow-inner flex items-center justify-center">
-                                                {user?.avatar ? (
-                                                    <img src={user.avatar} alt={user.name || 'User'} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="text-primary font-black text-xl">
-                                                        {(user.name || 'P')[0].toUpperCase()}
-                                                    </div>
-                                                )}
+                                            <div className="rgb-avatar-border w-12 h-12">
+                                                <div className="w-full h-full rounded-full bg-muted border-0 overflow-hidden flex items-center justify-center">
+                                                    {user?.avatar ? (
+                                                        <img src={user.avatar} alt={user.name || 'User'} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="text-primary font-black text-xl">
+                                                            {(user.name || 'P')[0].toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-background rounded-full shadow-lg" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-black text-foreground truncate uppercase tracking-tight">{user.name || 'Account'}</p>
