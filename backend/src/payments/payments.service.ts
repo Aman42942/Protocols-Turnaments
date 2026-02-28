@@ -28,6 +28,15 @@ export class PaymentsService {
     };
   }
 
+  private getHttpsFrontendUrl(): string {
+    const url = this.configService.get<string>('FRONTEND_URL') || '';
+    // Cashfree requires HTTPS — fallback to production Vercel URL if local/http
+    if (!url || url.startsWith('http://') || url.includes('localhost') || url.includes('127.0.0.1')) {
+      return 'https://protocols-turnaments.vercel.app';
+    }
+    return url;
+  }
+
   async createOrder(
     amount: number,
     userId: string,
@@ -61,7 +70,7 @@ export class PaymentsService {
         customer_email: userEmail || 'gamer@protocol.app',
       },
       order_meta: {
-        return_url: `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/tournaments?order_id={order_id}`,
+        return_url: `${this.getHttpsFrontendUrl()}/tournaments?order_id={order_id}`,
       },
     };
 
