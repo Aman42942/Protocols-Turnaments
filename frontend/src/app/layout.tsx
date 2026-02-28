@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BrandingProvider } from "@/context/ThemeContext";
 import { SocketProvider } from "@/context/SocketContext";
+import { CmsEngineProvider } from "@/context/CmsContext";
 import Script from "next/script";
 
 const geistSans = Geist({
@@ -18,43 +19,69 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Protocol Tournaments | Professional Esports Platform",
-    template: "%s | Protocol",
-  },
-  description: "Join the world's leading esports tournament platform. Compete in Valorant, PUBG, BGMI, and Free Fire. Win prizes and build your legacy.",
-  keywords: ["esports", "tournament", "gaming", "pubg", "valorant", "bgmi", "free fire", "competitive gaming"],
-  authors: [{ name: "Protocol Team" }],
-  creator: "Protocol",
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: "https://protocol.gg",
-    title: "Protocol Tournaments | Professional Esports Platform",
-    description: "Compete in top-tier esports tournaments. Win cash prizes. Build your team.",
-    siteName: "Protocol",
-    images: [
-      {
-        url: "https://protocol.gg/og-image.jpg", // Ensure this image exists in public folder
-        width: 1200,
-        height: 630,
-        alt: "Protocol Esports Platform",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Protocol Tournaments",
-    description: "The ultimate platform for competitive gaming.",
-    images: ["https://protocol.gg/og-image.jpg"],
-    creator: "@protocolgg",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  let content: Record<string, string> = {};
+
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/cms/config`, {
+      next: { revalidate: 60 }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.content) {
+        content = data.content;
+      }
+    } else {
+      console.warn(`CMS config fetch returned status: ${res.status}`);
+    }
+  } catch (error) {
+    console.error("Failed to fetch global SEO metadata - Backend might be down:", error instanceof Error ? error.message : error);
+  }
+
+  const title = content.SEO_META_TITLE || "Protocol Tournaments | Professional Esports Platform";
+  const description = content.SEO_META_DESCRIPTION || "Join the world's leading esports tournament platform. Compete in Valorant, PUBG, BGMI, and Free Fire. Win prizes and build your legacy.";
+  const keywords = content.SEO_META_KEYWORDS ? content.SEO_META_KEYWORDS.split(',').map(k => k.trim()) : ["esports", "tournament", "gaming", "pubg", "valorant", "bgmi", "free fire", "competitive gaming"];
+  const ogImage = content.SEO_OG_IMAGE || "https://protocol.gg/og-image.jpg";
+
+  return {
+    title: {
+      default: title,
+      template: "%s | Protocol",
+    },
+    description,
+    keywords,
+    authors: [{ name: "Protocol Team" }],
+    creator: "Protocol",
+    openGraph: {
+      type: "website",
+      locale: "en_US",
+      url: "https://protocol.gg",
+      title: title,
+      description: description,
+      siteName: "Protocol",
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: title,
+      description: description,
+      images: [ogImage],
+      creator: "@protocolgg",
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+}
 
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 
@@ -75,16 +102,18 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <BrandingProvider>
-            <SocketProvider>
-              <Navbar />
-              <main className="min-h-screen flex flex-col pb-20 md:pb-0">
-                {children}
-              </main>
-              <MobileBottomNav />
-              <Footer />
-            </SocketProvider>
-          </BrandingProvider>
+          <CmsEngineProvider>
+            <BrandingProvider>
+              <SocketProvider>
+                <Navbar />
+                <main className="min-h-screen flex flex-col pb-20 md:pb-0">
+                  {children}
+                </main>
+                <MobileBottomNav />
+                <Footer />
+              </SocketProvider>
+            </BrandingProvider>
+          </CmsEngineProvider>
         </ThemeProvider>
 
         {/* Cashfree SDK v3 */}

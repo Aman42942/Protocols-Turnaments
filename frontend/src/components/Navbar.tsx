@@ -10,6 +10,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logout } from '@/lib/auth';
+import { useCms } from '@/context/CmsContext';
 
 // Final Verified Mobile Sidebar Navbar
 interface SidebarLinkProps {
@@ -27,10 +28,10 @@ function SidebarLink({ href, icon: Icon, label, active, onClick }: SidebarLinkPr
                 whileTap={{ scale: 0.98 }}
                 className={cn(
                     "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
-                    active ? "bg-primary/10 text-primary" : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
+                    active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
             >
-                <Icon className={cn("w-5 h-5", active ? "text-primary" : "text-zinc-500")} />
+                <Icon className={cn("w-5 h-5", active ? "text-primary" : "text-muted-foreground/70")} />
                 <span className="text-sm font-semibold">{label}</span>
                 {active && <motion.div layoutId="active-pill" className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
             </motion.div>
@@ -43,6 +44,11 @@ export function Navbar() {
     const [user, setUser] = useState<any>(null);
     const pathname = usePathname();
     const router = useRouter();
+    const { getContent } = useCms();
+
+    // Fallbacks to default values if CMS not loaded
+    const logoUrl = getContent('LOGO_URL', '');
+    const siteTitle = getContent('SITE_TITLE', 'PROTOCOL');
 
     const [announcements, setAnnouncements] = useState<any[]>([]);
 
@@ -122,10 +128,14 @@ export function Navbar() {
                 <div className="container flex h-16 items-center justify-between">
                     <div className="flex items-center gap-2 md:gap-6">
                         <Link href="/" className="flex items-center gap-2">
-                            <div className="bg-primary/10 p-1 rounded-lg">
-                                <Trophy className="w-6 h-6 text-primary" />
-                            </div>
-                            <span className="text-xl font-bold tracking-tight">PROTOCOL</span>
+                            {logoUrl ? (
+                                <img src={logoUrl} alt="Logo" className="w-8 h-8 object-contain" />
+                            ) : (
+                                <div className="bg-primary/10 p-1 rounded-lg">
+                                    <Trophy className="w-6 h-6 text-primary" />
+                                </div>
+                            )}
+                            <span className="text-xl font-bold tracking-tight uppercase">{siteTitle}</span>
                         </Link>
                         <div className="hidden md:flex gap-6">
                             {navLinks.map((link) => (
@@ -204,11 +214,15 @@ export function Navbar() {
                         >
                             <div className="p-6 pb-2 flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-                                        <Trophy className="w-5 h-5 text-black" />
-                                    </div>
+                                    {logoUrl ? (
+                                        <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain" />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                                            <Trophy className="w-5 h-5 text-black" />
+                                        </div>
+                                    )}
                                     <div className="flex flex-col">
-                                        <span className="text-lg font-black tracking-tighter text-foreground leading-none lowercase group-hover:first-letter:uppercase">p<span className="text-primary">rotocol</span></span>
+                                        <span className="text-lg font-black tracking-tighter text-foreground leading-none lowercase group-hover:first-letter:uppercase">p<span className="text-primary">{siteTitle.slice(1).toLowerCase()}</span></span>
                                         <span className="text-[10px] font-bold text-primary uppercase tracking-widest mt-1">Esports Pro</span>
                                     </div>
                                 </div>

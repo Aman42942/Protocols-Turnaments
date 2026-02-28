@@ -24,6 +24,7 @@ import { QueueModule } from './queue/queue.module';
 import { RedisModule } from './redis/redis.module';
 import { RbacModule } from './rbac/rbac.module';
 import { OrganizerModule } from './organizer/organizer.module';
+import { CmsModule } from './cms/cms.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { OrganizerModule } from './organizer/organizer.module';
     QueueModule,
     RbacModule,
     OrganizerModule,
+    CmsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -59,4 +61,4 @@ import { OrganizerModule } from './organizer/organizer.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

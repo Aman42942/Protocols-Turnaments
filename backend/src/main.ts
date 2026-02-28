@@ -17,7 +17,7 @@ async function bootstrap() {
           scriptSrc: ["'self'", "'unsafe-inline'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", "data:", "https:"],
-          connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:3000'],
+          connectSrc: ["'self'", "http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:4000", "http://127.0.0.1:4000"],
           fontSrc: ["'self'", "https:", "data:"],
           objectSrc: ["'none'"],
           mediaSrc: ["'self'"],
@@ -29,19 +29,15 @@ async function bootstrap() {
   );
 
   console.log('Current NODE_ENV:', process.env.NODE_ENV);
-  // Debug: Log all incoming requests (Development Only)
-  if (process.env.NODE_ENV !== 'production') {
-    app.use((req, res, next) => {
-      console.log(
-        `[Request] ${req.method} ${req.url} | Origin: ${req.headers.origin} | Referer: ${req.headers.referer}`,
-      );
-      next();
-    });
-  }
 
   // 2. Strict CORS Configuration (Zero-Trust)
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000', // STRICT: Only accept requests from YOUR frontend
+    origin: [
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:4000',
+      'http://127.0.0.1:4000'
+    ],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type,Accept,Authorization,X-Requested-With',

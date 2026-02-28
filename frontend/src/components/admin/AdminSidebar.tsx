@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, Users, CreditCard, Settings,
-    LayoutDashboard, LogOut, X, Activity, ShieldCheck,
+    LayoutDashboard, LogOut, X, Activity, ShieldCheck, Palette
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
     { name: 'Users', href: '/admin/users', icon: Users, color: '#22c55e', accent: 'before:bg-green-500', glow: 'group-hover:shadow-green-500/40' },
     { name: 'Transactions', href: '/admin/transactions', icon: CreditCard, color: '#a855f7', accent: 'before:bg-purple-500', glow: 'group-hover:shadow-purple-500/40' },
     { name: 'Health', href: '/admin/health', icon: Activity, color: '#10b981', accent: 'before:bg-emerald-500', glow: 'group-hover:shadow-emerald-500/40' },
+    { name: 'Site Builder', href: '/admin/builder', icon: Palette, color: '#ec4899', accent: 'before:bg-pink-500', glow: 'group-hover:shadow-pink-500/40' },
     { name: 'Profile', href: '/admin/profile', icon: ShieldCheck, color: '#facc15', accent: 'before:bg-yellow-400', glow: 'group-hover:shadow-yellow-400/40' },
     { name: 'Settings', href: '/admin/settings', icon: Settings, color: '#94a3b8', accent: 'before:bg-slate-400', glow: 'group-hover:shadow-slate-400/30' },
 ];

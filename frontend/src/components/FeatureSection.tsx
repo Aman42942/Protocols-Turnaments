@@ -1,8 +1,27 @@
 "use client";
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
-import { Zap, Shield, Globe, Award } from 'lucide-react';
+import { Zap, Shield, Globe, Award, Star, Trophy, Gamepad2, Users, Rocket, Target, Check, LayoutDashboard } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useCms } from '@/context/CmsContext';
+
+const getIcon = (iconName: string | null | undefined) => {
+    switch (iconName?.toLowerCase()) {
+        case 'zap': return Zap;
+        case 'shield': return Shield;
+        case 'globe': return Globe;
+        case 'award': return Award;
+        case 'trophy': return Trophy;
+        case 'game':
+        case 'gamepad2': return Gamepad2;
+        case 'users': return Users;
+        case 'rocket': return Rocket;
+        case 'target': return Target;
+        case 'layout':
+        case 'layoutdashboard': return LayoutDashboard;
+        default: return Star;
+    }
+};
 
 const features = [
     {
@@ -35,7 +54,22 @@ const features = [
     },
 ];
 
+const defaultTitle = "WHY CHOOSE PROTOCOL?";
+const defaultSubtitle = "Built by gamers, for gamers. We provide the most reliable and premium tournament experience in the industry.";
+
 export function FeatureSection() {
+    const { config, getContent } = useCms();
+
+    const displayFeatures = config?.features && config.features.length > 0
+        ? config.features.map(f => ({
+            title: f.title,
+            description: f.description,
+            icon: getIcon(f.icon),
+            color: "text-primary",
+            bg: "bg-primary/10"
+        }))
+        : features;
+
     return (
         <section className="py-32 relative overflow-hidden bg-muted/20">
             {/* Subtle background glow */}
@@ -49,17 +83,17 @@ export function FeatureSection() {
                         viewport={{ once: true }}
                         className="space-y-4"
                     >
-                        <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground italic">
-                            WHY CHOOSE <span className="text-primary italic">PROTOCOL?</span>
+                        <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground italic uppercase">
+                            {getContent('FEATURES_TITLE', defaultTitle)}
                         </h2>
                         <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto font-medium opacity-80">
-                            Built by gamers, for gamers. We provide the most reliable and premium tournament experience in the industry.
+                            {getContent('FEATURES_SUBTITLE', defaultSubtitle)}
                         </p>
                     </motion.div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {features.map((feature, index) => (
+                    {displayFeatures.map((feature: any, index: number) => (
                         <motion.div
                             key={index}
                             initial={{ opacity: 0, y: 30 }}

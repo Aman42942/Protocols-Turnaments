@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { HeroSection } from "@/components/HeroSection";
 import { FeatureSection } from "@/components/FeatureSection";
 import { DashboardView } from "@/components/DashboardView";
+import { useCms } from "@/context/CmsContext";
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { config } = useCms();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -16,16 +18,39 @@ export default function Home() {
 
   if (isLoading) return null;
 
+  // Build the dynamic landing page Layout
+  const renderDynamicLayout = () => {
+    if (!config?.layout || config.layout.length === 0) {
+      // Fallback if DB is empty
+      return (
+        <>
+          <HeroSection />
+          <FeatureSection />
+        </>
+      );
+    }
+
+    // Sort valid active layouts by display order
+    const sortedLayouts = [...config.layout]
+      .filter(l => l.isVisible)
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+
+    return sortedLayouts.map(layout => {
+      switch (layout.componentId) {
+        case 'HERO': return <HeroSection key={layout.componentId} />;
+        case 'FEATURES': return <FeatureSection key={layout.componentId} />;
+        case 'TOURNAMENTS': return null; // Placeholder for future component
+        default: return null;
+      }
+    });
+  };
+
   return (
     <div className="flex flex-col gap-0">
       {isLoggedIn ? (
         <DashboardView />
       ) : (
-        <>
-          <HeroSection />
-          <FeatureSection />
-          {/* Tournament List will go here for guest view if needed */}
-        </>
+        renderDynamicLayout()
       )}
     </div>
   );

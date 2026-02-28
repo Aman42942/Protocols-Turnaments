@@ -5,8 +5,17 @@ import { motion } from 'framer-motion';
 import { Trophy, Gamepad2, Users, Rocket, Target, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useCms } from '@/context/CmsContext';
 
 export function HeroSection() {
+    const { getContent } = useCms();
+
+    const heroTitle = getContent('HERO_TITLE', 'COMPETE. WIN. Become a Legend.');
+    const heroSubtitle = getContent('HERO_SUBTITLE', 'The ultimate esports platform for competitive gamers. Join tournaments, climb the leaderboards, and win real cash prizes across your favorite titles.');
+
+    // Attempt to split title if formatted like "Word1. Word2. phrase."
+    const parts = heroTitle.split('.');
+
     return (
         <section className="relative overflow-hidden pt-24 pb-32 md:pt-40 md:pb-48 bg-background">
             {/* Elite Background Mesh - Protocol Blue Theme */}
@@ -37,14 +46,20 @@ export function HeroSection() {
                         Season 1 Registrations Open
                     </motion.div>
 
-                    <h1 className="text-6xl md:text-9xl font-black tracking-tighter mb-8 leading-[0.85] text-foreground">
-                        <span className="block opacity-90 italic">COMPETE.</span>
-                        <span className="block text-primary drop-shadow-[0_0_40px_rgba(var(--primary),0.25)]">WIN.</span>
-                        <span className="block text-4xl md:text-6xl font-black tracking-widest mt-6 text-muted-foreground uppercase opacity-80">Become a Legend.</span>
-                    </h1>
+                    {parts.length >= 3 ? (
+                        <h1 className="text-6xl md:text-9xl font-black tracking-tighter mb-8 leading-[0.85] text-foreground">
+                            <span className="block opacity-90 italic">{parts[0]}.</span>
+                            <span className="block text-primary drop-shadow-[0_0_40px_rgba(var(--primary),0.25)]">{parts[1]}.</span>
+                            <span className="block text-4xl md:text-6xl font-black tracking-widest mt-6 text-muted-foreground uppercase opacity-80">{parts.slice(2).join('.')}</span>
+                        </h1>
+                    ) : (
+                        <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 leading-tight text-foreground uppercase italic py-4">
+                            {heroTitle}
+                        </h1>
+                    )}
 
                     <p className="mt-8 text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-16 leading-relaxed font-medium">
-                        The ultimate esports platform for competitive gamers. Join tournaments, climb the leaderboards, and win real cash prizes across your favorite titles.
+                        {heroSubtitle}
                     </p>
 
                     <div className="flex flex-col sm:flex-row gap-6 justify-center mb-32 items-center">

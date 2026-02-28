@@ -365,3 +365,47 @@ model ComplianceAuditLog {
   @@index([organizerId])
   @@index([tournamentId])
 }
+
+model GlobalTheme {
+  id                 String   @id @default(uuid())
+  mode               String   @default("DARK") // DARK, LIGHT, NEON, MINIMAL
+  primaryColor       String   @default("#FF5733")
+  secondaryColor     String   @default("#1F1F1F")
+  backgroundColor    String   @default("#000000")
+  textColor          String   @default("#FFFFFF")
+  fontFamily         String   @default("Inter")
+  borderRounding     String   @default("0.5rem") // 0px, 0.5rem, 9999px
+  animationSpeed     String   @default("normal") // slow, normal, fast
+  buttonStyle        String   @default("solid")  // solid, outline, ghost
+  glassmorphism      Boolean  @default(false)
+  backgroundStyle    String   @default("solid")  // solid, gradient, mesh
+  updatedAt          DateTime @updatedAt
+}
+
+model SiteContent {
+  id              String   @id @default(uuid())
+  key             String   @unique // e.g., "HERO_TITLE", "LOGO_URL"
+  value           String   @db.Text
+  type            String   // TEXT, IMAGE_URL, HTML
+  updatedAt       DateTime @updatedAt
+}
+
+model ComponentLayout {
+  id              String   @id @default(uuid())
+  componentId     String   @unique // e.g., "FEATURED_TOURNAMENTS", "TESTIMONIALS"
+  isVisible       Boolean  @default(true)
+  displayOrder    Int      @default(0)
+}
+
+model CustomFeature {
+  id          String   @id @default(uuid())
+  title       String
+  description String?  @db.Text
+  icon        String?  // Name of the lucide icon or a URL
+  imageUrl    String?  // Optional image for the feature
+  type        String   @default("CARD") // CARD, HERO, TEXT_BLOCK, STAT_BOX
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
