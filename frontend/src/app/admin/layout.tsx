@@ -119,7 +119,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     whileTap={{ scale: 0.9 }}
                                     className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-[10px] shadow-lg shadow-primary/30 cursor-pointer"
                                 >
-                                    {user?.name?.charAt(0).toUpperCase() || 'A'}
+                                    {(user?.name && user.name !== 'User' ? user.name.charAt(0) : user?.email?.charAt(0) || 'A').toUpperCase()}
                                 </motion.div>
                             </Link>
                         </div>

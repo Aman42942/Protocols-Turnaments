@@ -162,6 +162,7 @@ export class AuthService {
       userWithoutPassword.id,
       userWithoutPassword.email,
       userWithoutPassword.role,
+      userWithoutPassword.name || undefined,
     );
     return {
       message: 'Email verified successfully!',
@@ -209,7 +210,7 @@ export class AuthService {
   async login(userOrBody: any, ip?: string) {
     // If called from OAuth flow, user is already validated
     if (userOrBody.id) {
-      const tokens = await this.getTokens(userOrBody.id, userOrBody.email, userOrBody.role);
+      const tokens = await this.getTokens(userOrBody.id, userOrBody.email, userOrBody.role, userOrBody.name);
       const { password, ...userWithoutPassword } = userOrBody;
       return { ...tokens, user: userWithoutPassword };
     }
@@ -359,6 +360,7 @@ export class AuthService {
       userWithoutPassword.id,
       userWithoutPassword.email,
       userWithoutPassword.role,
+      userWithoutPassword.name || undefined,
     );
     return { ...tokens, user: userWithoutPassword };
   }
@@ -496,6 +498,7 @@ export class AuthService {
       userWithoutPassword.id,
       userWithoutPassword.email,
       userWithoutPassword.role,
+      userWithoutPassword.name || undefined,
     );
     return { ...tokens, user: userWithoutPassword };
   }
@@ -531,11 +534,12 @@ export class AuthService {
 
   // ========== TOKEN GENERATION ==========
 
-  private async generateTokens(userId: string, email: string, role: string) {
+  private async generateTokens(userId: string, email: string, role: string, name?: string) {
     const payload = {
       sub: userId,
       email: email,
       role: role,
+      name: name,
     };
 
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
@@ -579,8 +583,8 @@ export class AuthService {
     });
   }
 
-  async getTokens(userId: string, email: string, role: string) {
-    const tokens = await this.generateTokens(userId, email, role);
+  async getTokens(userId: string, email: string, role: string, name?: string) {
+    const tokens = await this.generateTokens(userId, email, role, name);
     await this.updateRefreshToken(userId, tokens.refresh_token);
     return tokens;
   }
