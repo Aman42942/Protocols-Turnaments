@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input';
 import {
     Loader2, Search, Filter, ArrowDownLeft, ArrowUpRight,
     CheckCircle, XCircle, Clock, Banknote, IndianRupee,
-    User, History, ExternalLink, ShieldCheck
+    User, History, ExternalLink, ShieldCheck, RotateCcw
 } from 'lucide-react';
 
 interface Transaction {
@@ -53,6 +53,25 @@ export default function AdminTransactionsPage() {
             await fetchTransactions();
         } catch (err: any) {
             alert(err.response?.data?.message || 'Action failed');
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleRefund = async (tx: Transaction) => {
+        if (!confirm(`Are you sure you want to refund ₹${tx.amount} to ${tx.user?.name}?`)) return;
+
+        setProcessingId(tx.id);
+        try {
+            await api.post('/payments/admin/refund', {
+                order_id: tx.reference,
+                amount: tx.amount,
+                userId: tx.user?.id
+            });
+            alert('Refund initiated successfully');
+            await fetchTransactions();
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Refund failed');
         } finally {
             setProcessingId(null);
         }
@@ -185,6 +204,21 @@ export default function AdminTransactionsPage() {
                                         >
                                             <XCircle className="h-4 w-4 mr-1.5" />
                                             REJECT
+                                        </Button>
+                                    </div>
+                                )}
+
+                                {tx.status === 'COMPLETED' && tx.type === 'DEPOSIT' && (
+                                    <div className="flex gap-2 mt-4 pt-4 border-t border-dashed">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="border-orange-500/50 text-orange-500 hover:bg-orange-500/10 font-bold"
+                                            disabled={!!processingId}
+                                            onClick={() => handleRefund(tx)}
+                                        >
+                                            {processingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1.5" />}
+                                            INITIATE REFUND
                                         </Button>
                                     </div>
                                 )}
