@@ -167,7 +167,7 @@ export default function TournamentDetailPage() {
 
             // Step 2: Redirect to Cashfree hosted payment page
             // This bypasses domain whitelisting — works on all domains
-            window.location.href = `https://payments.cashfree.com/order/#/?payment_session_id=${payment_session_id}`;
+            window.location.href = `https://payments.cashfree.com/pg/view/checkout?payment_session_id=${payment_session_id}`;
         } catch (err: any) {
             alert(err.response?.data?.message || 'Payment initiation failed');
             setRegistering(false);
