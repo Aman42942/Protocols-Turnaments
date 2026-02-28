@@ -64,7 +64,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
 
             {/* Dropdown Content */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 mt-2 w-[min(320px,calc(100vw-16px))] bg-popover border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-[80vh] overflow-y-auto z-[9999]">
 
                     {/* Header Section */}
                     <div className="p-4 flex items-center gap-3 border-b border-border">
