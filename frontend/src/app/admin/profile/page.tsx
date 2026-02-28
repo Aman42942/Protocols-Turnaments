@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Shield, Key, User, Mail, Save, Loader2, CheckCircle, AlertCircle, ShieldCheck, Target, Lock } from 'lucide-react';
+import { Shield, Key, User, Mail, Save, Loader2, CheckCircle, AlertCircle, ShieldCheck, Target, Lock, Camera } from 'lucide-react';
 import api from '@/lib/api';
 import { getRoleColor, ROLE_LABELS, UserRole } from '@/lib/roles';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,16 +20,26 @@ export default function AdminProfilePage() {
     const [passMessage, setPassMessage] = useState('');
     const [passError, setPassError] = useState('');
 
+    // Avatar Form State
+    const [avatarUrl, setAvatarUrl] = useState('');
+    const [avatarLoading, setAvatarLoading] = useState(false);
+    const [avatarMessage, setAvatarMessage] = useState('');
+    const [avatarError, setAvatarError] = useState('');
+    const [showAvatarInput, setShowAvatarInput] = useState(false);
+
     useEffect(() => {
         // First load from localStorage for immediate display
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
-            setUser(JSON.parse(storedUser));
+            const parsed = JSON.parse(storedUser);
+            setUser(parsed);
+            setAvatarUrl(parsed.avatar || '');
         }
         // Then fetch full profile from API (includes avatar field)
         api.get('/users/me')
             .then(res => {
                 setUser(res.data);
+                setAvatarUrl(res.data.avatar || '');
                 // Also update localStorage with latest info
                 const stored = localStorage.getItem('user');
                 if (stored) {
@@ -65,6 +75,27 @@ export default function AdminProfilePage() {
             setPassError(err.response?.data?.message || 'Failed to update security credentials.');
         } finally {
             setPassLoading(false);
+        }
+    };
+
+    const handleSaveAvatar = async () => {
+        if (!avatarUrl.trim()) return;
+        setAvatarLoading(true);
+        setAvatarError('');
+        setAvatarMessage('');
+        try {
+            const res = await api.patch('/users/me', { avatar: avatarUrl.trim() });
+            setUser((prev: any) => ({ ...prev, avatar: res.data.avatar }));
+            const stored = localStorage.getItem('user');
+            if (stored) {
+                localStorage.setItem('user', JSON.stringify({ ...JSON.parse(stored), avatar: res.data.avatar }));
+            }
+            setAvatarMessage('Profile image updated!');
+            setShowAvatarInput(false);
+        } catch (err: any) {
+            setAvatarError('Failed to update avatar.');
+        } finally {
+            setAvatarLoading(false);
         }
     };
 
@@ -112,19 +143,36 @@ export default function AdminProfilePage() {
                         {/* HUD corner decorations */}
                         <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary/30 pointer-events-none" />
                         <CardHeader className="pb-0 pt-8 flex flex-col items-center">
-                            <div className="relative group">
+                            <div className="relative group cursor-pointer" onClick={() => setShowAvatarInput(v => !v)}>
                                 <div className="w-28 h-28 rounded-3xl bg-muted/50 border-2 border-border/50 flex items-center justify-center relative overflow-hidden group-hover:border-primary/50 transition-colors duration-500">
                                     {user?.avatar ? (
                                         <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
                                     ) : (
                                         <User className="w-12 h-12 text-muted-foreground/30" />
                                     )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-2">
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-white">Active</p>
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <Camera className="w-6 h-6 text-white" />
                                     </div>
                                 </div>
                                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-4 border-card rounded-full shadow-lg" />
                             </div>
+                            {showAvatarInput && (
+                                <div className="w-full px-2 mt-3 space-y-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground text-center">Paste Image URL</p>
+                                    <Input
+                                        value={avatarUrl}
+                                        onChange={e => setAvatarUrl(e.target.value)}
+                                        placeholder="https://example.com/photo.jpg"
+                                        className="text-xs rounded-xl"
+                                        onClick={e => e.stopPropagation()}
+                                    />
+                                    {avatarError && <p className="text-[10px] text-red-500 text-center">{avatarError}</p>}
+                                    {avatarMessage && <p className="text-[10px] text-green-500 text-center">{avatarMessage}</p>}
+                                    <Button onClick={(e) => { e.stopPropagation(); handleSaveAvatar(); }} disabled={avatarLoading} className="w-full h-8 text-xs rounded-xl">
+                                        {avatarLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Save Photo'}
+                                    </Button>
+                                </div>
+                            )}
                             <CardTitle className="mt-4 text-xl font-black uppercase tracking-tight italic">{user?.name || 'ADMIN'}</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6 pb-8 px-8">
