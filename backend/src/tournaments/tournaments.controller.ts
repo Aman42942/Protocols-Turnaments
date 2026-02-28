@@ -25,6 +25,7 @@ import {
   ComplianceService,
   ComplianceEvent,
 } from '../organizer/compliance.service';
+import { UsersService } from '../users/users.service';
 
 @Controller('tournaments')
 export class TournamentsController {
@@ -35,6 +36,7 @@ export class TournamentsController {
     private readonly paymentsService: PaymentsService,
     private readonly activityLogService: ActivityLogService,
     private readonly complianceService: ComplianceService,
+    private readonly usersService: UsersService,
   ) { }
 
   @Post()
@@ -92,10 +94,13 @@ export class TournamentsController {
       return { amount: 0, orderId: null }; // Free tournament
     }
 
-    // Create Cashfree order
+    // Create Cashfree order with real user details
+    const user = await this.usersService.findById(req.user.userId);
     const order = await this.paymentsService.createOrder(
       tournament.entryFeePerPerson,
-      req.user.userId, // Pass userId for Cashfree customer details
+      req.user.userId,
+      user?.email,
+      undefined,
     );
     return order;
   }
