@@ -23,6 +23,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             if (!ADMIN_ROLES.includes(userData.role)) { setStatus('unauthorized'); router.replace('/'); return; }
             setUser(userData);
             setStatus('authorized');
+            // Fetch full profile to get avatar
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data?.avatar) setUser((prev: any) => ({ ...prev, avatar: data.avatar }));
+                })
+                .catch(() => { });
         } catch { setStatus('unauthorized'); router.replace('/login'); }
     }, [router]);
 
@@ -117,9 +126,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 <motion.div
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
-                                    className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-[10px] shadow-lg shadow-primary/30 cursor-pointer"
+                                    className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-[10px] shadow-lg shadow-primary/30 cursor-pointer overflow-hidden"
                                 >
-                                    {(user?.name && user.name !== 'User' ? user.name.charAt(0) : user?.email?.charAt(0) || 'A').toUpperCase()}
+                                    {user?.avatar ? (
+                                        <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        (user?.name && user.name !== 'User' ? user.name.charAt(0) : user?.email?.charAt(0) || 'A').toUpperCase()
+                                    )}
                                 </motion.div>
                             </Link>
                         </div>
