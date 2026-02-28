@@ -143,7 +143,7 @@ export function DashboardView() {
                     </div>
                     <div className="flex gap-4">
                         <Link href="/dashboard/wallet">
-                            <Button className="h-12 px-6 rounded-xl border border-primary/20 bg-background hover:bg-muted transition-all duration-300 shadow-sm">
+                            <Button className="h-12 px-6 rounded-xl border-2 border-primary/40 bg-background hover:bg-muted transition-all duration-300 shadow-sm">
                                 <Wallet className="mr-2 h-5 w-5 text-primary" />
                                 <span className="font-orbitron font-bold text-foreground">₹{data.walletBalance.toFixed(2)}</span>
                             </Button>
