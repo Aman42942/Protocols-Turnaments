@@ -163,11 +163,12 @@ export default function TournamentDetailPage() {
         try {
             // Step 1: Create Order on backend
             const orderRes = await api.post(`/tournaments/${params.id}/create-order`);
-            const { payment_session_id } = orderRes.data;
+            const { payment_session_id, cf_env } = orderRes.data;
 
             // Step 2: Redirect to Cashfree hosted payment page
-            // This bypasses domain whitelisting — works on all domains
-            window.location.href = `https://payments.cashfree.com/pg/view/checkout?payment_session_id=${payment_session_id}`;
+            // Choose domain based on environment (Sandbox vs Production)
+            const cfDomain = cf_env === 'PRODUCTION' ? 'payments.cashfree.com' : 'sandbox.cashfree.com';
+            window.location.href = `https://${cfDomain}/pg/view/checkout?payment_session_id=${payment_session_id}`;
         } catch (err: any) {
             alert(err.response?.data?.message || 'Payment initiation failed');
             setRegistering(false);
