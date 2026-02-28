@@ -143,18 +143,17 @@ export default function AdminProfilePage() {
                         {/* HUD corner decorations */}
                         <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary/30 pointer-events-none" />
                         <CardHeader className="pb-0 pt-8 flex flex-col items-center">
-                            <div className="relative group cursor-pointer" onClick={() => setShowAvatarInput(v => !v)}>
-                                <div className="w-28 h-28 rounded-3xl bg-muted/50 border-2 border-border/50 flex items-center justify-center relative overflow-hidden group-hover:border-primary/50 transition-colors duration-500">
+                            <div className="rgb-avatar-border w-28 h-28 cursor-pointer" onClick={() => setShowAvatarInput(v => !v)}>
+                                <div className="w-full h-full rounded-full bg-muted/50 border-0 flex items-center justify-center relative overflow-hidden">
                                     {user?.avatar ? (
                                         <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
                                     ) : (
                                         <User className="w-12 h-12 text-muted-foreground/30" />
                                     )}
-                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <Camera className="w-6 h-6 text-white" />
                                     </div>
                                 </div>
-                                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-4 border-card rounded-full shadow-lg" />
                             </div>
                             {showAvatarInput && (
                                 <div className="w-full px-2 mt-3 space-y-2">
