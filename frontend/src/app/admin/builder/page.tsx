@@ -49,6 +49,7 @@ export default function SiteBuilderPage() {
                 SEO_META_DESCRIPTION: config.content.SEO_META_DESCRIPTION || 'The ultimate competitive gaming platform.',
                 SEO_META_KEYWORDS: config.content.SEO_META_KEYWORDS || 'esports, tournament, gaming, competitive',
                 SEO_OG_IMAGE: config.content.SEO_OG_IMAGE || '',
+                SEO_FAVICON_URL: config.content.SEO_FAVICON_URL || '',
             });
         }
         if (config?.features) {
@@ -451,15 +452,27 @@ export default function SiteBuilderPage() {
                                         />
                                     </div>
 
-                                    <div>
-                                        <label className="text-sm font-bold flex items-center gap-2 mb-2"><ImageIcon className="w-4 h-4 text-muted-foreground" /> Open Graph Image (OG:Image)</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Direct link to banner image... (1200x630px recommended)"
-                                            value={contentForm.SEO_OG_IMAGE || ''}
-                                            onChange={(e) => setContentForm({ ...contentForm, SEO_OG_IMAGE: e.target.value })}
-                                            className="w-full bg-muted px-4 py-3 rounded-xl border border-border focus:border-primary outline-none text-sm"
-                                        />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div>
+                                            <label className="text-sm font-bold flex items-center gap-2 mb-2"><ImageIcon className="w-4 h-4 text-muted-foreground" /> Open Graph Image (OG:Image)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Direct link to banner image... (1200x630px recommended)"
+                                                value={contentForm.SEO_OG_IMAGE || ''}
+                                                onChange={(e) => setContentForm({ ...contentForm, SEO_OG_IMAGE: e.target.value })}
+                                                className="w-full bg-muted px-4 py-3 rounded-xl border border-border focus:border-primary outline-none text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-bold flex items-center gap-2 mb-2"><ImageIcon className="w-4 h-4 text-muted-foreground" /> Site Favicon URL (.ico/.png)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Direct link to small logo icon..."
+                                                value={contentForm.SEO_FAVICON_URL || ''}
+                                                onChange={(e) => setContentForm({ ...contentForm, SEO_FAVICON_URL: e.target.value })}
+                                                className="w-full bg-muted px-4 py-3 rounded-xl border border-border focus:border-primary outline-none text-sm"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 

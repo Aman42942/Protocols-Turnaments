@@ -43,6 +43,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = content.SEO_META_DESCRIPTION || "Join the world's leading esports tournament platform. Compete in Valorant, PUBG, BGMI, and Free Fire. Win prizes and build your legacy.";
   const keywords = content.SEO_META_KEYWORDS ? content.SEO_META_KEYWORDS.split(',').map(k => k.trim()) : ["esports", "tournament", "gaming", "pubg", "valorant", "bgmi", "free fire", "competitive gaming"];
   const ogImage = content.SEO_OG_IMAGE || "https://protocol.gg/og-image.jpg";
+  const favicon = content.SEO_FAVICON_URL || "/favicon.ico";
 
   return {
     title: {
@@ -51,6 +52,11 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description,
     keywords,
+    icons: {
+      icon: favicon,
+      shortcut: favicon,
+      apple: favicon,
+    },
     authors: [{ name: "Protocol Team" }],
     creator: "Protocol",
     openGraph: {
