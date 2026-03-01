@@ -6,7 +6,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /**
    * Get Admin Dashboard Statistics (Revenue, User Growth, etc.)
@@ -65,6 +65,120 @@ export class AnalyticsService {
       activeTournaments,
       totalUsers,
       revenueTrend: formattedTrend,
+    };
+  }
+
+  /**
+   * Get Central Bank Economy Statistics (Admin Dual Currency Flow)
+   */
+  async getEconomyStats() {
+    // 1. Total INR Deposited
+    const inrAgg = await this.prisma.transaction.aggregate({
+      where: { type: 'DEPOSIT', status: 'COMPLETED', currency: 'INR' },
+      _sum: { amount: true },
+    });
+    const totalINRDeposited = inrAgg._sum.amount || 0;
+
+    // 2. Total USD Deposited
+    const usdAgg = await this.prisma.transaction.aggregate({
+      where: { type: 'DEPOSIT', status: 'COMPLETED', currency: 'USD' },
+      _sum: { amount: true },
+    });
+    // In our system, the "amount" field in transaction for a deposit stores the FINAL COINS.
+    // Wait, let's fix this logic: the deposit creates a transaction where `amount` = Coins added, 
+    // but `currency` is USD and `conversionRate` is rate. 
+    // True USD deposited = Coins / ConversionRate.
+    const usdTransactions = await this.prisma.transaction.findMany({
+      where: { type: 'DEPOSIT', status: 'COMPLETED', currency: 'USD' },
+      select: { amount: true, conversionRate: true }
+    });
+
+    let totalUSDPaid = 0;
+    usdTransactions.forEach(tx => {
+      if (tx.conversionRate > 0) {
+        totalUSDPaid += (tx.amount / tx.conversionRate);
+      }
+    });
+
+    // 3. Total Coins Minted (All deposits regardless of currency)
+    const coinsMintedAgg = await this.prisma.transaction.aggregate({
+      where: { type: 'DEPOSIT', status: 'COMPLETED' },
+      _sum: { amount: true },
+    });
+    const totalCoinsMinted = coinsMintedAgg._sum.amount || 0;
+
+    // 4. Total Coins Wasted/Spent (Entry Fees or Withdrawals)
+    const coinsSpentAgg = await this.prisma.transaction.aggregate({
+      where: { type: { in: ['ENTRY_FEE', 'WITHDRAWAL'] }, status: 'COMPLETED' },
+      _sum: { amount: true },
+    });
+    const totalCoinsBurned = coinsSpentAgg._sum.amount || 0;
+
+    // 5. Total Coins Currently In Wallets (Economy Size)
+    // Leak Detection: Minted - Burned should exactly equal current wallet balances
+    const walletAgg = await this.prisma.wallet.aggregate({
+      _sum: { balance: true, frozenBalance: true },
+    });
+    const totalCoinsInWallets = (walletAgg._sum.balance || 0) + (walletAgg._sum.frozenBalance || 0);
+
+    const leakDelta = totalCoinsMinted - totalCoinsBurned - totalCoinsInWallets;
+
+    return {
+      totalINRDeposited,
+      totalUSDPaid,
+      totalCoinsMinted,
+      totalCoinsBurned,
+      totalCoinsInWallets,
+      leakSystem: {
+        delta: leakDelta,
+        status: Math.abs(leakDelta) < 1 ? 'SECURE' : 'LEAK_DETECTED'
+      }
+    };
+  }
+
+  /**
+   * Get Personal User Ledger
+   */
+  async getUserLedger(userId: string) {
+    const transactions = await this.prisma.transaction.findMany({
+      where: { wallet: { userId } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    let totalSpent = 0;
+    let totalWon = 0;
+    let totalDeposited = 0;
+
+    transactions.forEach(tx => {
+      if (tx.status === 'COMPLETED') {
+        if (tx.type === 'ENTRY_FEE') totalSpent += tx.amount;
+        if (tx.type === 'WINNINGS') totalWon += tx.amount;
+        if (tx.type === 'DEPOSIT') totalDeposited += tx.amount;
+      }
+    });
+
+    return {
+      totalSpent,
+      totalWon,
+      totalDeposited,
+      history: transactions.map(tx => {
+        let narrative = tx.description;
+        if (tx.type === 'DEPOSIT' && tx.currency === 'USD') {
+          const usdVal = (tx.amount / tx.conversionRate).toFixed(2);
+          narrative = `Purchased ${tx.amount} Coins via PayPal ($${usdVal})`;
+        } else if (tx.type === 'DEPOSIT') {
+          narrative = `Purchased ${tx.amount} Coins via ${tx.method || 'UPI'}`;
+        }
+        return {
+          id: tx.id,
+          type: tx.type,
+          amount: tx.amount,
+          status: tx.status,
+          date: tx.createdAt,
+          narrative
+        }
+      })
     };
   }
 

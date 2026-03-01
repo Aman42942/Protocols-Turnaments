@@ -20,6 +20,7 @@ interface TournamentCardProps {
     registeredTeams: number;
     gameMode: string;
     status: string;
+    banner?: string;
 }
 
 // ═══ GAME THEMES DEFINITION ══════════════════════════════════════════════════
@@ -69,7 +70,7 @@ const DEFAULT_THEME = {
 };
 
 export function TournamentCard({
-    id, title, game, tier, entryFee, prizePool, startDate, maxTeams, registeredTeams, gameMode, status
+    id, title, game, tier, entryFee, prizePool, startDate, maxTeams, registeredTeams, gameMode, status, banner
 }: TournamentCardProps) {
     const isFull = registeredTeams >= maxTeams;
     const isHot = registeredTeams >= maxTeams / 2;
@@ -90,13 +91,25 @@ export function TournamentCard({
                     "overflow-hidden rounded-[2rem] border-border/50 bg-card/40 backdrop-blur-xl hover:border-border transition-all duration-500 h-full flex flex-col relative shadow-[0_15px_40px_rgba(0,0,0,0.1)]",
                     `hover:shadow-[0_20px_50px_${theme.glow}]`
                 )}>
-                    {/* Game Visual Header - Enhanced with Mesh */}
+                    {/* Game Visual Header - Enhanced with Mesh or Banner */}
                     <div className="relative h-44 bg-muted/20 flex flex-col items-center justify-center overflow-hidden">
-                        {/* Mesh Gradients - Enhanced Visibility */}
-                        <div className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity duration-700">
-                            <div className={cn("absolute top-[-20%] left-[-10%] w-[120%] h-[120%] bg-gradient-to-br blur-3xl animate-pulse", theme.gradient)} />
-                            <div className={cn("absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] blur-2xl opacity-40", theme.secondary)} />
-                        </div>
+                        {/* Banner Image if exists */}
+                        {banner ? (
+                            <div className="absolute inset-0 z-0">
+                                <img
+                                    src={banner}
+                                    alt={title}
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                />
+                                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-500 z-10" />
+                            </div>
+                        ) : (
+                            /* Mesh Gradients - Fallback */
+                            <div className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity duration-700">
+                                <div className={cn("absolute top-[-20%] left-[-10%] w-[120%] h-[120%] bg-gradient-to-br blur-3xl animate-pulse", theme.gradient)} />
+                                <div className={cn("absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] blur-2xl opacity-40", theme.secondary)} />
+                            </div>
+                        )}
 
                         <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent z-10" />
 

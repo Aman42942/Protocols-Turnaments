@@ -38,7 +38,7 @@ export default function LoginPage() {
         if (data.user.role === 'ADMIN' || data.user.role === 'SUPERADMIN') {
             router.push('/admin');
         } else {
-            router.push('/');
+            router.push('/dashboard');
         }
     };
 

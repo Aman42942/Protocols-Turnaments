@@ -191,7 +191,7 @@ model Wallet {
   id            String        @id @default(uuid())
   userId        String        @unique
   balance       Float         @default(0)
-  currency      String        @default("INR")
+  currency      String        @default("COIN")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   frozenBalance Float         @default(0)
@@ -200,17 +200,19 @@ model Wallet {
 }
 
 model Transaction {
-  id          String   @id @default(uuid())
-  walletId    String
-  type        String
-  amount      Float
-  status      String   @default("PENDING")
-  method      String?
-  reference   String?
-  description String?
-  createdAt   DateTime @default(now())
-  metadata    String?
-  wallet      Wallet   @relation(fields: [walletId], references: [id])
+  id             String   @id @default(uuid())
+  walletId       String
+  type           String
+  amount         Float
+  currency       String   @default("INR") // INR, USD, COIN
+  conversionRate Float    @default(1.0)
+  status         String   @default("PENDING")
+  method         String?
+  reference      String?
+  description    String?
+  createdAt      DateTime @default(now())
+  metadata       String?
+  wallet         Wallet   @relation(fields: [walletId], references: [id])
 }
 
 model Notification {

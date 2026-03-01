@@ -7,7 +7,7 @@ services:
     region: singapore # Optional: closer to India
     rootDir: backend
     buildCommand: npm install && npx prisma generate && npm run build
-    startCommand: npx prisma db push && npm run start:prod
+    startCommand: npx prisma db push --accept-data-loss && npm run start:prod
     envVars:
       - key: DATABASE_URL
         sync: false

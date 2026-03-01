@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, Trophy, User, LogOut, ChevronRight, LayoutDashboard, CreditCard, Users, Settings, Activity, ShieldCheck, Search } from 'lucide-react';
+import { Menu, X, Trophy, User, LogOut, ChevronRight, LayoutDashboard, CreditCard, Users, Settings, Activity, ShieldCheck, Search, Home } from 'lucide-react';
 import { Button } from './ui/Button';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
@@ -96,7 +96,8 @@ export function Navbar() {
     };
 
     const navLinks = [
-        { name: 'Home', href: '/', icon: LayoutDashboard },
+        { name: 'Home', href: '/', icon: Home },
+        ...(user ? [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }] : []),
         { name: 'Tournaments', href: '/tournaments', icon: Trophy },
         ...(user ? [{ name: 'Wallet', href: '/dashboard/wallet', icon: CreditCard }] : []),
         { name: 'Leaderboard', href: '/leaderboard', icon: Users },
@@ -235,7 +236,8 @@ export function Navbar() {
                             <div className="flex-1 overflow-y-auto px-4 py-2 space-y-8 custom-scrollbar scroll-smooth">
                                 <div className="space-y-1">
                                     <p className="px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-3">Dashboard</p>
-                                    <SidebarLink href="/" icon={LayoutDashboard} label="Home Overview" active={pathname === '/'} onClick={() => setIsOpen(false)} />
+                                    <SidebarLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} onClick={() => setIsOpen(false)} />
+                                    <SidebarLink href="/" icon={Home} label="Hero Page" active={pathname === '/'} onClick={() => setIsOpen(false)} />
                                     <SidebarLink href="/tournaments" icon={Trophy} label="Tournament Arena" active={pathname === '/tournaments'} onClick={() => setIsOpen(false)} />
                                     <SidebarLink href="/leaderboard" icon={Activity} label="Leaderboards" active={pathname === '/leaderboard'} onClick={() => setIsOpen(false)} />
                                 </div>

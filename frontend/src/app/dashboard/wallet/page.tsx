@@ -6,70 +6,96 @@ import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { QRCodeSVG } from 'qrcode.react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Wallet, IndianRupee, ArrowUpRight, ArrowDownLeft, QrCode, Loader2,
-    CheckCircle, XCircle, Clock, CreditCard, Building2, Smartphone,
-    Shield, Zap, Copy, ExternalLink, TrendingUp, History, ChevronRight,
-    Gift, Star, AlertCircle, Globe, Banknote, Trophy, Target, MessageCircle
+    Wallet, ArrowUpRight, ArrowDownLeft, Loader2,
+    CheckCircle, XCircle, Clock, CreditCard,
+    Shield, Target, MessageCircle, History,
+    Star, Banknote, Coins, ArrowRightLeft, DollarSign, IndianRupee, PieChart, Info, Trophy, Globe, ShieldCheck
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { usePayPalScriptReducer, PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 
-interface WalletData {
-    id: string;
-    balance: number;
-    currency: string;
-    transactions: Transaction[];
-}
+// ---- SUBCOMPONENTS FOR PAYPAL ----
+const PayPalCheckout = ({ usdAmount, expectedCoins, onSuccess, onCancel, onError }: any) => {
+    const [{ isPending }] = usePayPalScriptReducer();
 
-interface Transaction {
-    id: string;
-    type: string;
-    amount: number;
-    status: string;
-    method?: string;
-    reference?: string;
-    description?: string;
-    createdAt: string;
-}
+    if (isPending) return <div className="flex justify-center p-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
-interface UpiDetails {
-    upiId: string;
-    merchantName: string;
-}
+    return (
+        <PayPalButtons
+            style={{ layout: "vertical", shape: "pill", color: "blue" }}
+            createOrder={async () => {
+                const res = await api.post('/payments/paypal/create-order', { usdAmount });
+                return res.data.id;
+            }}
+            onApprove={async (data: any) => {
+                try {
+                    toast.loading('Verifying Payment...');
+                    const res = await api.post('/payments/paypal/capture-order', {
+                        orderId: data.orderID,
+                        expectedCoins
+                    });
+                    toast.dismiss();
+                    toast.success(`Successfully added ${res.data.coinsAdded} Coins!`);
+                    onSuccess();
+                } catch (error: any) {
+                    toast.dismiss();
+                    toast.error(error.response?.data?.message || 'Verification Failed');
+                    onError();
+                }
+            }}
+            onCancel={() => {
+                toast.error('Payment Cancelled');
+                onCancel();
+            }}
+            onError={(err: any) => {
+                toast.error('Payment Error Occurred');
+                onError();
+            }}
+        />
+    );
+};
 
-
-
+// ---- MAIN WALLET COMPONENT ----
 export default function WalletPage() {
     const router = useRouter();
-    const [wallet, setWallet] = useState<WalletData | null>(null);
+    const [wallet, setWallet] = useState<any>(null);
+    const [ledger, setLedger] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [upiDetails, setUpiDetails] = useState<UpiDetails | null>(null);
+
+    // Topup State
+    const [showTopup, setShowTopup] = useState(false);
+    const [topupMethod, setTopupMethod] = useState<'UPI' | 'PAYPAL'>('UPI');
+    const [topupCoins, setTopupCoins] = useState('');
+    const [exchangeRate, setExchangeRate] = useState(85); // fallback
+    const [paypalClientId, setPaypalClientId] = useState('');
 
     // Withdraw state
     const [showWithdraw, setShowWithdraw] = useState(false);
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [withdrawing, setWithdrawing] = useState(false);
-    const [withdrawUpiId, setWithdrawUpiId] = useState('');
-
-    // Transaction filter
-    const [txFilter, setTxFilter] = useState<'all' | 'deposit' | 'withdrawal' | 'entry_fee' | 'winnings'>('all');
-    const [currentUser, setCurrentUser] = useState<any>(null);
-
-    const [cashfree, setCashfree] = useState<any>(null);
+    const [withdrawPaypalEmail, setWithdrawPaypalEmail] = useState('');
 
     const loadData = async () => {
         try {
-            const [walletRes, upiRes, userRes] = await Promise.allSettled([
+            const [walletRes, ledgerRes, rateRes] = await Promise.allSettled([
                 api.get('/wallet'),
-                api.get('/wallet/upi-details'),
-                api.get('/users/me'),
+                api.get('/analytics/user-ledger'),
+                api.get(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/PAYPAL_EXCHANGE_RATE`),
             ]);
-            if (walletRes.status === 'fulfilled') setWallet(walletRes.value.data as any);
-            if (upiRes.status === 'fulfilled') setUpiDetails(upiRes.value.data as any);
-            if (userRes.status === 'fulfilled') setCurrentUser(userRes.value.data as any);
+
+            if (walletRes.status === 'fulfilled') setWallet(walletRes.value.data);
+            if (ledgerRes.status === 'fulfilled') setLedger(ledgerRes.value.data);
+            if (rateRes.status === 'fulfilled') {
+                const rate = Number(rateRes.value.data?.value);
+                if (!isNaN(rate) && rate > 0) setExchangeRate(rate);
+            }
+
+            setPaypalClientId(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
+
         } catch (err) {
-            console.error('Failed to load wallet:', err);
+            console.error('Failed to load wallet data:', err);
         } finally {
             setLoading(false);
         }
@@ -77,58 +103,31 @@ export default function WalletPage() {
 
     useEffect(() => {
         loadData();
-        // Initialize Cashfree SDK from window (loaded via layout Script)
-        const initCashfree = () => {
-            if (typeof window !== 'undefined' && (window as any).Cashfree) {
-                const cf = (window as any).Cashfree({
-                    mode: "production" // Match your backend .env CASHFREE_ENV="PRODUCTION"
-                });
-                setCashfree(cf);
-            } else {
-                // Retry in 1 second if not loaded yet
-                setTimeout(initCashfree, 1000);
-            }
-        };
-        initCashfree();
     }, []);
 
-
-
     const handleWithdraw = async () => {
-        if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) return alert('Enter valid amount');
-        if (!withdrawUpiId.trim()) return alert('Please enter your UPI ID to receive funds');
+        const coinsToWithdraw = parseFloat(withdrawAmount);
+        if (!coinsToWithdraw || coinsToWithdraw <= 0) return toast.error('Enter valid amount');
+        if (!withdrawPaypalEmail.trim()) return toast.error('Please enter your receiving email/ID');
+
         setWithdrawing(true);
         try {
             await api.post('/wallet/withdraw', {
-                amount: parseFloat(withdrawAmount),
-                method: 'UPI',
+                amount: coinsToWithdraw,
+                method: topupMethod === 'PAYPAL' ? 'PAYPAL_PAYOUT' : 'UPI',
+                reference: withdrawPaypalEmail
             });
-            alert('Withdrawal request submitted! You will receive funds within 24 hours.');
+            toast.success('Withdrawal request submitted! You will receive funds within 24 hours.');
             setShowWithdraw(false);
             setWithdrawAmount('');
-            setWithdrawUpiId('');
+            setWithdrawPaypalEmail('');
             loadData();
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Withdrawal failed');
+            toast.error(err.response?.data?.message || 'Withdrawal failed');
         } finally {
             setWithdrawing(false);
         }
     };
-
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
-        alert('Copied to clipboard!');
-    };
-
-    const generateUpiLink = (amount: string) => {
-        if (!upiDetails) return '';
-        return `upi://pay?pa=${upiDetails.upiId}&pn=${encodeURIComponent(upiDetails.merchantName)}&am=${amount}&cu=INR&tn=${encodeURIComponent('Protocol Tournament Deposit')}`;
-    };
-
-    const filteredTx = (wallet?.transactions || []).filter(tx => {
-        if (txFilter === 'all') return true;
-        return tx.type.toLowerCase() === txFilter;
-    });
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -149,8 +148,8 @@ export default function WalletPage() {
         }
     };
 
-    const formatDate = (d: string) => new Date(d).toLocaleDateString('en-IN', {
-        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
     if (loading) {
@@ -158,188 +157,276 @@ export default function WalletPage() {
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
                     <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
-                    <p className="text-muted-foreground">Loading your wallet...</p>
+                    <p className="text-muted-foreground">Syncing Ledger...</p>
                 </div>
             </div>
         );
     }
 
-
+    const requestedCoins = parseFloat(topupCoins) || 0;
+    const usdEquivalent = (requestedCoins / exchangeRate).toFixed(2);
+    const inrEquivalent = requestedCoins; // 1 Coin = 1 INR basically
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+        <div className="min-h-screen bg-background">
             <div className="container max-w-5xl py-8 space-y-8">
 
                 {/* ===== WALLET HERO CARD ===== */}
-                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary/90 via-primary to-blue-600 p-6 sm:p-8 text-white shadow-2xl shadow-primary/20">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-yellow-500 via-yellow-600 to-orange-600 p-6 sm:p-8 text-white shadow-2xl shadow-yellow-500/20">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
 
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Wallet className="h-5 w-5 opacity-80" />
-                            <span className="text-sm font-medium opacity-80">Available Balance</span>
-                        </div>
-                        <div className="flex items-baseline gap-2 mb-6">
-                            <span className="text-5xl font-extrabold tracking-tight">
-                                ₹{(wallet?.balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                            </span>
-                            <span className="text-lg opacity-60">{wallet?.currency || 'INR'}</span>
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <Coins className="h-5 w-5 opacity-90 text-yellow-200" />
+                                <span className="text-sm font-bold tracking-wider opacity-90 text-yellow-100">VIRTUAL COINS BALANCE</span>
+                            </div>
+                            <div className="flex items-end gap-2 mb-2">
+                                <span className="text-6xl font-black tracking-tighter shadow-sm">
+                                    {Math.floor(wallet?.balance || 0).toLocaleString()}
+                                </span>
+                                <span className="text-xl font-bold opacity-80 pb-2">.{(wallet?.balance % 1).toFixed(2).substring(2)}</span>
+                            </div>
+                            <p className="text-sm text-yellow-100 font-medium">1 Coin ≈ ₹1 INR ≈ ${(1 / exchangeRate).toFixed(3)} USD</p>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex flex-col sm:flex-row gap-3 min-w-[280px]">
                             <Button
                                 size="lg"
-                                className="bg-white text-primary hover:bg-white/90 font-bold shadow-lg flex-1 sm:flex-none"
-                                onClick={() => router.push('/tournaments')}
+                                className="bg-white text-yellow-600 hover:bg-white/90 font-black tracking-wide shadow-xl flex-1 items-center gap-2"
+                                onClick={() => { setShowTopup(true); setShowWithdraw(false); }}
                             >
-                                <Trophy className="h-5 w-5 mr-2" />
-                                Join Tournaments
+                                <ArrowDownLeft className="h-5 w-5" />
+                                TOP UP COINS
                             </Button>
                             <Button
                                 size="lg"
                                 variant="outline"
-                                className="bg-transparent border-white/30 text-white hover:bg-white/10 font-bold flex-1 sm:flex-none"
-                                onClick={() => { setShowWithdraw(true); }}
+                                className="bg-black/20 border-white/20 text-white hover:bg-black/40 font-bold tracking-wide flex-1 items-center gap-2"
+                                onClick={() => { setShowWithdraw(true); setShowTopup(false); }}
                             >
-                                <ArrowUpRight className="h-5 w-5 mr-2" />
-                                Withdraw
+                                <ArrowUpRight className="h-5 w-5" />
+                                WITHDRAW
                             </Button>
                         </div>
                     </div>
                 </div>
 
-                {/* ===== SECURITY BADGES ===== */}
-                <div className="flex flex-wrap gap-3 justify-center">
-                    {[
-                        { icon: Shield, label: 'Secure Payments', color: 'text-green-500' },
-                        { icon: Target, label: 'Direct Entry', color: 'text-yellow-500' },
-                        { icon: MessageCircle, label: 'Instant Help', color: 'text-blue-500' },
-                    ].map((b, i) => (
-                        <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border text-sm">
-                            <b.icon className={`h-4 w-4 ${b.color}`} />
-                            <span className="font-medium">{b.label}</span>
+                {/* ===== LEDGER / ANALYTICS GRID ===== */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-card border border-border rounded-3xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center">
+                            <ArrowDownLeft className="h-6 w-6 text-green-500" />
                         </div>
-                    ))}
-                    <p className="w-full text-center text-xs text-muted-foreground mt-2 italic">
-                        Note: Funds are now added directly when you join a tournament. No need to deposit in advance!
-                    </p>
+                        <div>
+                            <p className="text-xs font-bold text-muted-foreground uppercase">Total Top-ups</p>
+                            <p className="text-xl font-black">{ledger?.totalDeposited?.toLocaleString()} <span className="text-sm text-muted-foreground">Coins</span></p>
+                        </div>
+                    </div>
+                    <div className="bg-card border border-border rounded-3xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center">
+                            <Target className="h-6 w-6 text-orange-500" />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-muted-foreground uppercase">Entry Fees Spent</p>
+                            <p className="text-xl font-black">{ledger?.totalSpent?.toLocaleString()} <span className="text-sm text-muted-foreground">Coins</span></p>
+                        </div>
+                    </div>
+                    <div className="bg-card border border-border rounded-3xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
+                            <Trophy className="h-6 w-6 text-yellow-500" />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-muted-foreground uppercase">Tournament Winnings</p>
+                            <p className="text-xl font-black">{ledger?.totalWon?.toLocaleString()} <span className="text-sm text-muted-foreground">Coins</span></p>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Deposit functionality removed in favor of direct tournament registration payments */}
+                {/* ===== TOPUP MODAL/PANEL ===== */}
+                <AnimatePresence>
+                    {showTopup && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                        >
+                            <Card className="border-primary/20 shadow-2xl overflow-hidden bg-card relative z-0">
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-primary to-green-500" />
+                                <CardHeader className="bg-muted/30 pb-4">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <CardTitle className="text-2xl font-black flex items-center gap-2">
+                                                <Coins className="h-6 w-6 text-yellow-500" />
+                                                Purchase Coins
+                                            </CardTitle>
+                                            <CardDescription className="font-medium mt-1">Select your preferred payment method.</CardDescription>
+                                        </div>
+                                        <Button variant="ghost" size="sm" className="rounded-full bg-muted shadow-sm hover:bg-muted/80" onClick={() => setShowTopup(false)}>✕</Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-6">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
+                                        {/* LEFT COMPONENT */}
+                                        <div className="space-y-6">
+                                            {/* Topup Amount Input */}
+                                            <div>
+                                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Amount of Coins to Buy</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-500"><Coins className="w-6 h-6" /></span>
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="e.g. 500"
+                                                        value={topupCoins}
+                                                        onChange={(e) => setTopupCoins(e.target.value)}
+                                                        className="text-3xl font-black pl-14 h-16 bg-muted/50 border-border/50 focus:border-primary/50"
+                                                        min={1}
+                                                    />
+                                                </div>
+                                            </div>
 
-                {/* ===== WITHDRAW PANEL ===== */}
-                {showWithdraw && (
-                    <Card className="border-orange-500/20 shadow-xl overflow-hidden">
-                        <CardHeader className="bg-gradient-to-r from-orange-500/5 to-transparent border-b">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle className="text-xl flex items-center gap-2">
-                                        <ArrowUpRight className="h-5 w-5 text-orange-500" />
-                                        Withdraw Funds
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Available: <span className="font-bold text-foreground">₹{(wallet?.balance || 0).toLocaleString('en-IN')}</span>
-                                    </CardDescription>
-                                </div>
-                                <Button variant="ghost" size="sm" onClick={() => setShowWithdraw(false)}>✕</Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-6 max-w-md mx-auto space-y-5">
-                            <div>
-                                <label className="text-sm font-semibold mb-2 block">Your UPI ID (to receive money)</label>
-                                <Input
-                                    placeholder="yourname@paytm"
-                                    value={withdrawUpiId}
-                                    onChange={(e) => setWithdrawUpiId(e.target.value)}
-                                    className="h-12"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-sm font-semibold mb-2 block">Amount to Withdraw</label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-muted-foreground">₹</span>
-                                    <Input
-                                        type="number"
-                                        placeholder="0.00"
-                                        value={withdrawAmount}
-                                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                                        className="text-2xl font-bold pl-10 h-14 text-center"
-                                        max={wallet?.balance}
-                                        min={100}
-                                    />
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-2">Minimum withdrawal: ₹100 · Processing: 24 hours</p>
-                            </div>
-                            <Button
-                                size="lg"
-                                className="w-full h-14 font-bold text-base bg-orange-600 hover:bg-orange-700 text-white"
-                                onClick={handleWithdraw}
-                                disabled={withdrawing || !withdrawAmount || parseFloat(withdrawAmount) < 100}
-                            >
-                                {withdrawing ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Banknote className="h-5 w-5 mr-2" />}
-                                Withdraw ₹{withdrawAmount || '0'}
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
+                                            {/* Gateway Selection */}
+                                            <div>
+                                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Payment Gateway (Global)</label>
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={() => setTopupMethod('UPI')}
+                                                        className={`flex-1 flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all ${topupMethod === 'UPI' ? 'border-green-500 bg-green-500/10' : 'border-border bg-muted/30 hover:bg-muted'}`}
+                                                    >
+                                                        <IndianRupee className={`w-8 h-8 mb-2 ${topupMethod === 'UPI' ? 'text-green-500' : 'text-muted-foreground'}`} />
+                                                        <span className={`font-bold text-sm ${topupMethod === 'UPI' ? 'text-green-500' : 'text-muted-foreground'}`}>India (INR)</span>
+                                                        <span className="text-[10px] text-muted-foreground mt-1 text-center">UPI / Cards / NetBanking</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => setTopupMethod('PAYPAL')}
+                                                        className={`flex-1 flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all ${topupMethod === 'PAYPAL' ? 'border-blue-500 bg-blue-500/10' : 'border-border bg-muted/30 hover:bg-muted'}`}
+                                                    >
+                                                        <Globe className={`w-8 h-8 mb-2 ${topupMethod === 'PAYPAL' ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                                                        <span className={`font-bold text-sm ${topupMethod === 'PAYPAL' ? 'text-blue-500' : 'text-muted-foreground'}`}>International (USD)</span>
+                                                        <span className="text-[10px] text-muted-foreground mt-1 text-center">PayPal / Credit Card</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* RIGHT COMPONENT: SUMMARY & CHECKOUT */}
+                                        <div className="bg-muted/30 rounded-3xl p-6 border border-border/50 flex flex-col justify-between">
+                                            <div>
+                                                <h3 className="text-sm font-bold text-foreground border-b border-border/50 pb-3 mb-4">Order Summary</h3>
+
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <span className="text-muted-foreground font-medium">Coins</span>
+                                                    <span className="font-black text-lg">{requestedCoins.toLocaleString()}</span>
+                                                </div>
+
+                                                <div className="flex justify-between items-center mb-6">
+                                                    <span className="text-muted-foreground font-medium">Exchange Rate</span>
+                                                    <span className="font-bold text-sm border border-border px-2 py-1 rounded-lg">
+                                                        {topupMethod === 'PAYPAL' ? `$1 = ${exchangeRate} Coins` : `₹1 = 1 Coin`}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <div className="bg-card border border-border rounded-xl p-4 flex justify-between items-center shadow-inner">
+                                                    <span className="text-sm font-bold tracking-wider uppercase text-muted-foreground">Total to Pay</span>
+                                                    <span className={`text-2xl font-black ${topupMethod === 'PAYPAL' ? 'text-blue-500' : 'text-green-500'}`}>
+                                                        {topupMethod === 'PAYPAL' ? `$${usdEquivalent}` : `₹${inrEquivalent.toLocaleString()}`}
+                                                    </span>
+                                                </div>
+
+                                                {/* CHECKOUT BUTTONS */}
+                                                {!requestedCoins || requestedCoins <= 0 ? (
+                                                    <Button disabled className="w-full h-14 rounded-full font-bold opacity-50 bg-muted text-muted-foreground">Enter Amount to Buy</Button>
+                                                ) : topupMethod === 'PAYPAL' ? (
+                                                    <div className="min-h-[55px]">
+                                                        {paypalClientId ? (
+                                                            <PayPalScriptProvider options={{ "clientId": paypalClientId, currency: "USD", intent: "capture" }}>
+                                                                <PayPalCheckout
+                                                                    usdAmount={usdEquivalent}
+                                                                    expectedCoins={requestedCoins}
+                                                                    onSuccess={() => { setShowTopup(false); setTopupCoins(''); loadData(); }}
+                                                                    onError={() => { }}
+                                                                    onCancel={() => { }}
+                                                                />
+                                                            </PayPalScriptProvider>
+                                                        ) : (
+                                                            <div className="bg-red-500/10 text-red-500 p-3 rounded-xl text-center text-sm font-medium">PayPal configuration missing on server.</div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <Button
+                                                        className="w-full h-14 rounded-full font-black text-lg bg-green-500 hover:bg-green-600 text-white shadow-xl shadow-green-500/20"
+                                                        onClick={() => alert('Cashfree integration to be loaded here.')}
+                                                    >
+                                                        Pay via Cashfree (₹{inrEquivalent})
+                                                    </Button>
+                                                )}
+
+                                                {topupMethod === 'PAYPAL' && (
+                                                    <p className="text-[10px] text-center text-muted-foreground flex items-center justify-center gap-1">
+                                                        <ShieldCheck className="w-3 h-3" /> Payments are securely processed by PayPal.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* ===== TRANSACTION HISTORY ===== */}
-                <Card>
-                    <CardHeader>
+                <Card className="border-border shadow-md rounded-3xl overflow-hidden">
+                    <CardHeader className="bg-muted/10 border-b border-border">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <CardTitle className="text-xl flex items-center gap-2">
-                                <History className="h-5 w-5" />
-                                Transaction History
-                            </CardTitle>
-                            <div className="flex flex-wrap gap-2">
-                                {(['all', 'deposit', 'withdrawal', 'entry_fee', 'winnings'] as const).map(f => (
-                                    <button
-                                        key={f}
-                                        onClick={() => setTxFilter(f)}
-                                        className={`px-3 py-1 rounded-full text-xs font-medium transition ${txFilter === f
-                                            ? 'bg-primary text-white'
-                                            : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
-                                    >
-                                        {f === 'all' ? 'All' : f.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                                    </button>
-                                ))}
+                            <div>
+                                <CardTitle className="text-xl flex items-center gap-2 font-black">
+                                    <History className="h-5 w-5 text-primary" />
+                                    Coin Ledger
+                                </CardTitle>
+                                <CardDescription className="font-medium mt-1">Detailed history of your virtual currency.</CardDescription>
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        {filteredTx.length === 0 ? (
-                            <div className="text-center py-12 text-muted-foreground">
-                                <Wallet className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                                <p className="font-medium">No transactions yet</p>
-                                <p className="text-sm">Your transaction history will appear here.</p>
+                    <CardContent className="p-0">
+                        {(!ledger?.history || ledger.history.length === 0) ? (
+                            <div className="text-center py-16 text-muted-foreground">
+                                <History className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                                <p className="font-bold text-lg">No records found</p>
+                                <p className="text-sm mt-1">Your detailed ledger will populate as you play.</p>
                             </div>
                         ) : (
-                            <div className="space-y-2">
-                                {filteredTx.map(tx => (
-                                    <div key={tx.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border sm:border-0 hover:bg-muted/30 transition group">
-                                        <div className="p-2 sm:p-2.5 rounded-full bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                            <div className="divide-y divide-border/50">
+                                {ledger.history.map((tx: any) => (
+                                    <div key={tx.id} className="flex items-center gap-4 p-4 sm:p-5 hover:bg-muted/20 transition-colors group">
+                                        <div className="p-3 rounded-2xl bg-muted/80 group-hover:bg-primary/10 group-hover:scale-110 transition-all shadow-sm">
                                             {getTxIcon(tx.type)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-sm sm:text-base truncate">{tx.description || tx.type.replace('_', ' ')}</p>
-                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] sm:text-xs text-muted-foreground">
-                                                <div className="flex items-center gap-1">
+                                            <p className="font-bold text-sm sm:text-base truncate">{tx.narrative}</p>
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground mt-1 font-medium">
+                                                <span className="flex items-center gap-1 bg-muted px-2 py-0.5 rounded-md">
                                                     {getStatusIcon(tx.status)}
-                                                    <span className="font-medium">{tx.status}</span>
-                                                </div>
-                                                <span className="hidden sm:inline">·</span>
-                                                <span>{formatDate(tx.createdAt)}</span>
+                                                    {tx.status}
+                                                </span>
+                                                <span className="hidden sm:inline opacity-50">·</span>
+                                                <span>{formatDate(tx.date)}</span>
                                             </div>
                                         </div>
                                         <div className="text-right whitespace-nowrap">
-                                            <p className={`font-bold text-sm sm:text-lg ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? 'text-green-500' : 'text-foreground'}`}>
-                                                {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
-                                            </p>
-                                            {tx.reference && (
-                                                <p className="text-[9px] sm:text-[10px] font-mono text-muted-foreground opacity-60">ID: {tx.reference.slice(-8).toUpperCase()}</p>
-                                            )}
+                                            <div className={`font-black tracking-tight text-lg sm:text-xl flex flex-col items-end justify-center ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? 'text-green-500' : 'text-foreground'}`}>
+                                                <div className="flex items-center gap-1">
+                                                    {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}
+                                                    {tx.amount.toLocaleString()} <Coins className="w-4 h-4" />
+                                                </div>
+                                            </div>
+                                            <p className="text-[10px] font-mono text-muted-foreground opacity-60 mt-1 uppercase tracking-widest">{tx.type.replace('_', ' ')}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -351,3 +438,4 @@ export default function WalletPage() {
         </div>
     );
 }
+

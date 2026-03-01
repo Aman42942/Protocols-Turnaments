@@ -392,10 +392,12 @@ export class WalletService {
 
   async deposit(
     userId: string,
-    amount: number,
+    amount: number, // Represents the final Coins to add
     method: string,
     reference?: string,
     metadata?: string,
+    currency: string = 'INR',
+    conversionRate: number = 1.0,
   ) {
     if (amount <= 0) throw new BadRequestException('Amount must be positive');
 
@@ -411,11 +413,13 @@ export class WalletService {
           walletId: wallet.id,
           type: 'DEPOSIT',
           amount,
+          currency,
+          conversionRate,
           status: 'COMPLETED',
           method: method || 'UPI',
           reference,
           metadata,
-          description: `Deposit of ₹${amount} via ${method || 'UPI'}`,
+          description: `Deposit via ${method || 'UPI'}`,
         },
       }),
     ]);

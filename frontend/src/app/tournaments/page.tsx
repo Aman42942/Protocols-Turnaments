@@ -23,6 +23,7 @@ interface Tournament {
     maxTeams: number;
     gameMode: string;
     status: string;
+    banner?: string;
     _count?: { teams: number };
 }
 
@@ -197,6 +198,7 @@ export default function TournamentsPage() {
                                     registeredTeams={t._count?.teams || 0}
                                     gameMode={t.gameMode}
                                     status={t.status}
+                                    banner={t.banner}
                                 />
                             ))
                         ) : (
