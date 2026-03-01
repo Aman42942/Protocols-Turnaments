@@ -515,195 +515,194 @@ export default function SiteBuilderPage() {
                                     </button>
                                 </div>
                             </div>
+                        )}
+
+                        {activeTab === 'layout' && (
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-3 border-b border-border pb-4">
+                                    <Layers className="w-5 h-5 text-primary" />
+                                    <h2 className="text-xl font-bold">Structural Layout Builder</h2>
+                                </div>
+                                <p className="text-sm text-muted-foreground">Drag and reorder the sections to change how they structure on the homepage. Toggle visibility to completely hide them.</p>
+
+                                <div className="space-y-3 pt-2">
+                                    {localLayouts.map((layout, idx) => (
+                                        <div key={layout.componentId} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${layout.isVisible ? 'bg-muted/50 border-border' : 'bg-muted/20 border-border/40 opacity-50'}`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className="md:grid grid-cols-1 hover:text-primary cursor-grab active:cursor-grabbing text-muted-foreground">
+                                                    <GripVertical className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold">{layout.componentId} BLOCK</h4>
+                                                    <p className="text-xs text-muted-foreground">Homepage Level Section</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => {
+                                                        const newL = [...localLayouts];
+                                                        newL[idx].isVisible = !newL[idx].isVisible;
+                                                        setLocalLayouts(newL);
+                                                    }}
+                                                    className={`p-2 rounded-lg transition-colors ${layout.isVisible ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'bg-background border border-border text-muted-foreground hover:bg-muted'}`}
+                                                >
+                                                    {layout.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                                </button>
+                                                <div className="flex flex-col gap-1">
+                                                    <button
+                                                        onClick={() => {
+                                                            if (idx === 0) return;
+                                                            const newL = [...localLayouts];
+                                                            const temp = newL[idx];
+                                                            newL[idx] = newL[idx - 1];
+                                                            newL[idx - 1] = temp;
+                                                            setLocalLayouts(newL);
+                                                        }}
+                                                        disabled={idx === 0}
+                                                        className="text-xs px-2 py-0.5 bg-background border border-border rounded hover:bg-muted disabled:opacity-30"
+                                                    >▲</button>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (idx === localLayouts.length - 1) return;
+                                                            const newL = [...localLayouts];
+                                                            const temp = newL[idx];
+                                                            newL[idx] = newL[idx + 1];
+                                                            newL[idx + 1] = temp;
+                                                            setLocalLayouts(newL);
+                                                        }}
+                                                        disabled={idx === localLayouts.length - 1}
+                                                        className="text-xs px-2 py-0.5 bg-background border border-border rounded hover:bg-muted disabled:opacity-30"
+                                                    >▼</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="pt-4 flex justify-end">
+                                    <button
+                                        onClick={handleSaveLayout}
+                                        disabled={saving}
+                                        className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20"
+                                    >
+                                        {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                        Save Architecture
+                                    </button>
+                                </div>
                             </div>
                         )}
 
-                {activeTab === 'layout' && (
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-border pb-4">
-                            <Layers className="w-5 h-5 text-primary" />
-                            <h2 className="text-xl font-bold">Structural Layout Builder</h2>
-                        </div>
-                        <p className="text-sm text-muted-foreground">Drag and reorder the sections to change how they structure on the homepage. Toggle visibility to completely hide them.</p>
-
-                        <div className="space-y-3 pt-2">
-                            {localLayouts.map((layout, idx) => (
-                                <div key={layout.componentId} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${layout.isVisible ? 'bg-muted/50 border-border' : 'bg-muted/20 border-border/40 opacity-50'}`}>
-                                    <div className="flex items-center gap-4">
-                                        <div className="md:grid grid-cols-1 hover:text-primary cursor-grab active:cursor-grabbing text-muted-foreground">
-                                            <GripVertical className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold">{layout.componentId} BLOCK</h4>
-                                            <p className="text-xs text-muted-foreground">Homepage Level Section</p>
-                                        </div>
-                                    </div>
+                        {activeTab === 'features' && (
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between border-b border-border pb-4">
                                     <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => {
-                                                const newL = [...localLayouts];
-                                                newL[idx].isVisible = !newL[idx].isVisible;
-                                                setLocalLayouts(newL);
-                                            }}
-                                            className={`p-2 rounded-lg transition-colors ${layout.isVisible ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'bg-background border border-border text-muted-foreground hover:bg-muted'}`}
-                                        >
-                                            {layout.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                                        </button>
-                                        <div className="flex flex-col gap-1">
-                                            <button
-                                                onClick={() => {
-                                                    if (idx === 0) return;
-                                                    const newL = [...localLayouts];
-                                                    const temp = newL[idx];
-                                                    newL[idx] = newL[idx - 1];
-                                                    newL[idx - 1] = temp;
-                                                    setLocalLayouts(newL);
-                                                }}
-                                                disabled={idx === 0}
-                                                className="text-xs px-2 py-0.5 bg-background border border-border rounded hover:bg-muted disabled:opacity-30"
-                                            >▲</button>
-                                            <button
-                                                onClick={() => {
-                                                    if (idx === localLayouts.length - 1) return;
-                                                    const newL = [...localLayouts];
-                                                    const temp = newL[idx];
-                                                    newL[idx] = newL[idx + 1];
-                                                    newL[idx + 1] = temp;
-                                                    setLocalLayouts(newL);
-                                                }}
-                                                disabled={idx === localLayouts.length - 1}
-                                                className="text-xs px-2 py-0.5 bg-background border border-border rounded hover:bg-muted disabled:opacity-30"
-                                            >▼</button>
-                                        </div>
+                                        <LayoutTemplate className="w-5 h-5 text-primary" />
+                                        <h2 className="text-xl font-bold">Dynamic Feature Blocks</h2>
                                     </div>
+                                    <button
+                                        onClick={handleAddFeature}
+                                        disabled={saving}
+                                        className="flex items-center gap-2 bg-primary/20 text-primary hover:bg-primary/30 px-4 py-2 rounded-xl font-bold transition-all text-sm"
+                                    >
+                                        <Plus className="w-4 h-4" /> Add Feature
+                                    </button>
                                 </div>
-                            ))}
-                        </div>
 
-                        <div className="pt-4 flex justify-end">
-                            <button
-                                onClick={handleSaveLayout}
-                                disabled={saving}
-                                className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20"
-                            >
-                                {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                Save Architecture
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'features' && (
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between border-b border-border pb-4">
-                            <div className="flex items-center gap-3">
-                                <LayoutTemplate className="w-5 h-5 text-primary" />
-                                <h2 className="text-xl font-bold">Dynamic Feature Blocks</h2>
+                                <div className="space-y-4">
+                                    {localFeatures.length === 0 ? (
+                                        <div className="text-center py-12 border-2 border-dashed border-border rounded-3xl">
+                                            <p className="text-muted-foreground font-medium">No custom features added yet.</p>
+                                        </div>
+                                    ) : (
+                                        localFeatures.map((feature, idx) => (
+                                            <div key={feature.id} className="p-5 rounded-2xl border border-border bg-muted/30 space-y-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-xs font-bold mb-1.5 block text-muted-foreground uppercase tracking-wider">Feature Title</label>
+                                                        <input
+                                                            type="text"
+                                                            value={feature.title}
+                                                            onChange={(e) => {
+                                                                const newF = [...localFeatures];
+                                                                newF[idx].title = e.target.value;
+                                                                setLocalFeatures(newF);
+                                                            }}
+                                                            className="w-full bg-background px-3 py-2 rounded-xl border border-border focus:border-primary outline-none font-bold"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-bold mb-1.5 block text-muted-foreground uppercase tracking-wider">Icon Name (Optional)</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="e.g. Shield, Zap, Target"
+                                                            value={feature.icon || ''}
+                                                            onChange={(e) => {
+                                                                const newF = [...localFeatures];
+                                                                newF[idx].icon = e.target.value;
+                                                                setLocalFeatures(newF);
+                                                            }}
+                                                            className="w-full bg-background px-3 py-2 rounded-xl border border-border focus:border-primary outline-none"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-bold mb-1.5 block text-muted-foreground uppercase tracking-wider">Description</label>
+                                                    <textarea
+                                                        rows={2}
+                                                        value={feature.description || ''}
+                                                        onChange={(e) => {
+                                                            const newF = [...localFeatures];
+                                                            newF[idx].description = e.target.value;
+                                                            setLocalFeatures(newF);
+                                                        }}
+                                                        className="w-full bg-background px-3 py-2 rounded-xl border border-border focus:border-primary outline-none text-sm resize-none"
+                                                    />
+                                                </div>
+                                                <div className="flex justify-end gap-2 pt-2">
+                                                    <button
+                                                        onClick={() => handleDeleteFeature(feature.id)}
+                                                        className="flex items-center gap-1.5 bg-destructive/10 text-destructive hover:bg-destructive/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" /> Delete
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleUpdateFeature(idx)}
+                                                        disabled={saving}
+                                                        className="flex items-center gap-1.5 bg-background border border-border hover:border-primary text-foreground px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm"
+                                                    >
+                                                        <Save className="w-3.5 h-3.5" /> Save Changes
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
-                            <button
-                                onClick={handleAddFeature}
-                                disabled={saving}
-                                className="flex items-center gap-2 bg-primary/20 text-primary hover:bg-primary/30 px-4 py-2 rounded-xl font-bold transition-all text-sm"
-                            >
-                                <Plus className="w-4 h-4" /> Add Feature
-                            </button>
-                        </div>
+                        )}
+                    </motion.div>
+                </div>
 
-                        <div className="space-y-4">
-                            {localFeatures.length === 0 ? (
-                                <div className="text-center py-12 border-2 border-dashed border-border rounded-3xl">
-                                    <p className="text-muted-foreground font-medium">No custom features added yet.</p>
-                                </div>
-                            ) : (
-                                localFeatures.map((feature, idx) => (
-                                    <div key={feature.id} className="p-5 rounded-2xl border border-border bg-muted/30 space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-xs font-bold mb-1.5 block text-muted-foreground uppercase tracking-wider">Feature Title</label>
-                                                <input
-                                                    type="text"
-                                                    value={feature.title}
-                                                    onChange={(e) => {
-                                                        const newF = [...localFeatures];
-                                                        newF[idx].title = e.target.value;
-                                                        setLocalFeatures(newF);
-                                                    }}
-                                                    className="w-full bg-background px-3 py-2 rounded-xl border border-border focus:border-primary outline-none font-bold"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold mb-1.5 block text-muted-foreground uppercase tracking-wider">Icon Name (Optional)</label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="e.g. Shield, Zap, Target"
-                                                    value={feature.icon || ''}
-                                                    onChange={(e) => {
-                                                        const newF = [...localFeatures];
-                                                        newF[idx].icon = e.target.value;
-                                                        setLocalFeatures(newF);
-                                                    }}
-                                                    className="w-full bg-background px-3 py-2 rounded-xl border border-border focus:border-primary outline-none"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-bold mb-1.5 block text-muted-foreground uppercase tracking-wider">Description</label>
-                                            <textarea
-                                                rows={2}
-                                                value={feature.description || ''}
-                                                onChange={(e) => {
-                                                    const newF = [...localFeatures];
-                                                    newF[idx].description = e.target.value;
-                                                    setLocalFeatures(newF);
-                                                }}
-                                                className="w-full bg-background px-3 py-2 rounded-xl border border-border focus:border-primary outline-none text-sm resize-none"
-                                            />
-                                        </div>
-                                        <div className="flex justify-end gap-2 pt-2">
-                                            <button
-                                                onClick={() => handleDeleteFeature(feature.id)}
-                                                className="flex items-center gap-1.5 bg-destructive/10 text-destructive hover:bg-destructive/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" /> Delete
-                                            </button>
-                                            <button
-                                                onClick={() => handleUpdateFeature(idx)}
-                                                disabled={saving}
-                                                className="flex items-center gap-1.5 bg-background border border-border hover:border-primary text-foreground px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm"
-                                            >
-                                                <Save className="w-3.5 h-3.5" /> Save Changes
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
+                {/* Live Preview Side Panel */}
+                <div className="lg:col-span-1">
+                    <div className="sticky top-24 bg-card border border-border rounded-3xl p-6 shadow-xl flex flex-col items-center text-center space-y-4">
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-2" style={{ backgroundColor: themeForm.primaryColor }}>
+                            <Palette className="w-8 h-8" style={{ color: themeForm.textColor || '#fff' }} />
                         </div>
+                        <h3 className="font-black text-xl" style={{ fontFamily: `"${themeForm.fontFamily}", sans-serif` }}>Live Preview</h3>
+                        <p className="text-sm text-muted-foreground w-full p-3 rounded-xl border border-border/50" style={{ backgroundColor: themeForm.backgroundColor, color: themeForm.textColor, borderRadius: themeForm.borderRounding }}>
+                            This is a preview container. Any changes you make to the primary colors or rounding will reflect instantly on the actual website once you deploy.
+                        </p>
+
+                        <button
+                            onClick={() => window.open('/', '_blank')}
+                            style={{ backgroundColor: themeForm.primaryColor, color: themeForm.textColor || '#FFF', borderRadius: themeForm.borderRounding }}
+                            className="w-full py-3 font-bold mt-4 shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                        >
+                            <Eye className="w-4 h-4" />
+                            View Live Website
+                        </button>
                     </div>
-                )}
-            </motion.div>
-        </div>
-
-                {/* Live Preview Side Panel */ }
-    <div className="lg:col-span-1">
-        <div className="sticky top-24 bg-card border border-border rounded-3xl p-6 shadow-xl flex flex-col items-center text-center space-y-4">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-2" style={{ backgroundColor: themeForm.primaryColor }}>
-                <Palette className="w-8 h-8" style={{ color: themeForm.textColor || '#fff' }} />
-            </div>
-            <h3 className="font-black text-xl" style={{ fontFamily: `"${themeForm.fontFamily}", sans-serif` }}>Live Preview</h3>
-            <p className="text-sm text-muted-foreground w-full p-3 rounded-xl border border-border/50" style={{ backgroundColor: themeForm.backgroundColor, color: themeForm.textColor, borderRadius: themeForm.borderRounding }}>
-                This is a preview container. Any changes you make to the primary colors or rounding will reflect instantly on the actual website once you deploy.
-            </p>
-
-            <button
-                onClick={() => window.open('/', '_blank')}
-                style={{ backgroundColor: themeForm.primaryColor, color: themeForm.textColor || '#FFF', borderRadius: themeForm.borderRounding }}
-                className="w-full py-3 font-bold mt-4 shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-                <Eye className="w-4 h-4" />
-                View Live Website
-            </button>
-        </div>
-    </div>
+                </div>
 
             </div >
         </div >
