@@ -37,7 +37,7 @@ export default function AdminUsersPage() {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [actionMenuId, setActionMenuId] = useState<string | null>(null);
     const [currentUserRole, setCurrentUserRole] = useState<string>('');
-    const [adjustmentUser, setAdjustmentUser] = useState<{ id: string, name: string, email: string } | null>(null);
+    const [adjustmentUser, setAdjustmentUser] = useState<{ id: string, name: string, email: string, balance?: number } | null>(null);
     const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
 
     useEffect(() => {
@@ -166,7 +166,9 @@ export default function AdminUsersPage() {
                 </Card>
                 <Card>
                     <CardContent className="pt-6 text-center">
-                        <p className="text-2xl font-bold text-green-500">{totalBalance.toLocaleString('en-IN')} Coins</p>
+                        <p className="text-2xl font-bold text-green-500">
+                            {totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Coins
+                        </p>
                         <p className="text-xs text-muted-foreground">Total Wallet Balance</p>
                     </CardContent>
                 </Card>
@@ -254,7 +256,7 @@ export default function AdminUsersPage() {
                                             </span>
                                         </td>
                                         <td className="p-4">
-                                            <span className="font-medium">{(user.wallet?.balance || 0).toFixed(0)} Coins</span>
+                                            <span className="font-medium">{(user.wallet?.balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Coins</span>
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -326,7 +328,7 @@ export default function AdminUsersPage() {
                                                             <button
                                                                 className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 text-primary group"
                                                                 onClick={() => {
-                                                                    setAdjustmentUser({ id: user.id, name: user.name || 'User', email: user.email });
+                                                                    setAdjustmentUser({ id: user.id, name: user.name || 'User', email: user.email, balance: user.wallet?.balance || 0 });
                                                                     setIsAdjustmentModalOpen(true);
                                                                     setActionMenuId(null);
                                                                 }}

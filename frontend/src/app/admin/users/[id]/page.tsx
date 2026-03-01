@@ -282,7 +282,7 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
                         <div className="text-center py-6 bg-primary/5 rounded-lg border border-primary/10">
                             <span className="text-sm text-muted-foreground">Current Balance</span>
                             <div className="text-4xl font-bold text-primary mt-1">
-                                {user.wallet?.balance?.toLocaleString() || 0} Coins
+                                {(user.wallet?.balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Coins
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -335,7 +335,7 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 font-bold">
-                                                {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}{tx.amount} Coins
+                                                {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Coins
                                             </td>
                                             <td className="px-4 py-3">
                                                 <Badge variant={tx.status === 'COMPLETED' ? 'default' : tx.status === 'PENDING' ? 'outline' : 'destructive'} className="text-[10px]">

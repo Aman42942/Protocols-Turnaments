@@ -18,7 +18,7 @@ import api from '@/lib/api';
 interface WalletAdjustmentModalProps {
     isOpen: boolean;
     onClose: () => void;
-    user: { id: string; name: string; email: string } | null;
+    user: { id: string; name: string; email: string; balance?: number } | null;
     onSuccess?: () => void;
 }
 
@@ -86,6 +86,13 @@ export function WalletAdjustmentModal({ isOpen, onClose, user, onSuccess }: Wall
                         </div>
                     )}
 
+                    <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-4 text-center">
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Current Wallet Balance</p>
+                        <p className="text-2xl font-black text-primary">
+                            {user.balance?.toLocaleString() || '0'} <span className="text-sm font-bold">Coins</span>
+                        </p>
+                    </div>
+
                     <div className="space-y-2">
                         <Label>Adjustment Type</Label>
                         <div className="grid grid-cols-2 gap-2">
@@ -115,6 +122,7 @@ export function WalletAdjustmentModal({ isOpen, onClose, user, onSuccess }: Wall
                         <Input
                             id="amount"
                             type="number"
+                            step="0.01"
                             placeholder="0.00"
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
