@@ -189,11 +189,11 @@ export default function WalletPage() {
                                 <Coins className="h-5 w-5 opacity-90 text-yellow-200" />
                                 <span className="text-sm font-bold tracking-wider opacity-90 text-yellow-100">VIRTUAL COINS BALANCE</span>
                             </div>
-                            <div className="flex items-end gap-2 mb-2">
-                                <span className="text-6xl font-black tracking-tighter shadow-sm">
+                            <div className="flex items-baseline gap-1 mb-2">
+                                <span className="text-6xl font-black tracking-tighter drop-shadow-sm">
                                     {Math.floor(wallet?.balance || 0).toLocaleString()}
                                 </span>
-                                <span className="text-xl font-bold opacity-80 pb-2">.{(wallet?.balance % 1).toFixed(2).substring(2)}</span>
+                                <span className="text-xl font-bold opacity-80">.{(wallet?.balance % 1).toFixed(2).substring(2)}</span>
                             </div>
                             <p className="text-sm text-yellow-100 font-medium">1 Coin ≈ ₹1 INR ≈ ${(1 / exchangeRate).toFixed(3)} USD</p>
                         </div>
