@@ -16,8 +16,8 @@ export function MobileBottomNav() {
         { icon: User, label: 'Profile', href: '/profile' },
     ];
 
-    // Hide Bottom Nav on Admin pages
-    if (pathname?.startsWith('/admin') || pathname?.startsWith('/secure-admin-login')) {
+    // Hide Bottom Nav on Admin or Maintenance pages
+    if (pathname?.startsWith('/admin') || pathname?.startsWith('/secure-admin-login') || pathname === '/maintenance') {
         return null;
     }
 

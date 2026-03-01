@@ -147,7 +147,7 @@ export default function AdminPaymentsPage() {
     const totalTransactions = allTransactions.length;
 
     const stats = [
-        { title: 'Total Deposits', value: `₹${totalRevenue.toLocaleString('en-IN')}`, icon: <IndianRupee className="w-5 h-5 text-green-500" />, sub: 'Completed deposits' },
+        { title: 'Total Deposits', value: `${totalRevenue.toLocaleString('en-IN')} Coins`, icon: <IndianRupee className="w-5 h-5 text-green-500" />, sub: 'Completed deposits' },
         { title: 'Total Transactions', value: totalTransactions.toString(), icon: <CreditCard className="w-5 h-5 text-blue-500" />, sub: 'All time' },
         { title: 'Pending Approvals', value: pendingDeposits.length.toString(), icon: <Clock className="w-5 h-5 text-yellow-500" />, sub: 'Awaiting verification' },
     ];
@@ -239,7 +239,7 @@ export default function AdminPaymentsPage() {
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <h3 className="font-bold text-lg">₹{deposit.amount}</h3>
+                                                    <h3 className="font-bold text-lg">{deposit.amount} Coins</h3>
                                                     <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/30">Pending</Badge>
                                                 </div>
                                                 <p className="text-sm text-muted-foreground">
@@ -333,7 +333,7 @@ export default function AdminPaymentsPage() {
                                                 </td>
                                                 <td className={`p-4 text-right font-medium ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? 'text-green-500' : ''
                                                     }`}>
-                                                    {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}₹{tx.amount}
+                                                    {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}{tx.amount} Coins
                                                 </td>
                                                 <td className="p-4 text-right text-muted-foreground text-xs">{formatDate(tx.createdAt)}</td>
                                                 <td className="p-4 text-right">

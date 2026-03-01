@@ -6,7 +6,7 @@ import { Roles } from './auth/roles.decorator';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly appService: AppService) { }
 
   @Get()
   getHello(): string {
@@ -23,5 +23,12 @@ export class AppController {
   @Roles('EMPLOYEE')
   setMaintenanceStatus(@Body('status') status: boolean) {
     return this.appService.setMaintenanceStatus(status);
+  }
+
+  @Post('maintenance/config')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('EMPLOYEE')
+  saveMaintenanceConfig(@Body() body: any) {
+    return this.appService.saveMaintenanceConfig(body);
   }
 }

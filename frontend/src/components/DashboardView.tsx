@@ -145,7 +145,7 @@ export function DashboardView() {
                         <Link href="/dashboard/wallet">
                             <Button className="h-12 px-6 rounded-xl border-2 border-primary/40 bg-background hover:bg-muted transition-all duration-300 shadow-sm">
                                 <Wallet className="mr-2 h-5 w-5 text-primary" />
-                                <span className="font-orbitron font-bold text-foreground">₹{data.walletBalance.toFixed(2)}</span>
+                                <span className="font-orbitron font-bold text-foreground">{data.walletBalance.toFixed(2)} Coins</span>
                             </Button>
                         </Link>
                     </div>
@@ -162,7 +162,7 @@ export function DashboardView() {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-bold font-orbitron text-foreground">₹{data.walletBalance.toFixed(2)}</div>
+                                <div className="text-3xl font-bold font-orbitron text-foreground">{data.walletBalance.toFixed(2)} Coins</div>
                                 <div className="mt-4">
                                     <Link href="/dashboard/wallet" className="text-green-600 dark:text-green-500/80 hover:text-green-500 text-xs font-semibold flex items-center gap-1 group/link">
                                         REPLENISH FUNDS <ArrowUpRight className="h-3 w-3 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
@@ -273,8 +273,8 @@ export function DashboardView() {
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-col items-end gap-2">
-                                                        <Badge className="bg-primary hover:bg-primary text-white font-orbitron px-3 py-1">₹{t.prizePool}</Badge>
-                                                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Entry: ₹{t.entryFeePerPerson}</span>
+                                                        <Badge className="bg-primary hover:bg-primary text-white font-orbitron px-3 py-1">{t.prizePool} Coins</Badge>
+                                                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Entry: {t.entryFeePerPerson} Coins</span>
                                                     </div>
                                                 </motion.div>
                                             </Link>

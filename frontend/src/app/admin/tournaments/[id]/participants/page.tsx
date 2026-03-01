@@ -8,7 +8,7 @@ import Link from 'next/link';
 import {
     Users, ArrowLeft, Loader2, UserX, CheckCircle2,
     AlertTriangle, IndianRupee, Search, ShieldAlert,
-    ShieldCheck, Clock, XCircle, ChevronDown, RotateCcw
+    ShieldCheck, Clock, XCircle, ChevronDown, RotateCcw, TrendingUp
 } from 'lucide-react';
 import { ADMIN_ROLES } from '@/lib/roles';
 import { Input } from '@/components/ui/Input';
@@ -35,6 +35,7 @@ interface Tournament {
     id: string;
     title: string;
     entryFeePerPerson: number;
+    prizePool: number;
 }
 
 export default function ParticipantsPage({ params }: { params: { id: string } }) {
@@ -92,7 +93,7 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
 
     const handleKickAndRefund = async () => {
         if (!confirmingKick) return;
-        if (!confirm(`Are you sure you want to KICK and REFUND ₹${tournament?.entryFeePerPerson} to ${confirmingKick.user.name}? This will process the refund via Cashfree.`)) return;
+        if (!confirm(`Are you sure you want to KICK and REFUND ${tournament?.entryFeePerPerson} Coins to ${confirmingKick.user.name}? This will process the refund via Cashfree.`)) return;
 
         try {
             // 1. Kick the participant
@@ -134,6 +135,10 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
     const cancelledCount = participants.filter(p => ['CANCELLED', 'REFUNDED'].includes(p.paymentStatus)).length;
     const fraudRisk = participants.filter(p => p.paymentStatus !== 'PAID' && p.status === 'APPROVED').length;
 
+    const collectedRevenue = paidCount * (tournament?.entryFeePerPerson || 0);
+    const prizePool = tournament?.prizePool || 0;
+    const isLoss = collectedRevenue < prizePool;
+
     const getPaymentBadge = (status: string) => {
         switch (status) {
             case 'PAID': return <Badge className="bg-green-500/10 text-green-400 border-green-500/20"><CheckCircle2 className="w-3 h-3 mr-1" /> Paid</Badge>;
@@ -162,7 +167,7 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                         <Users className="w-6 h-6 text-primary" />
                         Participant Manager
                     </h1>
-                    <p className="text-muted-foreground text-sm">{tournament?.title} — Entry: ₹{tournament?.entryFeePerPerson || 'Free'}</p>
+                    <p className="text-muted-foreground text-sm">{tournament?.title} — Entry: {tournament?.entryFeePerPerson ? `${tournament.entryFeePerPerson} Coins` : 'Free'}</p>
                 </div>
             </div>
 
@@ -176,6 +181,37 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                     </div>
                 </div>
             )}
+
+            {/* Financial Health */}
+            <Card className={`border shadow-sm ${isLoss ? 'border-red-500/30 bg-red-500/5' : 'border-green-500/30 bg-green-500/5'}`}>
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center justify-between">
+                        Financial Health
+                        {isLoss ? <AlertTriangle className="w-5 h-5 text-red-500" /> : <TrendingUp className="w-5 h-5 text-green-500" />}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex justify-between items-end">
+                        <div>
+                            <p className="text-3xl font-bold" style={{ color: isLoss ? '#ef4444' : '#22c55e' }}>{collectedRevenue.toLocaleString('en-IN')} Coins</p>
+                            <p className="text-xs font-semibold text-muted-foreground mt-1 uppercase tracking-wider">Collected Revenue</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xl font-bold text-muted-foreground">{prizePool.toLocaleString('en-IN')} Coins</p>
+                            <p className="text-xs font-semibold text-muted-foreground mt-1 uppercase tracking-wider">Prize Pool</p>
+                        </div>
+                    </div>
+                    {isLoss ? (
+                        <p className="text-xs font-bold text-red-500 mt-4 bg-red-500/10 p-2.5 rounded-xl text-center border border-red-500/20 shadow-inner">
+                            ⚠️ CURRENT LOSS: {(prizePool - collectedRevenue).toLocaleString('en-IN')} Coins
+                        </p>
+                    ) : (
+                        <p className="text-xs font-bold text-green-500 mt-4 bg-green-500/10 p-2.5 rounded-xl text-center border border-green-500/20 shadow-inner">
+                            ✅ ESTIMATED PROFIT: {(collectedRevenue - prizePool).toLocaleString('en-IN')} Coins
+                        </p>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

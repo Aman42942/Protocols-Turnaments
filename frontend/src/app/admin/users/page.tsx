@@ -166,7 +166,7 @@ export default function AdminUsersPage() {
                 </Card>
                 <Card>
                     <CardContent className="pt-6 text-center">
-                        <p className="text-2xl font-bold text-green-500">₹{totalBalance.toLocaleString('en-IN')}</p>
+                        <p className="text-2xl font-bold text-green-500">{totalBalance.toLocaleString('en-IN')} Coins</p>
                         <p className="text-xs text-muted-foreground">Total Wallet Balance</p>
                     </CardContent>
                 </Card>
@@ -234,8 +234,12 @@ export default function AdminUsersPage() {
                                     <tr key={user.id} className={`hover:bg-muted/30 transition-colors ${user.banned ? 'opacity-60' : ''}`}>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                                                    {user.name?.[0] || user.email[0]}
+                                                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden shrink-0 border border-primary/20">
+                                                    {user.avatar ? (
+                                                        <img src={user.avatar} alt={user.name || 'User'} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        user.name?.[0]?.toUpperCase() || user.email[0]?.toUpperCase()
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <p className="font-medium">{user.name || 'Unnamed'}</p>
@@ -250,7 +254,7 @@ export default function AdminUsersPage() {
                                             </span>
                                         </td>
                                         <td className="p-4">
-                                            <span className="font-medium">₹{(user.wallet?.balance || 0).toFixed(0)}</span>
+                                            <span className="font-medium">{(user.wallet?.balance || 0).toFixed(0)} Coins</span>
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -315,8 +319,8 @@ export default function AdminUsersPage() {
                                                         </button>
                                                     )}
 
-                                                    {/* Only SUPERADMIN can delete users */}
-                                                    {currentUserRole === 'SUPERADMIN' && (
+                                                    {/* Allow Admins to Adjust Balances */}
+                                                    {(currentUserRole === 'ULTIMATE_ADMIN' || currentUserRole === 'SUPERADMIN') && (
                                                         <>
                                                             <hr className="my-1 border-border" />
                                                             <button
@@ -330,6 +334,13 @@ export default function AdminUsersPage() {
                                                                 <Wallet className="h-3.5 w-3.5" />
                                                                 Adjust Balance
                                                             </button>
+                                                        </>
+                                                    )}
+
+                                                    {/* Only SUPERADMIN and ULTIMATE_ADMIN can delete users */}
+                                                    {(currentUserRole === 'ULTIMATE_ADMIN' || currentUserRole === 'SUPERADMIN') && (
+                                                        <>
+                                                            <hr className="my-1 border-border" />
                                                             <button
                                                                 className="w-full px-4 py-2 text-left text-sm hover:bg-red-500/10 text-red-500 flex items-center gap-2"
                                                                 onClick={() => handleDelete(user.id)}

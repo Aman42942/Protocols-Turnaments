@@ -44,8 +44,8 @@ export class PaypalService {
         }
     }
 
-    async createOrder(usdAmount: number): Promise<{ id: string }> {
-        if (usdAmount <= 0) {
+    async createOrder(amount: number, currencyCode: string = 'USD'): Promise<{ id: string }> {
+        if (amount <= 0) {
             throw new BadRequestException('Order amount must be greater than 0');
         }
 
@@ -56,8 +56,8 @@ export class PaypalService {
             purchase_units: [
                 {
                     amount: {
-                        currency_code: 'USD',
-                        value: usdAmount.toFixed(2),
+                        currency_code: currencyCode,
+                        value: amount.toFixed(2),
                     },
                 },
             ],

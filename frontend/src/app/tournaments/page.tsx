@@ -87,7 +87,7 @@ export default function TournamentsPage() {
                             {[
                                 { label: 'Active', value: tournaments.filter(t => !['COMPLETED', 'CANCELLED'].includes(t.status?.toUpperCase())).length, icon: Gamepad2 },
                                 { label: 'Live Now', value: liveCount, icon: Flame },
-                                { label: 'Total Prizes', value: `₹${(totalPrize / 1000).toFixed(0)}K`, icon: Trophy },
+                                { label: 'Total Prizes', value: totalPrize >= 1000 ? `${(totalPrize / 1000).toFixed(1).replace(/\.0$/, '')}K Coins` : `${totalPrize} Coins`, icon: Trophy },
                             ].map((s, i) => (
                                 <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/50 border shrink-0">
                                     <s.icon className="h-4 w-4 text-primary" />

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, Users, CreditCard, Settings,
-    LayoutDashboard, LogOut, X, Activity, ShieldCheck, Palette, PieChart
+    LayoutDashboard, LogOut, X, Activity, ShieldCheck, Palette, PieChart, Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
     { name: 'Economy', href: '/admin/analytics', icon: PieChart, color: '#eab308', accent: 'before:bg-yellow-500', glow: 'group-hover:shadow-yellow-500/40' },
     { name: 'Health', href: '/admin/health', icon: Activity, color: '#10b981', accent: 'before:bg-emerald-500', glow: 'group-hover:shadow-emerald-500/40' },
     { name: 'Site Builder', href: '/admin/builder', icon: Palette, color: '#ec4899', accent: 'before:bg-pink-500', glow: 'group-hover:shadow-pink-500/40' },
+    { name: 'Website Manage', href: '/admin/website-manage', icon: Globe, color: '#0ea5e9', accent: 'before:bg-sky-500', glow: 'group-hover:shadow-sky-500/40' },
     { name: 'Profile', href: '/admin/profile', icon: ShieldCheck, color: '#facc15', accent: 'before:bg-yellow-400', glow: 'group-hover:shadow-yellow-400/40' },
     { name: 'Settings', href: '/admin/settings', icon: Settings, color: '#94a3b8', accent: 'before:bg-slate-400', glow: 'group-hover:shadow-slate-400/30' },
 ];

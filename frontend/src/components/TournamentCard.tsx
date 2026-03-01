@@ -161,7 +161,7 @@ export function TournamentCard({
                                     <Trophy className="w-3 h-3 text-yellow-500" />
                                     <span className="text-[8px] font-black text-muted-foreground uppercase tracking-wider">Winnings</span>
                                 </div>
-                                <p className="text-lg font-black text-foreground tracking-tight">₹{prizePool.toLocaleString()}</p>
+                                <p className="text-lg font-black text-foreground tracking-tight">{prizePool.toLocaleString()} Coins</p>
                             </div>
                             <div className="p-3 rounded-2xl bg-muted/20 border border-border/50 backdrop-blur-sm group-hover:bg-muted/30 transition-colors">
                                 <div className="flex items-center gap-1.5 mb-1">
@@ -169,7 +169,7 @@ export function TournamentCard({
                                     <span className="text-[8px] font-black text-muted-foreground uppercase tracking-wider">Entry</span>
                                 </div>
                                 <p className="text-lg font-black text-foreground tracking-tight">
-                                    {entryFee === 0 ? "FREE" : `₹${entryFee}`}
+                                    {entryFee === 0 ? "FREE" : `${entryFee} Coins`}
                                 </p>
                             </div>
                         </div>

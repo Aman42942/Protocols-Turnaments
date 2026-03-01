@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 import api from '@/lib/api';
 import {
-    Trophy, Users, IndianRupee, Clock, Loader2,
+    Trophy, Users, Coins, Clock, Loader2,
     Wallet, TrendingUp, UserPlus, Activity, Plus,
     ArrowUpRight, ArrowDownRight, Layout, Zap, BarChart3,
-    ChevronRight, ShieldCheck, Flame, Swords, Target
+    ChevronRight, ShieldCheck, Flame, Swords, Target, AlertTriangle
 } from 'lucide-react';
 
 // ─── Glitch Number Animation ────────────────────────────────────────────────
@@ -77,7 +77,7 @@ interface AdminStats {
 }
 
 const STAT_CONFIG = [
-    { label: 'Total Revenue', key: 'totalRevenue' as const, prefix: '₹', icon: IndianRupee, color: '#22c55e', sub: (s: AdminStats) => `Entry: ₹${(s.entryFeeRevenue || 0).toLocaleString('en-IN')}` },
+    { label: 'Total Revenue', key: 'totalRevenue' as const, prefix: '', icon: Coins, color: '#22c55e', sub: (s: AdminStats) => `Entry: ${(s.entryFeeRevenue || 0).toLocaleString('en-IN')} Coins` },
     { label: 'Total Players', key: 'totalUsers' as const, icon: Users, color: '#3b82f6', sub: (s: AdminStats) => `+${s.newUsersThisWeek || 0} this week` },
     { label: 'Active Events', key: 'activeTournaments' as const, icon: Flame, color: '#f97316', sub: (s: AdminStats) => `${s.totalTournaments || 0} total` },
     { label: 'Pending', key: 'pendingDeposits' as const, icon: Clock, color: '#eab308', sub: () => 'Needs approval' },
@@ -98,6 +98,7 @@ export default function AdminDashboard() {
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [tournaments, setTournaments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [lossTournaments, setLossTournaments] = useState<any[]>([]);
 
     useEffect(() => {
         fetchData();
@@ -109,7 +110,17 @@ export default function AdminDashboard() {
         try {
             const [sRes, tRes] = await Promise.allSettled([api.get('/users/admin/stats'), api.get('/tournaments')]);
             if (sRes.status === 'fulfilled') setStats(sRes.value.data);
-            if (tRes.status === 'fulfilled') setTournaments(tRes.value.data?.slice(0, 5) || []);
+            if (tRes.status === 'fulfilled') {
+                const allT = tRes.value.data || [];
+                setTournaments(allT.slice(0, 5));
+
+                const lossItems = allT.filter((t: any) => {
+                    if (t.status === 'COMPLETED' || t.status === 'CANCELLED') return false;
+                    const collected = (t.teams?.length || 0) * (t.entryFeePerPerson || 0);
+                    return collected < (t.prizePool || 0);
+                });
+                setLossTournaments(lossItems);
+            }
         } finally { setLoading(false); }
     };
 
@@ -187,7 +198,7 @@ export default function AdminDashboard() {
                                         </motion.div>
                                     </div>
                                     <p className="text-2xl font-black leading-none" style={{ color: cfg.color }}>
-                                        <GlitchCounter value={value} prefix={cfg.prefix} />
+                                        <GlitchCounter value={value} prefix={cfg.prefix} /> {cfg.key === 'totalRevenue' ? 'Coins' : ''}
                                     </p>
                                     <p className="text-[10px] font-bold text-foreground mt-1.5 truncate">{cfg.label}</p>
                                     <p className="text-[9px] text-muted-foreground mt-0.5 truncate">{stats ? cfg.sub(stats) : '—'}</p>
@@ -197,6 +208,41 @@ export default function AdminDashboard() {
                     );
                 })}
             </div>
+
+            {/* ─── RISK ALERTS ─────────────────────────────────────── */}
+            {lossTournaments.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+                    <div className="flex items-center gap-2 mb-3">
+                        <AlertTriangle className="w-4 h-4 text-red-500 animate-pulse" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Active Risk Alerts ({lossTournaments.length})</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {lossTournaments.map(t => {
+                            const collected = (t.teams?.length || 0) * (t.entryFeePerPerson || 0);
+                            const loss = (t.prizePool || 0) - collected;
+                            return (
+                                <Link key={t.id} href={`/admin/tournaments/${t.id}/participants`}>
+                                    <div className="flex items-center justify-between p-4 rounded-2xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/10 transition-colors cursor-pointer group">
+                                        <div className="flex items-center gap-3 max-w-[65%]">
+                                            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
+                                                <AlertTriangle className="w-5 h-5 text-red-500 group-hover:scale-110 transition-transform" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-foreground group-hover:text-red-500 transition-colors truncate">{t.title}</p>
+                                                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">Prize: {t.prizePool} | Collected: {collected}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-red-500 font-black text-lg">-{loss}</p>
+                                            <p className="text-[9px] text-red-500/70 font-bold uppercase">Current Loss</p>
+                                        </div>
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </motion.div>
+            )}
 
             {/* ─── QUICK ACTIONS ───────────────────────────────────── */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
@@ -267,7 +313,7 @@ export default function AdminDashboard() {
                                         </div>
                                     </div>
                                     <div className="text-right shrink-0 ml-2">
-                                        <p className="font-black text-sm">₹{(t.prizePool || 0).toLocaleString('en-IN')}</p>
+                                        <p className="font-black text-sm">{(t.prizePool || 0).toLocaleString('en-IN')} Coins</p>
                                         <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold inline-flex items-center gap-1 ${t.status === 'LIVE' ? 'bg-red-500/10 text-red-500' : t.status === 'UPCOMING' ? 'bg-green-500/10 text-green-500' : 'bg-muted text-muted-foreground'}`}>
                                             {t.status === 'LIVE' && <motion.span animate={{ scale: [1, 1.5, 1] }} transition={{ duration: 1, repeat: Infinity }} className="w-1 h-1 rounded-full bg-red-500" />}
                                             {t.status || 'UPCOMING'}
@@ -285,7 +331,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
                             <div className="flex items-center gap-2">
                                 <div className="p-1.5 rounded-lg" style={{ background: '#22c55e15' }}>
-                                    <IndianRupee className="w-4 h-4" style={{ color: '#22c55e' }} />
+                                    <Coins className="w-4 h-4" style={{ color: '#22c55e' }} />
                                 </div>
                                 <p className="font-bold text-sm">Recent Activity</p>
                             </div>
@@ -315,7 +361,7 @@ export default function AdminDashboard() {
                                         </div>
                                         <div className="text-right shrink-0">
                                             <p className="text-sm font-black" style={{ color: isIn ? '#22c55e' : undefined }}>
-                                                {isIn ? '+' : '-'}₹{tx.amount}
+                                                {isIn ? '+' : '-'}{tx.amount} Coins
                                             </p>
                                             <p className="text-[9px] text-muted-foreground">{fmtT(tx.createdAt)}</p>
                                         </div>

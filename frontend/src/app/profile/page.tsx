@@ -150,7 +150,7 @@ export default function ProfilePage() {
                             {[
                                 { label: 'Tournaments', value: user.teams?.length || 0, icon: Trophy, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
                                 { label: 'Win Rate', value: '0%', icon: Zap, color: 'text-primary', bg: 'bg-primary/10' },
-                                { label: 'Wallet', value: `₹${user.wallet?.balance || 0}`, icon: Wallet, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                                { label: 'Wallet', value: `${user.wallet?.balance || 0} Coins`, icon: Wallet, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
                             ].map((stat, i) => {
                                 const Icon = stat.icon === Wallet ? Zap : stat.icon; // Quick fix if Wallet is not imported correctly, using Zap for now or ensuring imports
                                 return (

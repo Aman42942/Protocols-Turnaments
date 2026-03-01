@@ -35,9 +35,17 @@ export default function AdminTransactionsPage() {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [adjustmentUser, setAdjustmentUser] = useState<{ id: string, name: string, email: string } | null>(null);
     const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+    const [currentUserRole, setCurrentUserRole] = useState<string>('');
 
     useEffect(() => {
         fetchTransactions();
+        try {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                setCurrentUserRole(user.role || '');
+            }
+        } catch (e) { console.error('Error parsing user', e); }
     }, []);
 
     const fetchTransactions = async () => {
@@ -64,7 +72,7 @@ export default function AdminTransactionsPage() {
     };
 
     const handleRefund = async (tx: Transaction) => {
-        if (!confirm(`Are you sure you want to refund ₹${tx.amount} to ${tx.user?.name}?`)) return;
+        if (!confirm(`Are you sure you want to refund ${tx.amount} Coins to ${tx.user?.name}?`)) return;
 
         setProcessingId(tx.id);
         try {
@@ -179,7 +187,7 @@ export default function AdminTransactionsPage() {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <span className="font-bold text-lg">₹{tx.amount.toLocaleString('en-IN')}</span>
+                                                <span className="font-bold text-lg">{tx.amount.toLocaleString('en-IN')} Coins</span>
                                                 <Badge variant="outline" className="text-[10px] uppercase">{tx.method || 'WALLET'}</Badge>
                                                 {getStatusBadge(tx.status)}
                                             </div>
@@ -244,18 +252,20 @@ export default function AdminTransactionsPage() {
                                             </Badge>
                                         )}
 
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="ml-auto text-primary font-bold gap-2"
-                                            onClick={() => {
-                                                setAdjustmentUser(tx.user || null);
-                                                setIsAdjustmentModalOpen(true);
-                                            }}
-                                        >
-                                            <Wallet className="w-4 h-4" />
-                                            ADJUST BALANCE
-                                        </Button>
+                                        {(currentUserRole === 'ULTIMATE_ADMIN' || currentUserRole === 'SUPERADMIN') && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="ml-auto text-primary font-bold gap-2"
+                                                onClick={() => {
+                                                    setAdjustmentUser(tx.user || null);
+                                                    setIsAdjustmentModalOpen(true);
+                                                }}
+                                            >
+                                                <Wallet className="w-4 h-4" />
+                                                ADJUST BALANCE
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                             </CardContent>

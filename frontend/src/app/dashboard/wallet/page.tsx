@@ -17,7 +17,7 @@ import toast from 'react-hot-toast';
 import { usePayPalScriptReducer, PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 
 // ---- SUBCOMPONENTS FOR PAYPAL ----
-const PayPalCheckout = ({ usdAmount, expectedCoins, onSuccess, onCancel, onError }: any) => {
+const PayPalCheckout = ({ usdAmount, expectedCoins, onSuccess, onCancel, onError, currency = 'USD' }: any) => {
     const [{ isPending }] = usePayPalScriptReducer();
 
     if (isPending) return <div className="flex justify-center p-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -26,7 +26,7 @@ const PayPalCheckout = ({ usdAmount, expectedCoins, onSuccess, onCancel, onError
         <PayPalButtons
             style={{ layout: "vertical", shape: "pill", color: "blue" }}
             createOrder={async () => {
-                const res = await api.post('/payments/paypal/create-order', { usdAmount });
+                const res = await api.post('/payments/paypal/create-order', { usdAmount, currency });
                 return res.data.id;
             }}
             onApprove={async (data: any) => {
@@ -66,9 +66,10 @@ export default function WalletPage() {
 
     // Topup State
     const [showTopup, setShowTopup] = useState(false);
-    const [topupMethod, setTopupMethod] = useState<'UPI' | 'PAYPAL'>('UPI');
+    const [topupMethod, setTopupMethod] = useState<'UPI' | 'PAYPAL' | 'PAYPAL_GBP'>('UPI');
     const [topupCoins, setTopupCoins] = useState('');
-    const [exchangeRate, setExchangeRate] = useState(85); // fallback
+    const [exchangeRate, setExchangeRate] = useState(85); // fallback usd
+    const [gbpExchangeRate, setGbpExchangeRate] = useState(110); // fallback gbp
     const [paypalClientId, setPaypalClientId] = useState('');
 
     // Withdraw state
@@ -79,10 +80,11 @@ export default function WalletPage() {
 
     const loadData = async () => {
         try {
-            const [walletRes, ledgerRes, rateRes] = await Promise.allSettled([
+            const [walletRes, ledgerRes, rateRes, gbpRes] = await Promise.allSettled([
                 api.get('/wallet'),
                 api.get('/analytics/user-ledger'),
                 api.get(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/PAYPAL_EXCHANGE_RATE`),
+                api.get(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/GBP_TO_COIN_RATE`),
             ]);
 
             if (walletRes.status === 'fulfilled') setWallet(walletRes.value.data);
@@ -90,6 +92,10 @@ export default function WalletPage() {
             if (rateRes.status === 'fulfilled') {
                 const rate = Number(rateRes.value.data?.value);
                 if (!isNaN(rate) && rate > 0) setExchangeRate(rate);
+            }
+            if (gbpRes.status === 'fulfilled') {
+                const rate = Number(gbpRes.value.data?.value);
+                if (!isNaN(rate) && rate > 0) setGbpExchangeRate(rate);
             }
 
             setPaypalClientId(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
@@ -165,6 +171,7 @@ export default function WalletPage() {
 
     const requestedCoins = parseFloat(topupCoins) || 0;
     const usdEquivalent = (requestedCoins / exchangeRate).toFixed(2);
+    const gbpEquivalent = (requestedCoins / gbpExchangeRate).toFixed(2);
     const inrEquivalent = requestedCoins; // 1 Coin = 1 INR basically
 
     return (
@@ -309,6 +316,15 @@ export default function WalletPage() {
                                                         <span className={`font-bold text-sm ${topupMethod === 'PAYPAL' ? 'text-blue-500' : 'text-muted-foreground'}`}>International (USD)</span>
                                                         <span className="text-[10px] text-muted-foreground mt-1 text-center">PayPal / Credit Card</span>
                                                     </button>
+
+                                                    <button
+                                                        onClick={() => setTopupMethod('PAYPAL_GBP')}
+                                                        className={`flex-1 flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all ${topupMethod === 'PAYPAL_GBP' ? 'border-purple-500 bg-purple-500/10' : 'border-border bg-muted/30 hover:bg-muted'}`}
+                                                    >
+                                                        <span className={`text-4xl font-serif mb-2 leading-none ${topupMethod === 'PAYPAL_GBP' ? 'text-purple-500' : 'text-muted-foreground'}`}>£</span>
+                                                        <span className={`font-bold text-sm ${topupMethod === 'PAYPAL_GBP' ? 'text-purple-500' : 'text-muted-foreground'}`}>UK (GBP)</span>
+                                                        <span className="text-[10px] text-muted-foreground mt-1 text-center">PayPal / Credit Card</span>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -326,7 +342,7 @@ export default function WalletPage() {
                                                 <div className="flex justify-between items-center mb-6">
                                                     <span className="text-muted-foreground font-medium">Exchange Rate</span>
                                                     <span className="font-bold text-sm border border-border px-2 py-1 rounded-lg">
-                                                        {topupMethod === 'PAYPAL' ? `$1 = ${exchangeRate} Coins` : `₹1 = 1 Coin`}
+                                                        {topupMethod === 'PAYPAL' ? `$1 = ${exchangeRate} Coins` : topupMethod === 'PAYPAL_GBP' ? `£1 = ${gbpExchangeRate} Coins` : `₹1 = 1 Coin`}
                                                     </span>
                                                 </div>
                                             </div>
@@ -334,20 +350,21 @@ export default function WalletPage() {
                                             <div className="space-y-4">
                                                 <div className="bg-card border border-border rounded-xl p-4 flex justify-between items-center shadow-inner">
                                                     <span className="text-sm font-bold tracking-wider uppercase text-muted-foreground">Total to Pay</span>
-                                                    <span className={`text-2xl font-black ${topupMethod === 'PAYPAL' ? 'text-blue-500' : 'text-green-500'}`}>
-                                                        {topupMethod === 'PAYPAL' ? `$${usdEquivalent}` : `₹${inrEquivalent.toLocaleString()}`}
+                                                    <span className={`text-2xl font-black ${topupMethod === 'PAYPAL' ? 'text-blue-500' : topupMethod === 'PAYPAL_GBP' ? 'text-purple-500' : 'text-green-500'}`}>
+                                                        {topupMethod === 'PAYPAL' ? `$${usdEquivalent}` : topupMethod === 'PAYPAL_GBP' ? `£${gbpEquivalent}` : `₹${inrEquivalent.toLocaleString()}`}
                                                     </span>
                                                 </div>
 
                                                 {/* CHECKOUT BUTTONS */}
                                                 {!requestedCoins || requestedCoins <= 0 ? (
                                                     <Button disabled className="w-full h-14 rounded-full font-bold opacity-50 bg-muted text-muted-foreground">Enter Amount to Buy</Button>
-                                                ) : topupMethod === 'PAYPAL' ? (
+                                                ) : (topupMethod === 'PAYPAL' || topupMethod === 'PAYPAL_GBP') ? (
                                                     <div className="min-h-[55px]">
                                                         {paypalClientId ? (
-                                                            <PayPalScriptProvider options={{ "clientId": paypalClientId, currency: "USD", intent: "capture" }}>
+                                                            <PayPalScriptProvider options={{ "clientId": paypalClientId, currency: topupMethod === 'PAYPAL_GBP' ? "GBP" : "USD", intent: "capture" }}>
                                                                 <PayPalCheckout
-                                                                    usdAmount={usdEquivalent}
+                                                                    usdAmount={topupMethod === 'PAYPAL_GBP' ? gbpEquivalent : usdEquivalent}
+                                                                    currency={topupMethod === 'PAYPAL_GBP' ? "GBP" : "USD"}
                                                                     expectedCoins={requestedCoins}
                                                                     onSuccess={() => { setShowTopup(false); setTopupCoins(''); loadData(); }}
                                                                     onError={() => { }}
@@ -367,7 +384,7 @@ export default function WalletPage() {
                                                     </Button>
                                                 )}
 
-                                                {topupMethod === 'PAYPAL' && (
+                                                {(topupMethod === 'PAYPAL' || topupMethod === 'PAYPAL_GBP') && (
                                                     <p className="text-[10px] text-center text-muted-foreground flex items-center justify-center gap-1">
                                                         <ShieldCheck className="w-3 h-3" /> Payments are securely processed by PayPal.
                                                     </p>

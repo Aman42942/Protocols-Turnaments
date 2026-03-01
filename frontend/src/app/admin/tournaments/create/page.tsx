@@ -387,7 +387,7 @@ export default function CreateTournamentPage() {
                                     </Button>
                                 </a>
                                 <Button variant="outline" className="flex-1 text-xs" onClick={() => {
-                                    navigator.clipboard.writeText(`🏆 Join our tournament!\n🎮 ${formData.title}\n💰 Entry: ₹${formData.entryFeePerPerson || 'FREE'}\n🔗 ${shareLink}`);
+                                    navigator.clipboard.writeText(`🏆 Join our tournament!\n🎮 ${formData.title}\n💰 Entry: ${formData.entryFeePerPerson ? `${formData.entryFeePerPerson} Coins` : 'FREE'}\n🔗 ${shareLink}`);
                                     alert('Copied to clipboard!');
                                 }}>
                                     <Copy className="h-3 w-3 mr-1" /> Copy Message
@@ -579,11 +579,11 @@ export default function CreateTournamentPage() {
                                 {/* Pricing */}
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div>
-                                        <Label>Entry Fee (₹)</Label>
+                                        <Label>Entry Fee (Coins)</Label>
                                         <Input type="number" name="entryFeePerPerson" value={formData.entryFeePerPerson} onChange={handleChange} placeholder="0 = Free" className="mt-1 w-full" />
                                     </div>
                                     <div>
-                                        <Label>Prize Pool (₹)</Label>
+                                        <Label>Prize Pool (Coins)</Label>
                                         <Input type="number" name="prizePool" value={formData.prizePool} onChange={handleChange} placeholder="Total prize" className="mt-1 w-full" />
                                     </div>
                                     <div>
@@ -604,19 +604,19 @@ export default function CreateTournamentPage() {
                                         <div className="p-3 rounded-lg bg-background/50 border shadow-sm">
                                             <p className="text-xs text-muted-foreground mb-1">Potential Revenue</p>
                                             <p className="font-bold text-green-600">
-                                                ₹{((parseFloat(formData.entryFeePerPerson) || 0) * (parseInt(formData.maxTeams) || 0) * (formData.gameMode === 'SOLO' ? 1 : formData.gameMode === 'DUO' ? 2 : formData.game === 'VALORANT' ? 5 : 4)).toLocaleString()}
+                                                {((parseFloat(formData.entryFeePerPerson) || 0) * (parseInt(formData.maxTeams) || 0) * (formData.gameMode === 'SOLO' ? 1 : formData.gameMode === 'DUO' ? 2 : formData.game === 'VALORANT' ? 5 : 4)).toLocaleString()} Coins
                                             </p>
                                         </div>
                                         <div className="p-3 rounded-lg bg-background/50 border shadow-sm">
                                             <p className="text-xs text-muted-foreground mb-1">Total Expenses</p>
                                             <p className="font-bold text-red-500">
-                                                -₹{(parseFloat(formData.prizePool) || 0).toLocaleString()}
+                                                -{(parseFloat(formData.prizePool) || 0).toLocaleString()} Coins
                                             </p>
                                         </div>
                                         <div className="p-3 rounded-lg bg-background/50 border shadow-sm ring-1 ring-primary/20">
                                             <p className="text-xs text-muted-foreground mb-1">Net Profit</p>
                                             <p className={`font-bold ${((parseFloat(formData.entryFeePerPerson) || 0) * (parseInt(formData.maxTeams) || 0) * (formData.gameMode === 'SOLO' ? 1 : formData.gameMode === 'DUO' ? 2 : formData.game === 'VALORANT' ? 5 : 4) - (parseFloat(formData.prizePool) || 0)) >= 0 ? 'text-primary' : 'text-red-500'}`}>
-                                                ₹{((parseFloat(formData.entryFeePerPerson) || 0) * (parseInt(formData.maxTeams) || 0) * (formData.gameMode === 'SOLO' ? 1 : formData.gameMode === 'DUO' ? 2 : formData.game === 'VALORANT' ? 5 : 4) - (parseFloat(formData.prizePool) || 0)).toLocaleString()}
+                                                {((parseFloat(formData.entryFeePerPerson) || 0) * (parseInt(formData.maxTeams) || 0) * (formData.gameMode === 'SOLO' ? 1 : formData.gameMode === 'DUO' ? 2 : formData.game === 'VALORANT' ? 5 : 4) - (parseFloat(formData.prizePool) || 0)).toLocaleString()} Coins
                                             </p>
                                         </div>
                                     </div>
@@ -650,7 +650,7 @@ export default function CreateTournamentPage() {
                                         {PRIZE_PRESETS[prizePreset as keyof typeof PRIZE_PRESETS].map((p, i) => (
                                             <div key={i} className="p-3 rounded-lg bg-muted/50 text-center">
                                                 <span className="text-sm font-bold">{p.place}</span>
-                                                <p className="text-xs text-muted-foreground">{p.percent}% — ₹{Math.round((parseFloat(formData.prizePool) || 0) * p.percent / 100)}</p>
+                                                <p className="text-xs text-muted-foreground">{p.percent}% — {Math.round((parseFloat(formData.prizePool) || 0) * p.percent / 100)} Coins</p>
                                             </div>
                                         ))}
                                     </div>
@@ -917,8 +917,8 @@ export default function CreateTournamentPage() {
                                         { label: 'Format', value: formData.format },
                                         { label: 'Tier', value: formData.tier },
                                         { label: 'Region', value: formData.region || 'Not set' },
-                                        { label: 'Entry Fee', value: formData.entryFeePerPerson ? `₹${formData.entryFeePerPerson}` : 'FREE' },
-                                        { label: 'Prize Pool', value: formData.prizePool ? `₹${formData.prizePool}` : '₹0' },
+                                        { label: 'Entry Fee', value: formData.entryFeePerPerson ? `${formData.entryFeePerPerson} Coins` : 'FREE' },
+                                        { label: 'Prize Pool', value: formData.prizePool ? `${formData.prizePool} Coins` : '0 Coins' },
                                         { label: 'Max Teams', value: formData.maxTeams },
                                         { label: 'Start', value: `${formData.startDate} ${formData.startTime}` },
                                         { label: 'Maps', value: `${selectedMaps.length} selected` },

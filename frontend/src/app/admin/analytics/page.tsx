@@ -7,9 +7,11 @@ import toast from 'react-hot-toast';
 
 export default function EconomyDashboard() {
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
+    const [savingUsd, setSavingUsd] = useState(false);
+    const [savingGbp, setSavingGbp] = useState(false);
     const [stats, setStats] = useState<any>(null);
     const [exchangeRate, setExchangeRate] = useState<string>('85');
+    const [gbpExchangeRate, setGbpExchangeRate] = useState<string>('110');
 
     const fetchEconomyData = async () => {
         try {
@@ -29,6 +31,12 @@ export default function EconomyDashboard() {
                 const configData = await configRes.json();
                 if (configData?.value) setExchangeRate(configData.value);
             }
+
+            const gbpRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/GBP_TO_COIN_RATE`);
+            if (gbpRes.ok) {
+                const gbpData = await gbpRes.json();
+                if (gbpData?.value) setGbpExchangeRate(gbpData.value);
+            }
         } catch (error) {
             toast.error('Failed to load economy data');
         } finally {
@@ -42,10 +50,10 @@ export default function EconomyDashboard() {
 
     const saveExchangeRate = async () => {
         if (!exchangeRate || isNaN(Number(exchangeRate)) || Number(exchangeRate) <= 0) {
-            toast.error('Invalid Exchange Rate');
+            toast.error('Invalid USD Exchange Rate');
             return;
         }
-        setSaving(true);
+        setSavingUsd(true);
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
@@ -57,14 +65,42 @@ export default function EconomyDashboard() {
                 body: JSON.stringify({ key: 'PAYPAL_EXCHANGE_RATE', value: exchangeRate })
             });
             if (res.ok) {
-                toast.success('Exchange Rate Updated Successfully');
+                toast.success('USD Rate Updated Successfully');
             } else {
-                toast.error('Failed to update rate');
+                toast.error('Failed to update USD rate');
             }
         } catch {
             toast.error('An error occurred');
         } finally {
-            setSaving(false);
+            setSavingUsd(false);
+        }
+    };
+
+    const saveGbpExchangeRate = async () => {
+        if (!gbpExchangeRate || isNaN(Number(gbpExchangeRate)) || Number(gbpExchangeRate) <= 0) {
+            toast.error('Invalid GBP Exchange Rate');
+            return;
+        }
+        setSavingGbp(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ key: 'GBP_TO_COIN_RATE', value: gbpExchangeRate })
+            });
+            if (res.ok) {
+                toast.success('GBP Rate Updated Successfully');
+            } else {
+                toast.error('Failed to update GBP rate');
+            }
+        } catch {
+            toast.error('An error occurred');
+        } finally {
+            setSavingGbp(false);
         }
     };
 
@@ -95,30 +131,58 @@ export default function EconomyDashboard() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-4 bg-background p-2 rounded-2xl border border-border w-full md:w-auto">
-                    <div className="w-10 h-10 flex items-center justify-center bg-muted rounded-xl">
-                        <ArrowRightLeft className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Global Rate</p>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold">$1 USD = </span>
-                            <input
-                                type="number"
-                                value={exchangeRate}
-                                onChange={e => setExchangeRate(e.target.value)}
-                                className="w-16 bg-transparent outline-none border-b border-dashed border-primary/50 text-primary font-black text-center"
-                            />
-                            <span className="text-sm font-bold text-yellow-500">Coins</span>
+                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto mt-4 md:mt-0">
+                    {/* USD Box */}
+                    <div className="flex items-center gap-4 bg-background p-2 rounded-2xl border border-border w-full">
+                        <div className="w-10 h-10 flex items-center justify-center bg-emerald-500/10 rounded-xl">
+                            <DollarSign className="w-5 h-5 text-emerald-500" />
                         </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">USD to Coin</p>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold">$1 = </span>
+                                <input
+                                    type="number"
+                                    value={exchangeRate}
+                                    onChange={e => setExchangeRate(e.target.value)}
+                                    className="w-12 bg-transparent outline-none border-b border-dashed border-emerald-500/50 text-emerald-500 font-black text-center"
+                                />
+                            </div>
+                        </div>
+                        <button
+                            onClick={saveExchangeRate}
+                            disabled={savingUsd}
+                            className="w-10 h-10 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors disabled:opacity-50 ml-auto"
+                        >
+                            {savingUsd ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        </button>
                     </div>
-                    <button
-                        onClick={saveExchangeRate}
-                        disabled={saving}
-                        className="w-10 h-10 flex items-center justify-center bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-colors disabled:opacity-50"
-                    >
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    </button>
+
+                    {/* GBP Box */}
+                    <div className="flex items-center gap-4 bg-background p-2 rounded-2xl border border-border w-full">
+                        <div className="w-10 h-10 flex items-center justify-center bg-purple-500/10 rounded-xl">
+                            <span className="text-lg font-black text-purple-500">£</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">GBP to Coin</p>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold">£1 = </span>
+                                <input
+                                    type="number"
+                                    value={gbpExchangeRate}
+                                    onChange={e => setGbpExchangeRate(e.target.value)}
+                                    className="w-12 bg-transparent outline-none border-b border-dashed border-purple-500/50 text-purple-500 font-black text-center"
+                                />
+                            </div>
+                        </div>
+                        <button
+                            onClick={saveGbpExchangeRate}
+                            disabled={savingGbp}
+                            className="w-10 h-10 flex items-center justify-center bg-purple-500 hover:bg-purple-600 text-white rounded-xl transition-colors disabled:opacity-50 ml-auto"
+                        >
+                            {savingGbp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -148,7 +212,7 @@ export default function EconomyDashboard() {
                 <StatCard
                     icon={IndianRupee}
                     label="Total INR Deposited"
-                    value={`₹${stats?.totalINRDeposited?.toLocaleString() || 0}`}
+                    value={`${stats?.totalINRDeposited?.toLocaleString() || 0} Coins`}
                     color="text-blue-500"
                     bg="bg-blue-500/10"
                     delay={0.1}
@@ -163,7 +227,14 @@ export default function EconomyDashboard() {
                     delay={0.2}
                 />
 
-                <div className="col-span-1 md:col-span-2 lg:col-span-1 hidden lg:block" />
+                <StatCard
+                    icon={({ className }: any) => <span className={`font-serif text-[1.4rem] leading-none ${className}`}>£</span>}
+                    label="Total GBP Deposited"
+                    value={`£${stats?.totalGBPPaid?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}`}
+                    color="text-purple-500"
+                    bg="bg-purple-500/10"
+                    delay={0.25}
+                />
 
                 <StatCard
                     icon={Coins}

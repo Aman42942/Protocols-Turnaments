@@ -111,7 +111,7 @@ export function WalletAdjustmentModal({ isOpen, onClose, user, onSuccess }: Wall
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="amount">Amount (₹)</Label>
+                        <Label htmlFor="amount">Amount (Coins)</Label>
                         <Input
                             id="amount"
                             type="number"

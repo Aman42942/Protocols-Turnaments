@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/Badge';
 import Link from 'next/link';
 import api from '@/lib/api';
 import {
-    Plus, Search, Trophy, Loader2, Trash2, Edit, Eye,
-    Users, IndianRupee, Calendar, MoreHorizontal, UserCheck, Swords
+    Plus, Search, Trophy, Loader2, Trash2, Edit, Eye, TrendingUp,
+    Users, IndianRupee, Calendar, MoreHorizontal, UserCheck, Swords, AlertTriangle
 } from 'lucide-react';
 import { ADMIN_ROLES } from '@/lib/roles';
 
@@ -24,6 +24,7 @@ interface Tournament {
     status: string;
     startDate: string;
     _count?: { teams: number };
+    teams?: { id: string }[];
 }
 
 export default function AdminTournamentsPage() {
@@ -109,7 +110,7 @@ export default function AdminTournamentsPage() {
 
     const totalPrizePool = tournaments.reduce((s, t) => s + (t.prizePool || 0), 0);
     const totalParticipants = tournaments.reduce((s, t) => s + (t._count?.teams || 0), 0);
-    const totalEntryFees = tournaments.reduce((s, t) => s + (t.entryFeePerPerson || 0) * (t._count?.teams || 0), 0);
+    const totalEntryFees = tournaments.reduce((s, t) => s + (t.entryFeePerPerson || 0) * (t.teams?.length || 0), 0);
 
     const formatDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -160,27 +161,47 @@ export default function AdminTournamentsPage() {
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card>
-                    <CardContent className="pt-6 text-center">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                            Total Events <Trophy className="w-4 h-4 text-primary" />
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
                         <p className="text-2xl font-bold">{tournaments.length}</p>
-                        <p className="text-xs text-muted-foreground">Total Events</p>
+                        <p className="text-xs text-muted-foreground mt-1">Currently active & upcoming</p>
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-2xl font-bold text-green-500">₹{totalPrizePool.toLocaleString('en-IN')}</p>
-                        <p className="text-xs text-muted-foreground">Total Prize Pools</p>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                            Total Prize Pool <IndianRupee className="w-4 h-4 text-green-500" />
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-green-500">{totalPrizePool.toLocaleString('en-IN')} Coins</p>
+                        <p className="text-xs text-muted-foreground mt-1">Across all tournaments</p>
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardContent className="pt-6 text-center">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                            Total Registrations <Users className="w-4 h-4 text-blue-500" />
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
                         <p className="text-2xl font-bold text-blue-500">{totalParticipants}</p>
-                        <p className="text-xs text-muted-foreground">Total Registrations</p>
+                        <p className="text-xs text-muted-foreground mt-1">Across all tournaments</p>
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-2xl font-bold text-orange-500">₹{totalEntryFees.toLocaleString('en-IN')}</p>
-                        <p className="text-xs text-muted-foreground">Entry Fee Revenue</p>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                            Collected Revenue <TrendingUp className="w-4 h-4 text-orange-500" />
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-orange-500">{totalEntryFees.toLocaleString('en-IN')} Coins</p>
+                        <p className="text-xs text-muted-foreground mt-1">From verified paid participants</p>
                     </CardContent>
                 </Card>
             </div>
@@ -222,9 +243,10 @@ export default function AdminTournamentsPage() {
                                     <th className="p-4">Tier</th>
                                     <th className="p-4">Entry Fee</th>
                                     <th className="p-4">Prize</th>
+                                    <th className="p-4">Collected</th>
+                                    <th className="p-4">P/L Alert</th>
                                     <th className="p-4">Participants</th>
                                     <th className="p-4">Status</th>
-                                    <th className="p-4">Date</th>
                                     <th className="p-4 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -253,8 +275,22 @@ export default function AdminTournamentsPage() {
                                                 {t.tier}
                                             </span>
                                         </td>
-                                        <td className="p-4">₹{t.entryFeePerPerson || 0}</td>
-                                        <td className="p-4 font-medium">₹{(t.prizePool || 0).toLocaleString('en-IN')}</td>
+                                        <td className="p-4">{t.entryFeePerPerson || 0} Coins</td>
+                                        <td className="p-4 font-medium">{(t.prizePool || 0).toLocaleString('en-IN')} Coins</td>
+                                        <td className="p-4 font-medium text-green-500">
+                                            {((t.teams?.length || 0) * (t.entryFeePerPerson || 0)).toLocaleString('en-IN')} Coins
+                                        </td>
+                                        <td className="p-4">
+                                            {((t.teams?.length || 0) * (t.entryFeePerPerson || 0)) < (t.prizePool || 0) ? (
+                                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20 flex items-center gap-1 w-fit">
+                                                    <AlertTriangle className="w-3 h-3" /> Loss
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500/10 text-green-500 border border-green-500/20 flex items-center gap-1 w-fit">
+                                                    <TrendingUp className="w-3 h-3" /> Profit
+                                                </span>
+                                            )}
+                                        </td>
                                         <td className="p-4 text-muted-foreground">
                                             {t._count?.teams || 0} / {t.maxTeams || '∞'}
                                         </td>
@@ -287,7 +323,6 @@ export default function AdminTournamentsPage() {
                                                 </button>
                                             )}
                                         </td>
-                                        <td className="p-4 text-muted-foreground text-xs">{formatDate(t.startDate)}</td>
                                         <td className="p-4 text-right">
                                             <div className="flex justify-end gap-1">
                                                 <Link href={`/admin/tournaments/${t.id}/teams`}>

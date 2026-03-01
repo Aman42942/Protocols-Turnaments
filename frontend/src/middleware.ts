@@ -33,20 +33,45 @@ export async function proxy(request: NextRequest) {
         isMaintenanceMode = false; // Fail open - allow access
     }
 
-    // Allow static files, api routes, and admin routes even in maintenance mode
-    if (isMaintenanceMode) {
-        // Exclude specific paths from maintenance mode
-        const isExcluded =
-            request.nextUrl.pathname.startsWith('/_next') ||
-            request.nextUrl.pathname.startsWith('/static') ||
-            request.nextUrl.pathname.startsWith('/admin') ||
-            request.nextUrl.pathname.startsWith('/api') || // Next.js API routes
-            request.nextUrl.pathname === '/maintenance' ||
-            request.nextUrl.pathname.startsWith('/login') || // Allow login for admins
-            request.nextUrl.pathname.startsWith('/secure-admin-login'); // Allow stealth login
+    // 3. Get the token from cookies (Prioritize HTTP-only cookie)
+    const token = request.cookies.get('token')?.value;
+    let isAdmin = false;
 
-        if (!isExcluded) {
-            return NextResponse.redirect(new URL('/maintenance', request.url));
+    // 4. Verify admin role from JWT token
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const ADMIN_ROLES = [
+                'ULTIMATE_ADMIN', 'SUPERADMIN',
+                'SENIOR_CHIEF_SECURITY_ADMIN', 'CHIEF_DEVELOPMENT_ADMIN',
+                'CHIEF_SECURITY_ADMIN', 'VICE_CHIEF_SECURITY_ADMIN',
+                'SENIOR_ADMIN', 'JUNIOR_ADMIN', 'EMPLOYEE', 'ADMIN'
+            ];
+
+            if (payload.role && ADMIN_ROLES.includes(payload.role)) {
+                isAdmin = true;
+            }
+        } catch (error) {
+            // Invalid token
+        }
+    }
+
+    // Handle Maintenance Mode
+    if (isMaintenanceMode) {
+        // Allow admins to bypass maintenance mode completely
+        if (!isAdmin) {
+            // Exclude specific paths from maintenance mode redirects for regular users
+            const isExcluded =
+                request.nextUrl.pathname.startsWith('/_next') ||
+                request.nextUrl.pathname.startsWith('/static') ||
+                request.nextUrl.pathname.startsWith('/api') || // Next.js API routes
+                request.nextUrl.pathname === '/maintenance' ||
+                request.nextUrl.pathname.startsWith('/login') || // Allow login page so Admins can log in
+                request.nextUrl.pathname.startsWith('/secure-admin-login'); // Allow stealth login
+
+            if (!isExcluded) {
+                return NextResponse.redirect(new URL('/maintenance', request.url));
+            }
         }
     } else {
         // If NOT in maintenance mode, redirect away from /maintenance page
@@ -78,31 +103,14 @@ export async function proxy(request: NextRequest) {
 
         // (Login page moved to /secure-admin-login, so no need to exclude it here as it's outside /admin scope)
 
-        // 3. Get the token from cookies (Prioritize HTTP-only cookie)
-        const token = request.cookies.get('token')?.value;
-
         if (!token) {
             // Stealth Mode: Redirect unauthorized users to Home 
             // This hides the existence of the admin panel
             return NextResponse.redirect(new URL('/', request.url));
         }
 
-        // 4. Verify admin role from JWT token
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            const ADMIN_ROLES = [
-                'ULTIMATE_ADMIN', 'SUPERADMIN',
-                'SENIOR_CHIEF_SECURITY_ADMIN', 'CHIEF_DEVELOPMENT_ADMIN',
-                'CHIEF_SECURITY_ADMIN', 'VICE_CHIEF_SECURITY_ADMIN',
-                'SENIOR_ADMIN', 'JUNIOR_ADMIN', 'EMPLOYEE', 'ADMIN'
-            ];
-
-            if (!payload.role || !ADMIN_ROLES.includes(payload.role)) {
-                // Not an admin - redirect silently to home
-                return NextResponse.redirect(new URL('/', request.url));
-            }
-        } catch (error) {
-            // Invalid token - redirect to home
+        if (!isAdmin) {
+            // Not an admin - redirect silently to home
             return NextResponse.redirect(new URL('/', request.url));
         }
     }
@@ -110,9 +118,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
 }
 
-export default proxy;
+export { proxy as middleware };
 
 // See "Matching Paths" below to learn more
 export const config = {
-    matcher: ['/admin/:path*', '/secure-admin-login'],
+    matcher: [
+        /*
+         * Match all request paths except for the ones starting with:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+         */
+        '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+    ],
 };

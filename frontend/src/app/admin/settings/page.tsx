@@ -20,7 +20,6 @@ export default function AdminSettingsPage() {
     // Platform settings
     const [siteName, setSiteName] = useState('Protocol Tournament');
     const [maxTeamSize, setMaxTeamSize] = useState('5');
-    const [maintenanceMode, setMaintenanceMode] = useState(false);
     const [minDeposit, setMinDeposit] = useState('10');
     const [minWithdraw, setMinWithdraw] = useState('100');
     const [autoApproveDeposits, setAutoApproveDeposits] = useState(false);
@@ -48,7 +47,6 @@ export default function AdminSettingsPage() {
 
         const loadSettings = () => {
             fetchUpiDetails();
-            fetchMaintenanceStatus();
 
             // Load other settings from localStorage
             const settings = localStorage.getItem('admin_settings');
@@ -65,16 +63,6 @@ export default function AdminSettingsPage() {
         loadSettings();
     }, []); // Removed upiDetails.upiId to avoid Infinite loop, and categorized correctly
 
-    const fetchMaintenanceStatus = async () => {
-        try {
-            const res = await api.get('/maintenance');
-            setMaintenanceMode(res.data.isMaintenanceMode);
-        } catch (error) {
-            console.error('Failed to fetch maintenance status:', error);
-        }
-    };
-
-
     const fetchUpiDetails = async () => {
         try {
             const res = await api.get('/wallet/upi-details');
@@ -86,9 +74,6 @@ export default function AdminSettingsPage() {
         setLoading(true);
 
         try {
-            // 1. Save Maintenance Mode to Backend
-            await api.post('/maintenance', { status: maintenanceMode });
-
             // 2. Save other settings to localStorage
             const settings = {
                 siteName,
@@ -184,11 +169,11 @@ export default function AdminSettingsPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">Minimum Deposit (₹)</label>
+                                <label className="text-sm font-medium">Minimum Deposit (Coins)</label>
                                 <Input type="number" value={minDeposit} onChange={(e) => setMinDeposit(e.target.value)} />
                             </div>
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">Minimum Withdrawal (₹)</label>
+                                <label className="text-sm font-medium">Minimum Withdrawal (Coins)</label>
                                 <Input type="number" value={minWithdraw} onChange={(e) => setMinWithdraw(e.target.value)} />
                             </div>
                         </div>
@@ -197,22 +182,6 @@ export default function AdminSettingsPage() {
                             onChange={() => setAutoApproveDeposits(!autoApproveDeposits)}
                             label="Auto-Approve Deposits"
                             desc="Skip manual verification and auto-credit QR deposits. Not recommended."
-                        />
-                    </CardContent>
-                </Card>
-
-                {/* Security */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" /> Security & Access</CardTitle>
-                        <CardDescription>Control platform availability and security.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <Toggle
-                            checked={maintenanceMode}
-                            onChange={() => setMaintenanceMode(!maintenanceMode)}
-                            label="Maintenance Mode"
-                            desc="When enabled, users will see a maintenance page. Only admins can access."
                         />
                     </CardContent>
                 </Card>

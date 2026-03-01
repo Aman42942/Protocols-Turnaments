@@ -50,7 +50,7 @@ export const ALL_BADGES: AchievementBadge[] = [
         id: 'first_blood', name: 'First Entry', description: 'Join your first paid tournament', tier: 'rare', category: 'Performance', emoji: '🩸', color: 'from-red-600 to-red-900',
     },
     {
-        id: 'wallet_warrior', name: 'Wallet Warrior', description: 'Have more than ₹500 in your wallet', tier: 'rare', category: 'Wealth', emoji: '💰', color: 'from-green-400 to-emerald-600',
+        id: 'wallet_warrior', name: 'Wallet Warrior', description: 'Have more than 500 Coins in your wallet', tier: 'rare', category: 'Wealth', emoji: '💰', color: 'from-green-400 to-emerald-600',
     },
     {
         id: 'veteran', name: 'Veteran Player', description: 'Account age over 30 days', tier: 'special', category: 'Milestone', emoji: '🎖️', color: 'from-blue-600 to-purple-600',

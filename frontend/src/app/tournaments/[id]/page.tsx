@@ -406,8 +406,8 @@ export default function TournamentDetailPage() {
                         {/* Quick Stats - Horizontal Snap on Mobile */}
                         <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide snap-x">
                             {[
-                                { icon: Trophy, label: 'Prize Pool', value: `₹${tournament.prizePool.toLocaleString('en-IN')}`, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                                { icon: Wallet, label: 'Entry Fee', value: tournament.entryFeePerPerson > 0 ? `₹${tournament.entryFeePerPerson}` : 'FREE', color: 'text-green-500', bg: 'bg-green-500/10' },
+                                { icon: Trophy, label: 'Prize Pool', value: `${tournament.prizePool.toLocaleString('en-IN')} Coins`, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                                { icon: Wallet, label: 'Entry Fee', value: tournament.entryFeePerPerson > 0 ? `${tournament.entryFeePerPerson} Coins` : 'FREE', color: 'text-green-500', bg: 'bg-green-500/10' },
                                 { icon: Users, label: 'Spots', value: `${tournament._count?.teams || 0}/${tournament.maxTeams}`, color: 'text-blue-500', bg: 'bg-blue-500/10' },
                                 { icon: Calendar, label: 'Start Date', value: new Date(tournament.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), color: 'text-purple-500', bg: 'bg-purple-500/10' },
                             ].map((stat, i) => (
@@ -568,7 +568,7 @@ export default function TournamentDetailPage() {
                                             ].map((prize, i) => (
                                                 <div key={i} className={`flex items-center justify-between p-4 rounded-xl bg-gradient-to-r ${prize.color} border`}>
                                                     <span className="font-bold">{prize.position}</span>
-                                                    <span className="font-bold text-lg">₹{Math.round(tournament.prizePool * prize.pct / 100).toLocaleString('en-IN')}</span>
+                                                    <span className="font-bold text-lg">{Math.round(tournament.prizePool * prize.pct / 100).toLocaleString('en-IN')} Coins</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -736,7 +736,7 @@ export default function TournamentDetailPage() {
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm text-muted-foreground">Entry Fee</span>
                                         <span className="text-2xl font-bold text-primary">
-                                            {tournament.entryFeePerPerson > 0 ? `₹${tournament.entryFeePerPerson}` : 'FREE'}
+                                            {tournament.entryFeePerPerson > 0 ? `${tournament.entryFeePerPerson} Coins` : 'FREE'}
                                         </span>
                                     </div>
                                     {tournament.entryFeePerPerson > 0 && (
@@ -769,7 +769,7 @@ export default function TournamentDetailPage() {
                                         ) : isFull ? (
                                             '🔒 Tournament Full'
                                         ) : (
-                                            <>Register Now {tournament.entryFeePerPerson > 0 ? `— ₹${tournament.entryFeePerPerson}` : '— Free'}</>
+                                            <>Register Now {tournament.entryFeePerPerson > 0 ? `— ${tournament.entryFeePerPerson} Coins` : '— Free'}</>
                                         )}
                                     </Button>
                                 )}
@@ -821,7 +821,7 @@ export default function TournamentDetailPage() {
                                             <Copy className="h-3 w-3 ml-auto" />
                                         </Button>
                                         <a
-                                            href={`https://wa.me/?text=${encodeURIComponent(`🏆 Join this tournament!\n🎮 ${tournament.title}\n💰 Entry: ₹${tournament.entryFeePerPerson || 'FREE'}\n🔗 ${typeof window !== 'undefined' ? window.location.origin : ''}/tournaments/share/${tournament.shareCode}`)}`}
+                                            href={`https://wa.me/?text=${encodeURIComponent(`🏆 Join this tournament!\n🎮 ${tournament.title}\n💰 Entry: ${tournament.entryFeePerPerson ? tournament.entryFeePerPerson + ' Coins' : 'FREE'}\n🔗 ${typeof window !== 'undefined' ? window.location.origin : ''}/tournaments/share/${tournament.shareCode}`)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                         >
@@ -886,7 +886,7 @@ export default function TournamentDetailPage() {
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Entry Fee</span>
                                 <span className="text-2xl font-black text-primary">
-                                    {tournament.entryFeePerPerson > 0 ? `₹${tournament.entryFeePerPerson}` : 'FREE'}
+                                    {tournament.entryFeePerPerson > 0 ? `${tournament.entryFeePerPerson} Coins` : 'FREE'}
                                 </span>
                             </div>
                             <Button

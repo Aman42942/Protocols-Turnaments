@@ -1,8 +1,16 @@
+"use client";
 import React from 'react';
 import Link from 'next/link';
 import { Trophy, Twitter, Instagram, Facebook, Youtube } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 export function Footer() {
+    const pathname = usePathname();
+
+    if (pathname && (pathname.startsWith('/secure-admin-login') || pathname.startsWith('/admin') || pathname === '/maintenance')) {
+        return null;
+    }
+
     return (
         <footer className="bg-background border-t border-border pt-16 pb-8 mt-auto hidden md:block">
             <div className="container">

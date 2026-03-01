@@ -4,6 +4,7 @@ import { WalletService } from '../wallet/wallet.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaypalService } from './paypal.service';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -18,6 +19,7 @@ export class PaymentsController {
     private readonly notificationsService: NotificationsService,
     private readonly paypalService: PaypalService,
     private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
   ) { }
 
   @UseGuards(JwtAuthGuard)
@@ -109,10 +111,7 @@ export class PaymentsController {
     @Body('tournamentId') tournamentId?: string,
     @Body('tournamentTitle') tournamentTitle?: string,
   ) {
-    // 1. Process Refund via Cashfree
-    const refundResult = await this.paymentsService.createRefund(orderId, amount);
-
-    // 2. Update Wallet
+    // 1. VIRTUAL COIN REFUND (Tournament kicks)
     if (tournamentId && tournamentTitle) {
       await this.walletService.refundTournamentEntry(
         userId,
@@ -120,20 +119,18 @@ export class PaymentsController {
         tournamentId,
         tournamentTitle,
       );
-    } else {
-      // General refund to wallet
-      await this.walletService.deposit(
-        userId,
-        amount,
-        'CASHFREE_REFUND',
-        orderId,
-        `Refund for order ${orderId}`,
-      );
+      return {
+        success: true,
+        message: 'Virtual Coins returned to wallet. No bank refund triggered.',
+      };
     }
+
+    // 2. FIAT BANK REFUND (Cashfree order cancellations)
+    const refundResult = await this.paymentsService.createRefund(orderId, amount);
 
     return {
       success: true,
-      message: 'Refund processed successfully',
+      message: 'Fiat refund processed successfully. Bank account credited.',
       cashfree: refundResult,
     };
   }
@@ -142,11 +139,15 @@ export class PaymentsController {
 
   @UseGuards(JwtAuthGuard)
   @Post('paypal/create-order')
-  async createPaypalOrder(@Request() req, @Body('usdAmount') usdAmount: number) {
-    if (!usdAmount || usdAmount <= 0) {
-      throw new BadRequestException('Valid USD amount is required');
+  async createPaypalOrder(
+    @Request() req,
+    @Body('usdAmount') amount: number,
+    @Body('currency') currency?: string
+  ) {
+    if (!amount || amount <= 0) {
+      throw new BadRequestException('Valid payment amount is required');
     }
-    return this.paypalService.createOrder(usdAmount);
+    return this.paypalService.createOrder(amount, currency || 'USD');
   }
 
   @UseGuards(JwtAuthGuard)
@@ -163,16 +164,28 @@ export class PaymentsController {
     const captureResult = await this.paypalService.captureOrder(orderId);
 
     if (captureResult.success) {
-      // Get the admin-defined rate or fallback to .env/default 85
-      const rate = Number(this.configService.get<string>('PAYPAL_EXCHANGE_RATE')) || 85;
-      const usdPaid = captureResult.data.amount;
-      const calculatedCoins = usdPaid * rate;
+      const currency = captureResult.data.currency; // 'USD' or 'GBP'
+
+      // Fetch rate from CMS or fallback
+      const rateConfigKey = currency === 'GBP' ? 'GBP_TO_COIN_RATE' : 'PAYPAL_EXCHANGE_RATE';
+      const cmsRate = await this.prisma.siteContent.findUnique({ where: { key: rateConfigKey } });
+
+      let rate = 85; // Default for USD
+      if (currency === 'GBP') rate = 110; // Default for GBP
+
+      if (cmsRate && cmsRate.value) {
+        rate = Number(cmsRate.value) || rate;
+      } else if (currency === 'USD') {
+        rate = Number(this.configService.get<string>('PAYPAL_EXCHANGE_RATE')) || rate;
+      }
+
+      const paidAmount = captureResult.data.amount;
+      const calculatedCoins = paidAmount * rate;
 
       // Ensure that the coins requested by the frontend match the amount actually paid on PayPal.
-      // E.g., if user modifies frontend to ask for 10000 coins but only paid $1, this blocks it.
       if (Math.abs(calculatedCoins - expectedCoins) > 1) { // 1 coin buffer for floats
         throw new BadRequestException(
-          `Payment amount mismatch. Paid $${usdPaid} which equals ${calculatedCoins} Coins, but requested ${expectedCoins} Coins.`
+          `Payment amount mismatch. Paid ${paidAmount} ${currency} which equals ${calculatedCoins} Coins, but requested ${expectedCoins} Coins.`
         );
       }
 
@@ -182,8 +195,8 @@ export class PaymentsController {
         calculatedCoins,          // Amount (Coins)
         'PAYPAL',                 // Method
         captureResult.data.captureId, // Reference
-        JSON.stringify({ paypalOrderId: orderId, usdPaid, rate }), // Metadata
-        'USD',                    // Original Currency
+        JSON.stringify({ paypalOrderId: orderId, paidAmount, rate, currency }), // Metadata
+        currency,                    // Original Currency
         rate                      // Conversion Rate Used
       );
 
@@ -199,7 +212,8 @@ export class PaymentsController {
         success: true,
         message: 'Payment verified and coins added.',
         coinsAdded: calculatedCoins,
-        usdPaid,
+        usdPaid: paidAmount,
+        currency
       };
     }
 

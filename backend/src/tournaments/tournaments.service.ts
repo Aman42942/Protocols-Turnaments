@@ -86,7 +86,13 @@ export class TournamentsService {
   findAll() {
     return this.prisma.tournament.findMany({
       orderBy: { startDate: 'asc' },
-      include: { _count: { select: { teams: true } } },
+      include: {
+        _count: { select: { teams: true } },
+        teams: {
+          where: { paymentStatus: 'PAID' },
+          select: { id: true },
+        },
+      },
     });
   }
 

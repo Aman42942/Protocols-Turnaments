@@ -17,6 +17,7 @@ import {
 import { Select } from "@/components/ui/Select";
 import { Label } from "@/components/ui/Label";
 import { UserRole, ROLE_LABELS, getRoleColor, ROLE_HIERARCHY_LEVELS } from '@/lib/roles';
+import { WalletAdjustmentModal } from '@/components/admin/WalletAdjustmentModal';
 
 interface UserDetails {
     id: string;
@@ -72,6 +73,18 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
     const [roleModalOpen, setRoleModalOpen] = useState(false);
     const [selectedRole, setSelectedRole] = useState('');
     const [updatingRole, setUpdatingRole] = useState(false);
+    const [currentUserRole, setCurrentUserRole] = useState<string>('');
+    const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+
+    useEffect(() => {
+        try {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const userObj = JSON.parse(userStr);
+                setCurrentUserRole(userObj.role || '');
+            }
+        } catch (e) { console.error('Error parsing user', e); }
+    }, []);
 
     const fetchUserDetails = useCallback(async () => {
         try {
@@ -133,9 +146,24 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
                     <CardHeader className="pb-4">
                         <div className="flex justify-between items-start">
                             <div className="flex gap-4">
-                                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-3xl font-bold text-primary">
-                                    {user.avatar ? <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" /> : (user.name?.[0] || user.email[0])}
-                                </div>
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <div className="w-24 h-24 rounded-[2rem] bg-primary/10 border-4 border-background shadow-xl flex items-center justify-center text-4xl font-black text-primary overflow-hidden shrink-0 cursor-pointer hover:border-primary/50 transition-colors">
+                                            {user.avatar ? (
+                                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                user.name?.[0]?.toUpperCase() || user.email[0]?.toUpperCase()
+                                            )}
+                                        </div>
+                                    </DialogTrigger>
+                                    {user.avatar && (
+                                        <DialogContent className="sm:max-w-md border-border/50 bg-background/80 backdrop-blur-xl p-0 overflow-hidden rounded-[2rem]">
+                                            <div className="w-full aspect-square relative flex items-center justify-center bg-black/50">
+                                                <img src={user.avatar} alt={user.name} className="max-w-full max-h-full object-contain" />
+                                            </div>
+                                        </DialogContent>
+                                    )}
+                                </Dialog>
                                 <div>
                                     <h1 className="text-2xl font-bold flex items-center gap-2">
                                         {user.name || 'Unnamed User'}
@@ -235,16 +263,26 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
 
                 {/* Wallet Summary */}
                 <Card className="h-full">
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="flex items-center gap-2">
                             <Wallet className="w-5 h-5 text-primary" /> Wallet
                         </CardTitle>
+                        {(currentUserRole === 'ULTIMATE_ADMIN' || currentUserRole === 'SUPERADMIN') && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 gap-2 text-primary"
+                                onClick={() => setIsAdjustmentModalOpen(true)}
+                            >
+                                <Wallet className="w-4 h-4" /> Adjust
+                            </Button>
+                        )}
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="text-center py-6 bg-primary/5 rounded-lg border border-primary/10">
                             <span className="text-sm text-muted-foreground">Current Balance</span>
                             <div className="text-4xl font-bold text-primary mt-1">
-                                ₹{user.wallet?.balance?.toLocaleString() || 0}
+                                {user.wallet?.balance?.toLocaleString() || 0} Coins
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -297,7 +335,7 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 font-bold">
-                                                {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}₹{tx.amount}
+                                                {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}{tx.amount} Coins
                                             </td>
                                             <td className="px-4 py-3">
                                                 <Badge variant={tx.status === 'COMPLETED' ? 'default' : tx.status === 'PENDING' ? 'outline' : 'destructive'} className="text-[10px]">
@@ -317,6 +355,16 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
                     )}
                 </CardContent>
             </Card>
+
+            <WalletAdjustmentModal
+                isOpen={isAdjustmentModalOpen}
+                onClose={() => setIsAdjustmentModalOpen(false)}
+                user={user ? { id: user.id, name: user.name || 'User', email: user.email } : null}
+                onSuccess={() => {
+                    fetchUserDetails();
+                    fetchUserTransactions();
+                }}
+            />
         </div>
     );
 }

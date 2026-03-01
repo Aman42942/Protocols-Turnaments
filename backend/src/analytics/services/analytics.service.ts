@@ -100,6 +100,19 @@ export class AnalyticsService {
       }
     });
 
+    // 2.5 Total GBP Deposited
+    const gbpTransactions = await this.prisma.transaction.findMany({
+      where: { type: 'DEPOSIT', status: 'COMPLETED', currency: 'GBP' },
+      select: { amount: true, conversionRate: true }
+    });
+
+    let totalGBPPaid = 0;
+    gbpTransactions.forEach(tx => {
+      if (tx.conversionRate > 0) {
+        totalGBPPaid += (tx.amount / tx.conversionRate);
+      }
+    });
+
     // 3. Total Coins Minted (All deposits regardless of currency)
     const coinsMintedAgg = await this.prisma.transaction.aggregate({
       where: { type: 'DEPOSIT', status: 'COMPLETED' },
@@ -126,6 +139,7 @@ export class AnalyticsService {
     return {
       totalINRDeposited,
       totalUSDPaid,
+      totalGBPPaid,
       totalCoinsMinted,
       totalCoinsBurned,
       totalCoinsInWallets,
@@ -167,6 +181,9 @@ export class AnalyticsService {
         if (tx.type === 'DEPOSIT' && tx.currency === 'USD') {
           const usdVal = (tx.amount / tx.conversionRate).toFixed(2);
           narrative = `Purchased ${tx.amount} Coins via PayPal ($${usdVal})`;
+        } else if (tx.type === 'DEPOSIT' && tx.currency === 'GBP') {
+          const gbpVal = (tx.amount / tx.conversionRate).toFixed(2);
+          narrative = `Purchased ${tx.amount} Coins via PayPal (£${gbpVal})`;
         } else if (tx.type === 'DEPOSIT') {
           narrative = `Purchased ${tx.amount} Coins via ${tx.method || 'UPI'}`;
         }
