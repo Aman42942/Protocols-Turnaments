@@ -52,7 +52,9 @@ export function Navbar() {
     // Theme-aware Logo selection
     const logoDark = getContent('LOGO_DARK', '/logo-dark.png');
     const logoLight = getContent('LOGO_LIGHT', '/logo-light.png');
-    const logoUrl = resolvedTheme === 'dark' ? logoDark : logoLight;
+
+    // Default to Dark logo if theme not yet resolved (common for esports)
+    const logoUrl = resolvedTheme === 'light' ? logoLight : logoDark;
 
     const siteTitle = getContent('SITE_TITLE', 'PROTOCOL');
 
