@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // Create a notification
   async create(
@@ -112,5 +112,29 @@ export class NotificationsService {
       'info',
       '/dashboard/teams',
     );
+  }
+
+  // --- Broadcast: Send to ALL users ---
+  async broadcast(
+    title: string,
+    message: string,
+    type = 'info',
+    link?: string,
+  ) {
+    const users = await this.prisma.user.findMany({
+      select: { id: true },
+    });
+
+    if (users.length === 0) return;
+
+    return this.prisma.notification.createMany({
+      data: users.map((user) => ({
+        userId: user.id,
+        title,
+        message,
+        type,
+        link,
+      })),
+    });
   }
 }

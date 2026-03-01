@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
+import { NotificationsService } from './notifications/notifications.service';
 
 @Injectable()
 export class AppService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) { }
 
   getHello(): string {
     return 'Hello World!';
@@ -32,17 +36,46 @@ export class AppService {
   }
 
   async setMaintenanceStatus(status: boolean): Promise<{ isMaintenanceMode: boolean }> {
+    const current = await this.prisma.systemConfig.findUnique({ where: { key: 'MAINTENANCE_MODE' } });
+    const currentlyOn = current?.value === 'true';
+
     const config = await this.prisma.systemConfig.upsert({
       where: { key: 'MAINTENANCE_MODE' },
       update: { value: String(status) },
       create: { key: 'MAINTENANCE_MODE', value: String(status) },
     });
-    return { isMaintenanceMode: config.value === 'true' };
+
+    const isOn = config.value === 'true';
+
+    // Notify users if status changed
+    if (isOn !== currentlyOn) {
+      if (isOn) {
+        await this.notificationsService.broadcast(
+          'Site Under Maintenance 🛠️',
+          'We are upgrading the system to enhance your experience. See you soon!',
+          'warning',
+          '/maintenance',
+        );
+      } else {
+        await this.notificationsService.broadcast(
+          'Servers are Back Online! 🚀',
+          'Maintenance is complete. Join the lobby and start winning now!',
+          'success',
+          '/',
+        );
+      }
+    }
+
+    return { isMaintenanceMode: isOn };
   }
 
   async saveMaintenanceConfig(data: any): Promise<any> {
+    const currentStatus = await this.prisma.systemConfig.findUnique({ where: { key: 'MAINTENANCE_MODE' } });
+    const currentlyOn = currentStatus?.value === 'true';
+    const newStatus = !!data.isMaintenanceMode;
+
     const keys = [
-      { key: 'MAINTENANCE_MODE', value: String(data.isMaintenanceMode) },
+      { key: 'MAINTENANCE_MODE', value: String(newStatus) },
       { key: 'MAINTENANCE_TITLE', value: data.title || '' },
       { key: 'MAINTENANCE_MESSAGE', value: data.message || '' },
       { key: 'MAINTENANCE_END_TIME', value: data.endTime || '' },
@@ -61,6 +94,25 @@ export class AppService {
         })
       )
     );
+
+    // Notify if status changed
+    if (newStatus !== currentlyOn) {
+      if (newStatus) {
+        await this.notificationsService.broadcast(
+          'Site Under Maintenance 🛠️',
+          'We are upgrading the system to enhance your experience. See you soon!',
+          'warning',
+          '/maintenance',
+        );
+      } else {
+        await this.notificationsService.broadcast(
+          'Servers are Back Online! 🚀',
+          'Maintenance is complete. Join the lobby and start winning now!',
+          'success',
+          '/',
+        );
+      }
+    }
 
     return this.getMaintenanceStatus();
   }
