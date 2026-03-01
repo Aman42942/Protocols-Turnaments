@@ -245,6 +245,26 @@ export default function MaintenancePage() {
                     pointer-events: none;
                     animation: float-particle 15s linear infinite;
                 }
+                @keyframes pulse-aura {
+                    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+                    50% { opacity: 0.3; }
+                    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+                }
+                @keyframes scanline {
+                    0% { bottom: 100%; }
+                    100% { bottom: -100px; }
+                }
+                @keyframes shimmer {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+                @keyframes spin-slow {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .animate-spin-slow {
+                    animation: spin-slow 12s linear infinite;
+                }
                 .aura-ring {
                     position: absolute;
                     top: 50%;
