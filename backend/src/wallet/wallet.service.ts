@@ -201,11 +201,50 @@ export class WalletService {
           type: type === 'DEPOSIT' ? 'DEPOSIT' : 'WITHDRAWAL',
           status: 'COMPLETED',
           description: `Admin Adjustment: ${reason} (Ref: ${adminId})`,
-          metadata: JSON.stringify({ adminId, originalReason: reason, adjustedAt: new Date().toISOString() }),
+          metadata: JSON.stringify({ adminId, originalReason: reason, adjustedAt: new Date().toISOString(), isAdminAdjustment: true }),
         },
       });
 
       return { wallet: updatedWallet, transaction };
+    });
+  }
+
+  async deleteAdminAdjustment(transactionId: string, adminId: string) {
+    const tx = await this.prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: { wallet: true },
+    });
+
+    if (!tx) throw new NotFoundException('Transaction not found');
+
+    // Security check: Ensure it's an admin adjustment
+    let metadata: any = {};
+    try {
+      if (tx.metadata) metadata = JSON.parse(tx.metadata);
+    } catch (e) { }
+
+    const isAdjustment = tx.description?.startsWith('Admin Adjustment:') || metadata.isAdminAdjustment;
+
+    if (!isAdjustment) {
+      throw new BadRequestException('Only manual admin adjustments can be deleted/undone.');
+    }
+
+    return this.prisma.$transaction(async (prismaTx) => {
+      // Revert the balance
+      // If it was a DEPOSIT, we subtract it. If it was a WITHDRAWAL, we add it back.
+      const amountToApply = tx.type === 'DEPOSIT' ? -tx.amount : tx.amount;
+
+      await prismaTx.wallet.update({
+        where: { id: tx.walletId },
+        data: { balance: { increment: amountToApply } },
+      });
+
+      // Delete the transaction record
+      await prismaTx.transaction.delete({
+        where: { id: transactionId },
+      });
+
+      return { success: true, revertedAmount: amountToApply };
     });
   }
 

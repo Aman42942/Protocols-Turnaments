@@ -7,6 +7,7 @@ import {
   Request,
   Query,
   Param,
+  Delete,
 } from '@nestjs/common';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -200,6 +201,21 @@ export class WalletController {
       req.ip,
     );
 
+    return result;
+  }
+
+  @Delete('admin/adjustment/:id')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  async deleteAdjustment(@Param('id') id: string, @Request() req) {
+    const result = await this.walletService.deleteAdminAdjustment(id, req.user.userId);
+    await this.activityLogService.log(
+      req.user.userId,
+      'DELETE_WALLET_ADJUSTMENT',
+      { transactionId: id },
+      id,
+      req.ip,
+    );
     return result;
   }
 }

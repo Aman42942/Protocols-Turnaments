@@ -33,7 +33,7 @@ export default function AdminTransactionsPage() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED' | 'FAILED'>('ALL');
     const [processingId, setProcessingId] = useState<string | null>(null);
-    const [adjustmentUser, setAdjustmentUser] = useState<{ id: string, name: string, email: string } | null>(null);
+    const [adjustmentUser, setAdjustmentUser] = useState<{ id: string, name: string, email: string, balance?: number } | null>(null);
     const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
     const [currentUserRole, setCurrentUserRole] = useState<string>('');
 
@@ -87,6 +87,21 @@ export default function AdminTransactionsPage() {
             toast.error(err.response?.data?.message || 'Refund failed');
             // Re-fetch anyway to see if it was actually processed but timed out
             await fetchTransactions();
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleDeleteAdjustment = async (id: string) => {
+        if (!confirm('Are you sure you want to PERMANENTLY delete this adjustment? This will revert the user\'s balance. This cannot be undone!')) return;
+
+        setProcessingId(id);
+        try {
+            await api.delete(`/wallet/admin/adjustment/${id}`);
+            toast.success('Adjustment deleted and balance reverted');
+            await fetchTransactions();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Deletion failed');
         } finally {
             setProcessingId(null);
         }
@@ -233,23 +248,41 @@ export default function AdminTransactionsPage() {
                                     </div>
                                 )}
 
-                                {tx.status === 'COMPLETED' && tx.type === 'DEPOSIT' && (
-                                    <div className="flex gap-2 mt-4 pt-4 border-t border-dashed">
-                                        {!isRefunded(tx) ? (
+                                {(tx.status === 'COMPLETED' || tx.status === 'FAILED') && (
+                                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-dashed">
+                                        {tx.type === 'DEPOSIT' && tx.status === 'COMPLETED' && (
+                                            <>
+                                                {!isRefunded(tx) ? (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="border-orange-500/50 text-orange-500 hover:bg-orange-500/10 font-bold"
+                                                        disabled={!!processingId}
+                                                        onClick={() => handleRefund(tx)}
+                                                    >
+                                                        {processingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1.5" />}
+                                                        INITIATE REFUND
+                                                    </Button>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-orange-500 bg-orange-500/10 border-orange-500/20 py-1 px-3">
+                                                        <RotateCcw className="w-3 h-3 mr-1" /> ALREADY REFUNDED
+                                                    </Badge>
+                                                )}
+                                            </>
+                                        )}
+
+                                        {/* Delete button for Admin Adjustments */}
+                                        {tx.description?.startsWith('Admin Adjustment:') && (
                                             <Button
-                                                variant="outline"
+                                                variant="ghost"
                                                 size="sm"
-                                                className="border-orange-500/50 text-orange-500 hover:bg-orange-500/10 font-bold"
+                                                className="text-red-500 hover:bg-red-500/10 font-bold gap-2"
                                                 disabled={!!processingId}
-                                                onClick={() => handleRefund(tx)}
+                                                onClick={() => handleDeleteAdjustment(tx.id)}
                                             >
-                                                {processingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1.5" />}
-                                                INITIATE REFUND
+                                                {processingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="w-4 h-4 text-red-500" />}
+                                                DELETE ADJUSTMENT
                                             </Button>
-                                        ) : (
-                                            <Badge variant="outline" className="text-orange-500 bg-orange-500/10 border-orange-500/20 py-1 px-3">
-                                                <RotateCcw className="w-3 h-3 mr-1" /> ALREADY REFUNDED
-                                            </Badge>
                                         )}
 
                                         {(currentUserRole === 'ULTIMATE_ADMIN' || currentUserRole === 'SUPERADMIN') && (
