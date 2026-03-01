@@ -39,10 +39,17 @@ export async function generateMetadata(): Promise<Metadata> {
     console.error("Failed to fetch global SEO metadata - Backend might be down:", error instanceof Error ? error.message : error);
   }
 
+  const domain = "https://protocols-turnaments.vercel.app";
   const title = content.SEO_META_TITLE || "Protocol Tournaments | Professional Esports Platform";
   const description = content.SEO_META_DESCRIPTION || "Join the world's leading esports tournament platform. Compete in Valorant, PUBG, BGMI, and Free Fire. Win prizes and build your legacy.";
   const keywords = content.SEO_META_KEYWORDS ? content.SEO_META_KEYWORDS.split(',').map(k => k.trim()) : ["esports", "tournament", "gaming", "pubg", "valorant", "bgmi", "free fire", "competitive gaming"];
-  const ogImage = content.SEO_OG_IMAGE || "https://protocol.gg/og-image.jpg";
+
+  // Ensure OG image is an absolute URL
+  let ogImage = content.SEO_OG_IMAGE || `${domain}/logo-primary.png`;
+  if (ogImage.startsWith('/')) {
+    ogImage = `${domain}${ogImage}`;
+  }
+
   const favicon = content.SEO_FAVICON_URL || "/favicon.ico";
 
   return {
@@ -52,20 +59,21 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description,
     keywords,
+    metadataBase: new URL(domain),
     icons: {
       icon: favicon,
       shortcut: favicon,
       apple: favicon,
     },
     authors: [{ name: "Protocol Team" }],
-    creator: "Protocol",
+    creator: "Protocol Tournaments",
     openGraph: {
       type: "website",
-      locale: "en_US",
-      url: "https://protocol.gg",
+      locale: "en_IN",
+      url: domain,
       title: title,
       description: description,
-      siteName: "Protocol",
+      siteName: "Protocol Tournaments",
       images: [
         {
           url: ogImage,
@@ -80,7 +88,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: title,
       description: description,
       images: [ogImage],
-      creator: "@protocolgg",
+      creator: "@ProtocolTournaments",
     },
     robots: {
       index: true,
