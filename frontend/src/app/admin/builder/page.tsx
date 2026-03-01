@@ -44,8 +44,7 @@ export default function SiteBuilderPage() {
             setContentForm({
                 HERO_TITLE: config.content.HERO_TITLE || 'Compete. Win. Become a Legend.',
                 HERO_SUBTITLE: config.content.HERO_SUBTITLE || 'Join the ultimate esports platform.',
-                LOGO_DARK: config.content.LOGO_DARK || '/logo-dark.png',
-                LOGO_LIGHT: config.content.LOGO_LIGHT || '/logo-light.png',
+                LOGO_URL: config.content.LOGO_URL || '',
                 SEO_META_TITLE: config.content.SEO_META_TITLE || 'Protocol Tournament',
                 SEO_META_DESCRIPTION: config.content.SEO_META_DESCRIPTION || 'The ultimate competitive gaming platform.',
                 SEO_META_KEYWORDS: config.content.SEO_META_KEYWORDS || 'esports, tournament, gaming, competitive',
@@ -388,33 +387,15 @@ export default function SiteBuilderPage() {
                                 <div className="space-y-5">
                                     <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest pt-2">Global Assets & Copy</h3>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                        <div>
-                                            <label className="text-sm font-bold flex items-center gap-2 mb-2">
-                                                <div className="w-3 h-3 rounded-full bg-black border border-white/20 shadow-sm" />
-                                                Navbar Logo (Dark Mode)
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="/logo-dark.png"
-                                                value={contentForm.LOGO_DARK || ''}
-                                                onChange={(e) => setContentForm({ ...contentForm, LOGO_DARK: e.target.value })}
-                                                className="w-full bg-muted px-4 py-3 rounded-xl border border-border focus:border-primary outline-none text-sm transition-all focus:ring-2 focus:ring-primary/20"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-sm font-bold flex items-center gap-2 mb-2">
-                                                <div className="w-3 h-3 rounded-full bg-white border border-black/20 shadow-sm" />
-                                                Navbar Logo (Light Mode)
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="/logo-light.png"
-                                                value={contentForm.LOGO_LIGHT || ''}
-                                                onChange={(e) => setContentForm({ ...contentForm, LOGO_LIGHT: e.target.value })}
-                                                className="w-full bg-muted px-4 py-3 rounded-xl border border-border focus:border-primary outline-none text-sm transition-all focus:ring-2 focus:ring-primary/20"
-                                            />
-                                        </div>
+                                    <div>
+                                        <label className="text-sm font-bold flex items-center gap-2 mb-2"><ImageIcon className="w-4 h-4 text-muted-foreground" /> Navbar Logo URL</label>
+                                        <input
+                                            type="text"
+                                            placeholder="https://example.com/logo.png"
+                                            value={contentForm.LOGO_URL || ''}
+                                            onChange={(e) => setContentForm({ ...contentForm, LOGO_URL: e.target.value })}
+                                            className="w-full bg-muted px-4 py-3 rounded-xl border border-border focus:border-primary outline-none text-sm"
+                                        />
                                     </div>
 
                                     <div>

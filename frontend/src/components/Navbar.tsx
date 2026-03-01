@@ -39,21 +39,15 @@ function SidebarLink({ href, icon: Icon, label, active, onClick }: SidebarLinkPr
     );
 }
 
-import { useTheme } from 'next-themes';
-
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [user, setUser] = useState<any>(null);
     const pathname = usePathname();
     const router = useRouter();
     const { getContent } = useCms();
-    const { resolvedTheme } = useTheme();
 
-    // Theme-aware Logo selection
-    const logoDark = getContent('LOGO_DARK', '/logo-dark.png');
-    const logoLight = getContent('LOGO_LIGHT', '/logo-light.png');
-    const logoUrl = resolvedTheme === 'dark' ? logoDark : logoLight;
-
+    // Fallbacks to default values if CMS not loaded
+    const logoUrl = getContent('LOGO_URL', '');
     const siteTitle = getContent('SITE_TITLE', 'PROTOCOL');
 
     const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -135,7 +129,7 @@ export function Navbar() {
                     <div className="flex items-center gap-2 md:gap-6">
                         <Link href="/" className="flex items-center gap-2">
                             {logoUrl ? (
-                                <img src={logoUrl} alt="Logo" className="h-10 w-auto object-contain" />
+                                <img src={logoUrl} alt="Logo" className="w-8 h-8 object-contain" />
                             ) : (
                                 <div className="bg-primary/10 p-1 rounded-lg">
                                     <Trophy className="w-6 h-6 text-primary" />
