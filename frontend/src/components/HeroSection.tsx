@@ -17,7 +17,7 @@ export function HeroSection() {
     const parts = heroTitle.split('.');
 
     return (
-        <section className="relative overflow-hidden pt-24 pb-32 md:pt-40 md:pb-48 bg-background">
+        <section className="relative overflow-hidden pt-12 pb-24 md:pt-40 md:pb-48 bg-background">
             {/* Elite Background Mesh - Protocol Blue Theme */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 bg-background">
                 <div className="absolute top-[-10%] left-[-10%] w-[100%] h-[100%] bg-primary/5 rounded-full blur-[150px] animate-pulse" />

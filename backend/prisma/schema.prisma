@@ -78,6 +78,7 @@ model Tournament {
   discordChannelId  String?
   streamUrl         String?
   region            String?
+  banner            String?
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
   collectedFees     Float                   @default(0)
@@ -408,4 +409,21 @@ model CustomFeature {
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model AdSlide {
+  id           String    @id @default(uuid())
+  title        String
+  description  String?   @db.Text
+  mediaType    String    @default("IMAGE") // IMAGE, VIDEO
+  mediaUrl     String    @db.Text
+  ctaLink      String?   @db.Text
+  ctaText      String?   @default("Learn More")
+  openInNewTab Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  displayOrder Int       @default(0)
+  startDate    DateTime?
+  endDate      DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }

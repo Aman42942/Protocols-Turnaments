@@ -139,14 +139,30 @@ export class WalletService {
     const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
     if (!wallet) throw new BadRequestException('User wallet not found');
 
+    // 1. DUPLICATE PROTECTION: Check if a refund for this user & tournament already exists
+    const existingRefund = await this.prisma.transaction.findFirst({
+      where: {
+        walletId: wallet.id,
+        type: 'REFUND',
+        status: 'COMPLETED',
+        metadata: {
+          contains: `"tournamentId":"${tournamentId}"`,
+        },
+      },
+    });
+
+    if (existingRefund) {
+      throw new BadRequestException('A refund for this tournament entry has already been processed.');
+    }
+
     return this.prisma.$transaction(async (tx) => {
-      // 1. Increment wallet balance
+      // 2. Increment wallet balance
       await tx.wallet.update({
         where: { id: wallet.id },
         data: { balance: { increment: amount } },
       });
 
-      // 2. Create REFUND transaction
+      // 3. Create REFUND transaction
       const transaction = await tx.transaction.create({
         data: {
           walletId: wallet.id,
@@ -154,11 +170,42 @@ export class WalletService {
           type: 'REFUND',
           status: 'COMPLETED',
           description: `Refund for tournament: ${tournamentTitle}`,
-          metadata: JSON.stringify({ tournamentId, userId }),
+          metadata: JSON.stringify({ tournamentId, userId, refundedAt: new Date().toISOString() }),
         },
       });
 
       return transaction;
+    });
+  }
+
+  // --- ADMIN: Manual Balance Adjustment (For recovery or rewards) ---
+  async adjustBalance(userId: string, amount: number, type: 'DEPOSIT' | 'WITHDRAWAL', reason: string, adminId: string) {
+    const wallet = await this.getWallet(userId);
+
+    if (type === 'WITHDRAWAL' && wallet.balance < Math.abs(amount)) {
+      throw new BadRequestException('Insufficient balance to perform deduction');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updatedWallet = await tx.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          balance: type === 'DEPOSIT' ? { increment: amount } : { decrement: Math.abs(amount) },
+        },
+      });
+
+      const transaction = await tx.transaction.create({
+        data: {
+          walletId: wallet.id,
+          amount: Math.abs(amount),
+          type: type === 'DEPOSIT' ? 'DEPOSIT' : 'WITHDRAWAL',
+          status: 'COMPLETED',
+          description: `Admin Adjustment: ${reason} (Ref: ${adminId})`,
+          metadata: JSON.stringify({ adminId, originalReason: reason, adjustedAt: new Date().toISOString() }),
+        },
+      });
+
+      return { wallet: updatedWallet, transaction };
     });
   }
 

@@ -43,6 +43,7 @@ interface Tournament {
     gameSettings?: string;
     rules?: string;
     prizeDistribution?: string;
+    banner?: string;
     _count?: { teams: number };
     teams?: any[];
 }
@@ -111,8 +112,12 @@ export default function TournamentDetailPage() {
     const [loading, setLoading] = useState(true);
     const [registering, setRegistering] = useState(false);
     const [registered, setRegistered] = useState(false);
-    const [walletBalance, setWalletBalance] = useState<number | null>(null);
     const [activeTab, setActiveTab] = useState<'overview' | 'leaderboard' | 'rules' | 'players'>('overview');
+    const [userTeams, setUserTeams] = useState<any[]>([]);
+    const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+    const [showTeamSelector, setShowTeamSelector] = useState(false);
+    const [myParticipant, setMyParticipant] = useState<any>(null);
+    const [teamMembers, setTeamMembers] = useState<any[]>([]);
 
     useEffect(() => {
         if (params.id) { fetchTournament(); }
@@ -123,13 +128,33 @@ export default function TournamentDetailPage() {
             const res = await api.get(`/tournaments/${params.id}`);
             setTournament(res.data);
             const token = localStorage.getItem('token');
-            const user = localStorage.getItem('user');
-            if (token && user) {
-                const userId = JSON.parse(user).id;
-                const isRegistered = res.data.teams?.some((t: any) => t.userId === userId);
-                setRegistered(!!isRegistered);
+            const userStr = localStorage.getItem('user');
+            if (token && userStr) {
+                const user = JSON.parse(userStr);
+                const userId = user.id;
+                const participants = res.data.teams || []; // tournament.teams is actually participants list
+                const me = participants.find((p: any) => p.userId === userId && p.status !== 'CANCELLED');
+                setMyParticipant(me);
+                setRegistered(!!me);
+
+                if (me?.teamId) {
+                    setSelectedTeamId(me.teamId);
+                    // Filter other members of the same team in this tournament
+                    const sameTeam = participants.filter((p: any) => p.teamId === me.teamId);
+                    setTeamMembers(sameTeam);
+                }
+
+                // Fetch user's teams for selection if it's a team tournament
+                if (res.data.gameMode !== 'SOLO') {
+                    const teamsRes = await api.get('/teams');
+                    setUserTeams(teamsRes.data || []);
+                }
             }
-        } catch (err) { console.error('Failed to fetch tournament:', err); } finally { setLoading(false); }
+        } catch (err) {
+            console.error('Failed to fetch tournament:', err);
+        } finally {
+            setLoading(false);
+        }
     };
 
 
@@ -139,13 +164,22 @@ export default function TournamentDetailPage() {
 
         if (!tournament) return;
 
+        // Validation for Team Mode
+        if (tournament.gameMode !== 'SOLO' && !selectedTeamId) {
+            setShowTeamSelector(true);
+            return;
+        }
+
         // Case 1: FREE Entry
         if (tournament.entryFeePerPerson <= 0) {
             setRegistering(true);
             try {
-                const res = await api.post(`/tournaments/${params.id}/register`);
+                const res = await api.post(`/tournaments/${params.id}/register`, {
+                    teamId: selectedTeamId
+                });
                 setRegistered(true);
                 alert(res.data.message || 'Registered successfully! 🎉');
+                fetchTournament(); // Refresh
             } catch (err: any) {
                 alert(err.response?.data?.message || 'Registration failed');
             } finally {
@@ -162,8 +196,10 @@ export default function TournamentDetailPage() {
         if (!tournament) return;
         setRegistering(true);
         try {
-            // Step 1: Create Order on backend
-            const orderRes = await api.post(`/tournaments/${params.id}/create-order`);
+            // Step 1: Create Order on backend with team selection
+            const orderRes = await api.post(`/tournaments/${params.id}/create-order`, {
+                teamId: selectedTeamId
+            });
             const { payment_session_id, cf_env } = orderRes.data;
 
             // Step 2: Initialize Cashfree SDK and Open Checkout
@@ -173,7 +209,7 @@ export default function TournamentDetailPage() {
 
             await cashfree.checkout({
                 paymentSessionId: payment_session_id,
-                redirectTarget: "_self", // Or "_modal" for a popup if supported
+                redirectTarget: "_self",
             });
 
         } catch (err: any) {
@@ -194,18 +230,24 @@ export default function TournamentDetailPage() {
 
     const handleVerifyCashfree = async (orderId: string) => {
         setRegistering(true);
+        const urlParams = new URLSearchParams(window.location.search);
+        const teamId = urlParams.get('team_id');
+
         try {
             const verifyRes = await api.post(`/tournaments/${params.id}/register`, {
                 orderId: orderId,
-                paymentId: orderId, // Using orderId as reference
-                signature: 'CASHFREE_DIRECT'
+                paymentId: orderId,
+                signature: 'CASHFREE_DIRECT',
+                teamId: teamId || undefined
             });
             setRegistered(true);
             alert(verifyRes.data.message || 'Payment Verified & Registered! 🎉');
             // Clean URL
             window.history.replaceState({}, '', window.location.pathname);
+            fetchTournament(); // Refresh stats
         } catch (err: any) {
             console.error('Final verification failed:', err);
+            alert(err.response?.data?.message || 'Verification failed. Please contact support.');
         } finally {
             setRegistering(false);
         }
@@ -272,10 +314,22 @@ export default function TournamentDetailPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* ===== IMMERSIVE HERO BANNER ===== */}
-            <div className={`relative overflow-hidden bg-gradient-to-br ${gameColor.gradient} border-b min-h-[40vh] flex flex-col justify-end pb-12`}>
-                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.05] dark:opacity-[0.1]" />
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+            <div className={cn(
+                "relative overflow-hidden border-b min-h-[40vh] flex flex-col justify-end pb-12",
+                !tournament.banner && `bg-gradient-to-br ${gameColor.gradient}`
+            )}>
+                {tournament.banner && (
+                    <div className="absolute inset-0 z-0">
+                        <img
+                            src={tournament.banner}
+                            alt={tournament.title}
+                            className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+                    </div>
+                )}
+                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.05] dark:opacity-[0.1] z-[1]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-[2]" />
 
                 <div className="container max-w-6xl relative z-10 px-6">
                     <motion.div
@@ -579,7 +633,14 @@ export default function TournamentDetailPage() {
                                                             #{i + 1}
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-medium">{p.user?.name || 'Anonymous'}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-sm font-medium">{p.user?.name || 'Anonymous'}</p>
+                                                                {p.team?.name && (
+                                                                    <Badge variant="outline" className="text-[8px] h-3.5 px-1 py-0 border-primary/30 bg-primary/5 text-primary uppercase font-black">
+                                                                        {p.team.name}
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
                                                             <p className="text-[10px] text-muted-foreground">
                                                                 Joined {new Date(p.registeredAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                                                             </p>
@@ -609,6 +670,67 @@ export default function TournamentDetailPage() {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <TournamentActivityFeed tournamentId={tournament.id} />
+
+                                {/* Team Selection (if not SOLO) */}
+                                {tournament.gameMode !== 'SOLO' && !registered && (
+                                    <div className="space-y-3 p-4 rounded-xl bg-primary/5 border border-primary/10">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-primary">Select Your Squad</label>
+                                            <Link href="/dashboard/teams" className="text-[10px] text-muted-foreground hover:text-primary transition underline">Manage Teams</Link>
+                                        </div>
+                                        {userTeams.length === 0 ? (
+                                            <div className="text-center py-2">
+                                                <p className="text-[10px] text-muted-foreground mb-2 text-wrap">You don&apos;t have any teams yet.</p>
+                                                <Link href="/dashboard/teams">
+                                                    <Button size="sm" variant="outline" className="w-full text-[10px] h-8 bg-background">Create Team</Button>
+                                                </Link>
+                                            </div>
+                                        ) : (
+                                            <div className="relative">
+                                                <select
+                                                    value={selectedTeamId}
+                                                    onChange={(e) => setSelectedTeamId(e.target.value)}
+                                                    className="w-full p-2.5 pl-3 rounded-lg bg-background border border-border text-xs font-bold focus:ring-2 ring-primary/20 outline-none appearance-none cursor-pointer pr-8"
+                                                >
+                                                    <option value="">-- Select Team --</option>
+                                                    {userTeams.map(t => (
+                                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                                    ))}
+                                                </select>
+                                                <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground rotate-90 pointer-events-none" />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Payment Status (if registered in a team) */}
+                                {registered && tournament.gameMode !== 'SOLO' && teamMembers.length > 0 && (
+                                    <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Squad Readiness</label>
+                                            <Badge variant="outline" className="text-[10px] h-5 bg-background">
+                                                {teamMembers.length} / {tournament.gameMode === 'DUO' ? 2 : (tournament.gameMode === 'SQUAD' ? 4 : 5)}
+                                            </Badge>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {teamMembers.map((m: any) => (
+                                                <div key={m.id} className="flex items-center justify-between">
+                                                    <span className="text-[11px] font-medium truncate max-w-[120px]">{m.user?.name}</span>
+                                                    <Badge className="bg-green-500/10 text-green-500 text-[9px] h-4 py-0 border-green-500/20">PAID</Badge>
+                                                </div>
+                                            ))}
+                                            {/* Show placeholder for missing members */}
+                                            {Array.from({ length: (tournament.gameMode === 'DUO' ? 2 : (tournament.gameMode === 'SQUAD' ? 4 : 5)) - teamMembers.length }).map((_, i) => (
+                                                <div key={i} className="flex items-center justify-between opacity-40">
+                                                    <span className="text-[11px]">Waiting...</span>
+                                                    <Badge variant="outline" className="text-[9px] h-4 py-0">PENDING</Badge>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-[9px] text-muted-foreground text-center">Share the tournament link with your teammates so they can pay and join!</p>
+                                    </div>
+                                )}
+
                                 {/* Pricing */}
                                 <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border">
                                     <div className="flex justify-between items-center">

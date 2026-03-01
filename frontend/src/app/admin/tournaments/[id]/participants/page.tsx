@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ADMIN_ROLES } from '@/lib/roles';
 import { Input } from '@/components/ui/Input';
+import { toast } from 'sonner';
 
 interface Participant {
     id: string;
@@ -24,6 +25,10 @@ interface Participant {
         name: string;
         email: string;
     };
+    team?: {
+        id: string;
+        name: string;
+    } | null;
 }
 
 interface Tournament {
@@ -74,13 +79,12 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
             const res = await api.delete(`/tournaments/${params.id}/participants/${confirmingKick.id}/kick`, {
                 data: { reason: kickReason || 'Fraudulent registration — removed by admin' }
             });
-            setSuccessMsg(res.data.message);
+            toast.success(res.data.message || 'Participant kicked successfully');
             setConfirmingKick(null);
             setKickReason('');
             await fetchData();
-            setTimeout(() => setSuccessMsg(''), 4000);
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Failed to kick participant');
+            toast.error(err.response?.data?.message || 'Failed to kick participant');
         } finally {
             setKickingId(null);
         }
@@ -90,7 +94,6 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
         if (!confirmingKick) return;
         if (!confirm(`Are you sure you want to KICK and REFUND ₹${tournament?.entryFeePerPerson} to ${confirmingKick.user.name}? This will process the refund via Cashfree.`)) return;
 
-        setKickingId(confirmingKick.id);
         try {
             // 1. Kick the participant
             await api.delete(`/tournaments/${params.id}/participants/${confirmingKick.id}/kick`, {
@@ -99,20 +102,20 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
 
             // 2. Process Refund
             await api.post('/payments/admin/refund', {
-                order_id: confirmingKick.paymentId, // Assuming paymentId is the Cashfree Order ID
+                order_id: confirmingKick.paymentId,
                 amount: tournament?.entryFeePerPerson,
                 userId: confirmingKick.user.id,
                 tournamentId: params.id,
                 tournamentTitle: tournament?.title
             });
 
-            setSuccessMsg(`Refunded and Removed ${confirmingKick.user.name} successfully!`);
+            toast.success(`Refunded and Removed ${confirmingKick.user.name} successfully!`);
             setConfirmingKick(null);
             setKickReason('');
             await fetchData();
-            setTimeout(() => setSuccessMsg(''), 4000);
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Refund/Kick failed');
+            toast.error(err.response?.data?.message || 'Refund/Kick failed');
+            await fetchData();
         } finally {
             setKickingId(null);
         }
@@ -162,14 +165,6 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                     <p className="text-muted-foreground text-sm">{tournament?.title} — Entry: ₹{tournament?.entryFeePerPerson || 'Free'}</p>
                 </div>
             </div>
-
-            {/* Success Toast */}
-            {successMsg && (
-                <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 text-green-400 font-medium">
-                    <CheckCircle2 className="w-5 h-5 shrink-0" />
-                    {successMsg}
-                </div>
-            )}
 
             {/* Fraud Alert */}
             {fraudRisk > 0 && (
@@ -242,7 +237,7 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                         <table className="w-full text-sm">
                             <thead className="bg-muted/50 text-muted-foreground">
                                 <tr>
-                                    <th className="p-4 text-left">Player</th>
+                                    <th className="p-4 text-left">Player / Squad</th>
                                     <th className="p-4 text-left">Payment Status</th>
                                     <th className="p-4 text-left">Reg. Status</th>
                                     <th className="p-4 text-left">Payment Ref</th>
@@ -272,7 +267,15 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                                                             {p.user.name}
                                                             {isFraud && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
                                                         </p>
-                                                        <p className="text-xs text-muted-foreground">{p.user.email}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-xs text-muted-foreground">{p.user.email}</p>
+                                                            {p.team?.name && (
+                                                                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary/5 border border-primary/10">
+                                                                    <Users className="w-2.5 h-2.5 text-primary" />
+                                                                    <span className="text-[9px] font-black text-primary uppercase tracking-tighter">{p.team.name}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -333,7 +336,7 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                             <div>
                                 <h3 className="text-lg font-bold">Remove Participant?</h3>
                                 <p className="text-muted-foreground text-sm mt-1">
-                                    You are about to remove <strong>{confirmingKick.user.name}</strong> ({confirmingKick.user.email}) from this tournament. This cannot be undone easily.
+                                    You are about to remove <strong>{confirmingKick.user?.name}</strong> ({confirmingKick.user?.email}) from this tournament. This cannot be undone easily.
                                 </p>
                             </div>
                         </div>

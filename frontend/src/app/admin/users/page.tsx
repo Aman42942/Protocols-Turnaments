@@ -12,6 +12,8 @@ import {
     MoreHorizontal, ChevronDown
 } from 'lucide-react';
 import { UserRole, ROLE_LABELS, getRoleColor, ROLE_HIERARCHY_LEVELS } from '@/lib/roles';
+import { WalletAdjustmentModal } from '@/components/admin/WalletAdjustmentModal';
+import { toast } from 'sonner';
 
 interface UserData {
     id: string;
@@ -35,6 +37,8 @@ export default function AdminUsersPage() {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [actionMenuId, setActionMenuId] = useState<string | null>(null);
     const [currentUserRole, setCurrentUserRole] = useState<string>('');
+    const [adjustmentUser, setAdjustmentUser] = useState<{ id: string, name: string, email: string } | null>(null);
+    const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
 
     useEffect(() => {
         fetchUsers();
@@ -316,6 +320,17 @@ export default function AdminUsersPage() {
                                                         <>
                                                             <hr className="my-1 border-border" />
                                                             <button
+                                                                className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 text-primary group"
+                                                                onClick={() => {
+                                                                    setAdjustmentUser({ id: user.id, name: user.name || 'User', email: user.email });
+                                                                    setIsAdjustmentModalOpen(true);
+                                                                    setActionMenuId(null);
+                                                                }}
+                                                            >
+                                                                <Wallet className="h-3.5 w-3.5" />
+                                                                Adjust Balance
+                                                            </button>
+                                                            <button
                                                                 className="w-full px-4 py-2 text-left text-sm hover:bg-red-500/10 text-red-500 flex items-center gap-2"
                                                                 onClick={() => handleDelete(user.id)}
                                                             >
@@ -334,6 +349,16 @@ export default function AdminUsersPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <WalletAdjustmentModal
+                isOpen={isAdjustmentModalOpen}
+                onClose={() => setIsAdjustmentModalOpen(false)}
+                user={adjustmentUser}
+                onSuccess={() => {
+                    toast.success('Wallet updated successfully');
+                    fetchUsers();
+                }}
+            />
         </div>
     );
 }

@@ -4,7 +4,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { FileText, Megaphone, ArrowRight, Layout } from 'lucide-react';
+import { FileText, Megaphone, ArrowRight, Layout, Play } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CMSDashboard() {
@@ -52,6 +52,25 @@ export default function CMSDashboard() {
                         <CardContent>
                             <Button variant="ghost" className="p-0 h-auto font-normal text-muted-foreground hover:text-primary">
                                 Manage Announcements <ArrowRight className="ml-1 h-4 w-4" />
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </Link>
+
+                <Link href="/admin/cms/slider">
+                    <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Play className="h-6 w-6 text-primary" />
+                                Home Slider
+                            </CardTitle>
+                            <CardDescription>
+                                Manage homepage advertisement slides, images, and videos.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Button variant="ghost" className="p-0 h-auto font-normal text-muted-foreground hover:text-primary">
+                                Manage Slider <ArrowRight className="ml-1 h-4 w-4" />
                             </Button>
                         </CardContent>
                     </Card>

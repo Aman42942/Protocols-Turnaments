@@ -9,8 +9,11 @@ import { Input } from '@/components/ui/Input';
 import {
     Loader2, Search, Filter, ArrowDownLeft, ArrowUpRight,
     CheckCircle, XCircle, Clock, Banknote, IndianRupee,
-    User, History, ExternalLink, ShieldCheck, RotateCcw
+    User, History, ExternalLink, ShieldCheck, RotateCcw,
+    AlertCircle, Wallet
 } from 'lucide-react';
+import { WalletAdjustmentModal } from '@/components/admin/WalletAdjustmentModal';
+import { toast } from 'sonner';
 
 interface Transaction {
     id: string;
@@ -30,6 +33,8 @@ export default function AdminTransactionsPage() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED' | 'FAILED'>('ALL');
     const [processingId, setProcessingId] = useState<string | null>(null);
+    const [adjustmentUser, setAdjustmentUser] = useState<{ id: string, name: string, email: string } | null>(null);
+    const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
 
     useEffect(() => {
         fetchTransactions();
@@ -68,13 +73,25 @@ export default function AdminTransactionsPage() {
                 amount: tx.amount,
                 userId: tx.user?.id
             });
-            alert('Refund initiated successfully');
+            toast.success('Refund initiated successfully');
             await fetchTransactions();
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Refund failed');
+            toast.error(err.response?.data?.message || 'Refund failed');
+            // Re-fetch anyway to see if it was actually processed but timed out
+            await fetchTransactions();
         } finally {
             setProcessingId(null);
         }
+    };
+
+    const isRefunded = (tx: Transaction) => {
+        // Simple heuristic: check if any COMPLETED REFUND transaction has the same reference
+        return transactions.some(t =>
+            t.type === 'REFUND' &&
+            t.status === 'COMPLETED' &&
+            t.reference === tx.reference &&
+            t.id !== tx.id // Ensure we aren't looking at the refund itself
+        );
     };
 
     const filtered = transactions.filter(tx => {
@@ -210,15 +227,34 @@ export default function AdminTransactionsPage() {
 
                                 {tx.status === 'COMPLETED' && tx.type === 'DEPOSIT' && (
                                     <div className="flex gap-2 mt-4 pt-4 border-t border-dashed">
+                                        {!isRefunded(tx) ? (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="border-orange-500/50 text-orange-500 hover:bg-orange-500/10 font-bold"
+                                                disabled={!!processingId}
+                                                onClick={() => handleRefund(tx)}
+                                            >
+                                                {processingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1.5" />}
+                                                INITIATE REFUND
+                                            </Button>
+                                        ) : (
+                                            <Badge variant="outline" className="text-orange-500 bg-orange-500/10 border-orange-500/20 py-1 px-3">
+                                                <RotateCcw className="w-3 h-3 mr-1" /> ALREADY REFUNDED
+                                            </Badge>
+                                        )}
+
                                         <Button
-                                            variant="outline"
+                                            variant="ghost"
                                             size="sm"
-                                            className="border-orange-500/50 text-orange-500 hover:bg-orange-500/10 font-bold"
-                                            disabled={!!processingId}
-                                            onClick={() => handleRefund(tx)}
+                                            className="ml-auto text-primary font-bold gap-2"
+                                            onClick={() => {
+                                                setAdjustmentUser(tx.user || null);
+                                                setIsAdjustmentModalOpen(true);
+                                            }}
                                         >
-                                            {processingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1.5" />}
-                                            INITIATE REFUND
+                                            <Wallet className="w-4 h-4" />
+                                            ADJUST BALANCE
                                         </Button>
                                     </div>
                                 )}
@@ -227,6 +263,16 @@ export default function AdminTransactionsPage() {
                     ))
                 )}
             </div>
+
+            <WalletAdjustmentModal
+                isOpen={isAdjustmentModalOpen}
+                onClose={() => setIsAdjustmentModalOpen(false)}
+                user={adjustmentUser}
+                onSuccess={() => {
+                    toast.success('Wallet updated successfully');
+                    fetchTransactions();
+                }}
+            />
         </div>
     );
 }

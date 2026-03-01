@@ -113,4 +113,8 @@ export class CreateTournamentDto {
   @IsString()
   @IsOptional()
   region?: string;
+
+  @IsString()
+  @IsOptional()
+  banner?: string;
 }

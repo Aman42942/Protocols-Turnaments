@@ -34,11 +34,27 @@ export interface CustomFeature {
     order: number;
 }
 
+export interface AdSlide {
+    id: string;
+    title: string;
+    description: string | null;
+    mediaType: 'IMAGE' | 'VIDEO';
+    mediaUrl: string;
+    ctaLink: string | null;
+    ctaText: string | null;
+    openInNewTab: boolean;
+    isActive: boolean;
+    displayOrder: number;
+    startDate: string | null;
+    endDate: string | null;
+}
+
 interface CmsConfig {
     theme: GlobalTheme;
     content: Record<string, string>;
     layout: ComponentLayout[];
     features: CustomFeature[];
+    slides: AdSlide[];
 }
 
 interface CmsContextType {

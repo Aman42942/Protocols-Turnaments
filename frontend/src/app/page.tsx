@@ -4,11 +4,12 @@ import { HeroSection } from "@/components/HeroSection";
 import { FeatureSection } from "@/components/FeatureSection";
 import { DashboardView } from "@/components/DashboardView";
 import { useCms } from "@/context/CmsContext";
+import { AdSlider } from "@/components/AdSlider";
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { config } = useCms();
+  const { config, loading: cmsLoading } = useCms();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -16,7 +17,7 @@ export default function Home() {
     setIsLoading(false);
   }, []);
 
-  if (isLoading) return null;
+  if (isLoading || cmsLoading) return null;
 
   // Build the dynamic landing page Layout
   const renderDynamicLayout = () => {
@@ -38,6 +39,7 @@ export default function Home() {
     return sortedLayouts.map(layout => {
       switch (layout.componentId) {
         case 'HERO': return <HeroSection key={layout.componentId} />;
+        case 'AD_SLIDER': return <AdSlider key={layout.componentId} slides={config.slides || []} />;
         case 'FEATURES': return <FeatureSection key={layout.componentId} />;
         case 'TOURNAMENTS': return null; // Placeholder for future component
         default: return null;

@@ -232,6 +232,7 @@ export default function CreateTournamentPage() {
         streamUrl: '',
         roomId: '',
         roomPassword: '',
+        banner: '',
     });
 
     // Protect the page
@@ -333,6 +334,7 @@ export default function CreateTournamentPage() {
                 discordChannelId: formData.discordChannelId || undefined,
                 streamUrl: formData.streamUrl || undefined,
                 region: formData.region || undefined,
+                banner: formData.banner || undefined,
             };
 
             const res = await api.post('/tournaments', payload);
@@ -663,6 +665,49 @@ export default function CreateTournamentPage() {
                                     <div>
                                         <Label>Stream URL</Label>
                                         <Input name="streamUrl" value={formData.streamUrl} onChange={handleChange} placeholder="https://youtube.com/live/..." className="mt-1" />
+                                    </div>
+                                </div>
+
+                                {/* Banner Implementation */}
+                                <div className="space-y-4 pt-4 border-t">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                                            <Link2 className="h-4 w-4" />
+                                        </div>
+                                        <h4 className="font-bold text-sm">Tournament Banner</h4>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="md:col-span-2">
+                                            <Label>Banner Image URL</Label>
+                                            <Input
+                                                name="banner"
+                                                value={formData.banner}
+                                                onChange={handleChange}
+                                                placeholder="https://images.unsplash.com/photo-..."
+                                                className="mt-1"
+                                            />
+                                            <p className="text-[10px] text-muted-foreground mt-2">
+                                                Provide a direct link to a high-quality (1920x1080) JPG/PNG image.
+                                                This will be displayed as the main header on the tournament page.
+                                            </p>
+                                        </div>
+                                        <div className="rounded-xl border bg-muted/30 overflow-hidden flex items-center justify-center relative aspect-video">
+                                            {formData.banner ? (
+                                                <img
+                                                    src={formData.banner}
+                                                    alt="Banner Preview"
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Invalid+Image+URL';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="text-center p-4">
+                                                    <Gamepad2 className="h-6 w-6 text-muted-foreground mx-auto mb-1 opacity-20" />
+                                                    <p className="text-[10px] text-muted-foreground">Preview</p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 

@@ -175,4 +175,31 @@ export class WalletController {
     );
     return result;
   }
+
+  @Post('admin/adjust-balance/:userId')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  async adjustBalance(
+    @Param('userId') userId: string,
+    @Body() body: { amount: number; type: 'DEPOSIT' | 'WITHDRAWAL'; reason: string },
+    @Request() req,
+  ) {
+    const result = await this.walletService.adjustBalance(
+      userId,
+      body.amount,
+      body.type,
+      body.reason,
+      req.user.userId,
+    );
+
+    await this.activityLogService.log(
+      req.user.userId,
+      'ADJUST_WALLET_BALANCE',
+      { targetUserId: userId, amount: body.amount, type: body.type, reason: body.reason },
+      undefined,
+      req.ip,
+    );
+
+    return result;
+  }
 }

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 import { AdminPaymentSettings } from '@/components/admin/AdminPaymentSettings';
+import { toast } from 'sonner';
 
 interface PendingDeposit {
     id: string;
@@ -104,15 +105,32 @@ export default function AdminPaymentsPage() {
         if (!confirm('Are you sure you want to refund this transaction? This will also cancel the tournament registration and credit money back to the user\'s wallet.')) return;
         setProcessingId(txId);
         try {
-            // Using the new tournament admin refund endpoint 
             await api.post(`/tournaments/admin/refund/${txId}`);
-            alert('Refund processed successfully!');
+            toast.success('Refund processed successfully!');
             await fetchData();
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Failed to process refund. Ensure the transaction has tournament metadata.');
+            toast.error(err.response?.data?.message || 'Failed to process refund');
+            await fetchData();
         } finally {
             setProcessingId(null);
         }
+    };
+
+    const isRefunded = (tx: Transaction) => {
+        if (tx.metadata) {
+            try {
+                const meta = JSON.parse(tx.metadata);
+                // If it's a refund transaction itself, it's not "refunded"
+                if (tx.type === 'REFUND') return false;
+            } catch (e) { }
+        }
+
+        return allTransactions.some(t =>
+            t.type === 'REFUND' &&
+            t.status === 'COMPLETED' &&
+            t.reference === tx.reference &&
+            t.id !== tx.id
+        );
     };
 
     const formatDate = (dateStr: string) => {
@@ -320,20 +338,28 @@ export default function AdminPaymentsPage() {
                                                 <td className="p-4 text-right text-muted-foreground text-xs">{formatDate(tx.createdAt)}</td>
                                                 <td className="p-4 text-right">
                                                     {(tx.status === 'COMPLETED' && (tx.type === 'DEPOSIT' || tx.type === 'ENTRY_FEE')) && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500"
-                                                            onClick={() => handleRefund(tx.id)}
-                                                            disabled={processingId === tx.id}
-                                                            title="Refund Transaction"
-                                                        >
-                                                            {processingId === tx.id ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                        <>
+                                                            {!isRefunded(tx) ? (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500"
+                                                                    onClick={() => handleRefund(tx.id)}
+                                                                    disabled={processingId === tx.id}
+                                                                    title="Refund Transaction"
+                                                                >
+                                                                    {processingId === tx.id ? (
+                                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    ) : (
+                                                                        <RotateCcw className="h-4 w-4" />
+                                                                    )}
+                                                                </Button>
                                                             ) : (
-                                                                <RotateCcw className="h-4 w-4" />
+                                                                <span title="Already Refunded">
+                                                                    <RotateCcw className="h-4 w-4 text-orange-500 opacity-50" />
+                                                                </span>
                                                             )}
-                                                        </Button>
+                                                        </>
                                                     )}
                                                 </td>
                                             </tr>

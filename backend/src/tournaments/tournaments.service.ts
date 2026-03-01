@@ -52,6 +52,7 @@ export class TournamentsService {
         discordChannelId: createTournamentDto.discordChannelId,
         streamUrl: createTournamentDto.streamUrl,
         region: createTournamentDto.region,
+        banner: createTournamentDto.banner,
       },
     });
 
@@ -94,7 +95,10 @@ export class TournamentsService {
       where: { id },
       include: {
         teams: {
-          include: { user: { select: { id: true, name: true, email: true } } },
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+            team: { select: { name: true } },
+          },
         },
         _count: { select: { teams: true } },
       },
@@ -151,28 +155,137 @@ export class TournamentsService {
     };
   }
 
-  // Register a user for a tournament (Robust Version)
-  async registerUser(userId: string, tournamentId: string, paymentReference?: string, status: 'APPROVED' | 'PENDING' = 'APPROVED') {
-    // 1. Check Tournament Existence & Status
+  // Validate if a user can register (Pre-check for payments)
+  async validateRegistration(userId: string, tournamentId: string, teamId?: string) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
-      include: { _count: { select: { teams: true } } },
+      include: {
+        _count: {
+          select: {
+            teams: {
+              where: { status: { notIn: ['CANCELLED', 'REJECTED'] } },
+            },
+          },
+        },
+      },
     });
 
     if (!tournament) throw new BadRequestException('Tournament not found');
 
-    // Check Status (Only UPCOMING or OPEN allowed)
-    // Assuming status is inferred or stored. If strictly checking:
-    // if (tournament.status !== 'UPCOMING') throw new BadRequestException('Tournament is not open for registration');
+    // 1. Team Validation
+    if (tournament.gameMode !== 'SOLO') {
+      if (!teamId) throw new BadRequestException(`Team selection is required for ${tournament.gameMode} mode.`);
 
-    // 2. Check Capacity
+      const isMember = await this.prisma.teamMember.count({
+        where: { teamId, userId },
+      });
+      if (isMember === 0) throw new BadRequestException('You are not a member of the selected team.');
+
+      const maxPerTeam = tournament.gameMode === 'DUO' ? 2 : tournament.gameMode === 'SQUAD' ? 4 : 5;
+      const currentTeamCount = await this.prisma.tournamentParticipant.count({
+        where: { tournamentId, teamId, status: { notIn: ['CANCELLED', 'REJECTED'] } },
+      });
+
+      if (currentTeamCount >= maxPerTeam) {
+        throw new BadRequestException(`Your team already has the maximum ${maxPerTeam} members registered.`);
+      }
+    }
+
+    // 2. Capacity Check
     if (tournament.maxTeams && tournament._count.teams >= tournament.maxTeams) {
+      // In professional mode, maxTeams might mean total slots.
+      // If SOLO, it's total players. If Team-based, it could be total teams.
+      // For now, keep the original behavior for SOLO.
+      if (tournament.gameMode === 'SOLO') throw new BadRequestException('Tournament is full');
+    }
+
+    // 3. Existing Registration Check
+    const existing = await this.prisma.tournamentParticipant.findFirst({
+      where: { userId, tournamentId, status: { notIn: ['CANCELLED', 'REJECTED'] } },
+    });
+    if (existing) throw new BadRequestException('You are already registered for this tournament');
+
+    return { tournament };
+  }
+
+  // Register a user for a tournament (Robust Version)
+  async registerUser(
+    userId: string,
+    tournamentId: string,
+    paymentReference?: string,
+    status: 'APPROVED' | 'PENDING' = 'APPROVED',
+    teamId?: string,
+  ) {
+    // 1. Check Tournament Existence & Status
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      include: {
+        _count: {
+          select: {
+            teams: {
+              where: { status: { notIn: ['CANCELLED', 'REJECTED'] } },
+            },
+          },
+        },
+      },
+    });
+
+    if (!tournament) throw new BadRequestException('Tournament not found');
+
+    // 1.1 Team Validation for non-SOLO modes
+    if (tournament.gameMode !== 'SOLO') {
+      if (!teamId) {
+        throw new BadRequestException(
+          `Team selection is required for ${tournament.gameMode} mode.`,
+        );
+      }
+
+      // Check if user is a member of the selected team
+      const memberCount = await this.prisma.teamMember.count({
+        where: { teamId, userId },
+      });
+      if (memberCount === 0) {
+        throw new BadRequestException('You are not a member of the selected team.');
+      }
+
+      // Check if the team already has maximum allowed members in this tournament
+      const maxPerTeam =
+        tournament.gameMode === 'DUO' ? 2 : tournament.gameMode === 'SQUAD' ? 4 : 5;
+      const currentTeamCount = await this.prisma.tournamentParticipant.count({
+        where: {
+          tournamentId,
+          teamId,
+          status: { notIn: ['CANCELLED', 'REJECTED'] },
+        },
+      });
+
+      if (currentTeamCount >= maxPerTeam) {
+        throw new BadRequestException(
+          `Your team already has the maximum ${maxPerTeam} members registered for this tournament.`,
+        );
+      }
+    } else if (teamId) {
+      // In SOLO mode, teamId should ideally be null
+      teamId = undefined;
+    }
+
+    // 2. Check Capacity (Max Teams/Individuals)
+    // Here we interpret maxTeams as the total number of individuals allowed if not using a more complex team-slotting logic
+    if (
+      tournament.maxTeams &&
+      tournament._count.teams >= tournament.maxTeams &&
+      tournament.gameMode === 'SOLO'
+    ) {
       throw new BadRequestException('Tournament is full');
     }
 
     // 3. Check Existing Registration
     const existing = await this.prisma.tournamentParticipant.findFirst({
-      where: { userId, tournamentId },
+      where: {
+        userId,
+        tournamentId,
+        status: { notIn: ['CANCELLED', 'REJECTED'] },
+      },
     });
     if (existing) {
       throw new BadRequestException(
@@ -196,6 +309,7 @@ export class TournamentsService {
               status: 'COMPLETED',
               reference: paymentReference,
               description: `Direct payment for ${tournament.title}`,
+              metadata: JSON.stringify({ tournamentId, teamId }),
             },
           });
 
@@ -204,8 +318,9 @@ export class TournamentsService {
             data: {
               userId,
               tournamentId,
+              teamId,
               status,
-              paymentStatus: status === 'APPROVED' ? 'PAID' : 'PENDING',
+              paymentStatus: 'PAID',
               paymentId: paymentReference,
             },
           });
@@ -238,6 +353,7 @@ export class TournamentsService {
             type: 'ENTRY_FEE',
             status: 'COMPLETED',
             description: `Entry fee for ${tournament.title}`,
+            metadata: JSON.stringify({ tournamentId, teamId }),
           },
         });
 
@@ -246,8 +362,9 @@ export class TournamentsService {
           data: {
             userId,
             tournamentId,
+            teamId,
             status,
-            paymentStatus: status === 'APPROVED' ? 'PAID' : 'PENDING',
+            paymentStatus: 'PAID',
           },
         });
 
@@ -255,13 +372,14 @@ export class TournamentsService {
       });
     }
 
-    // Free Tournament
+    // 5. FREE Tournament Flow
     const participant = await this.prisma.tournamentParticipant.create({
       data: {
         userId,
         tournamentId,
+        teamId,
         status,
-        paymentStatus: 'PAID',
+        paymentStatus: 'PAID', // Technically ₹0 paid
       },
     });
 
@@ -395,8 +513,14 @@ export class TournamentsService {
         user: {
           select: { id: true, name: true, email: true, createdAt: true },
         },
+        team: {
+          select: { id: true, name: true },
+        },
       },
-      orderBy: { registeredAt: 'desc' },
+      orderBy: [
+        { teamId: 'asc' }, // Group by team first
+        { registeredAt: 'desc' },
+      ],
     });
 
     return { tournament, participants };

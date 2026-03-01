@@ -29,11 +29,12 @@ export class CmsController {
 
     @Get('config')
     async getGlobalConfig() {
-        const [theme, content, layout, features] = await Promise.all([
+        const [theme, content, layout, features, slides] = await Promise.all([
             this.cmsService.getGlobalTheme(),
             this.cmsService.getAllContent(),
             this.cmsService.getAllLayouts(),
-            this.cmsService.getAllFeatures(true), // Only return active features for public
+            this.cmsService.getAllFeatures(true),
+            this.cmsService.getAllAdSlides(true),
         ]);
 
         return {
@@ -41,6 +42,7 @@ export class CmsController {
             content,
             layout,
             features,
+            slides,
         };
     }
 
@@ -139,6 +141,62 @@ export class CmsController {
             req.user.userId,
             'DELETE_CUSTOM_FEATURE',
             { featureId: id },
+            undefined,
+            req.ip,
+        );
+        return { success: true };
+    }
+
+    // ==========================================
+    // AD SLIDES (SUPERADMIN ONLY)
+    // ==========================================
+
+    @Get('slides')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPERADMIN')
+    async getAllSlides() {
+        return this.cmsService.getAllAdSlides(false);
+    }
+
+    @Post('slides')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPERADMIN')
+    async createSlide(@Body() body: any, @Request() req) {
+        const slide = await this.cmsService.createAdSlide(body);
+        await this.activityLogService.log(
+            req.user.userId,
+            'CREATE_AD_SLIDE',
+            { slideId: slide.id, title: slide.title },
+            undefined,
+            req.ip,
+        );
+        return { success: true, slide };
+    }
+
+    @Put('slides/:id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPERADMIN')
+    async updateSlide(@Param('id') id: string, @Body() body: any, @Request() req) {
+        const slide = await this.cmsService.updateAdSlide(id, body);
+        await this.activityLogService.log(
+            req.user.userId,
+            'UPDATE_AD_SLIDE',
+            { slideId: slide.id },
+            undefined,
+            req.ip,
+        );
+        return { success: true, slide };
+    }
+
+    @Delete('slides/:id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPERADMIN')
+    async deleteSlide(@Param('id') id: string, @Request() req) {
+        await this.cmsService.deleteAdSlide(id);
+        await this.activityLogService.log(
+            req.user.userId,
+            'DELETE_AD_SLIDE',
+            { slideId: id },
             undefined,
             req.ip,
         );

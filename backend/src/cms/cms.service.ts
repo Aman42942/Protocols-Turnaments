@@ -139,4 +139,44 @@ export class CmsService {
             where: { id },
         });
     }
+
+    // ==========================================
+    // AD SLIDES
+    // ==========================================
+
+    async getAllAdSlides(onlyActive = false) {
+        const now = new Date();
+        if (onlyActive) {
+            return (this.prisma as any).adSlide.findMany({
+                where: {
+                    isActive: true,
+                    AND: [
+                        { OR: [{ startDate: null }, { startDate: { lte: now } }] },
+                        { OR: [{ endDate: null }, { endDate: { gte: now } }] },
+                    ],
+                },
+                orderBy: { displayOrder: 'asc' },
+            });
+        }
+        return (this.prisma as any).adSlide.findMany({
+            orderBy: { displayOrder: 'asc' },
+        });
+    }
+
+    async createAdSlide(data: any) {
+        return (this.prisma as any).adSlide.create({ data });
+    }
+
+    async updateAdSlide(id: string, data: any) {
+        return (this.prisma as any).adSlide.update({
+            where: { id },
+            data,
+        });
+    }
+
+    async deleteAdSlide(id: string) {
+        return (this.prisma as any).adSlide.delete({
+            where: { id },
+        });
+    }
 }

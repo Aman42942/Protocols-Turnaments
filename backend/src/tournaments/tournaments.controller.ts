@@ -85,14 +85,17 @@ export class TournamentsController {
   //  // Create payment order for tournament (Cashfree)
   @UseGuards(JwtAuthGuard)
   @Post(':id/create-order')
-  async createOrder(@Request() req, @Param('id') id: string) {
-    const tournament = await this.tournamentsService.findOne(id);
-    if (!tournament) throw new BadRequestException('Tournament not found');
-
-    // Free tournament
-    if (!tournament.entryFeePerPerson || tournament.entryFeePerPerson <= 0) {
-      return { amount: 0, orderId: null }; // Free tournament
-    }
+  async createOrder(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() body: { teamId?: string },
+  ) {
+    // Validate registration before creating order
+    const { tournament } = await this.tournamentsService.validateRegistration(
+      req.user.userId,
+      id,
+      body.teamId,
+    );
 
     // Create Cashfree order with real user details
     const user = await this.usersService.findById(req.user.userId);
@@ -101,18 +104,23 @@ export class TournamentsController {
       req.user.userId,
       user?.email,
       undefined,
-      `${this.paymentsService.getHttpsFrontendUrl()}/tournaments/${id}?order_id={order_id}`,
+      `${this.paymentsService.getHttpsFrontendUrl()}/tournaments/${id}?order_id={order_id}${body.teamId ? `&team_id=${body.teamId}` : ''}`,
     );
     return order;
   }
 
-  // --- REGISTER WITH PAYMENT VERIFICATION ---
   @UseGuards(JwtAuthGuard)
   @Post(':id/register')
   async register(
     @Request() req,
     @Param('id') id: string,
-    @Body() body: { paymentId?: string; orderId?: string; signature?: string },
+    @Body()
+    body: {
+      paymentId?: string;
+      orderId?: string;
+      signature?: string;
+      teamId?: string;
+    },
   ) {
     const tournament = await this.tournamentsService.findOne(id);
     if (!tournament) throw new BadRequestException('Tournament not found');
@@ -137,7 +145,7 @@ export class TournamentsController {
         entryFee,
         'CASHFREE', // Using CASHFREE label as per PaymentsService implementation
         body.paymentId,
-        JSON.stringify({ tournamentId: id }),
+        JSON.stringify({ tournamentId: id, teamId: body.teamId }),
       );
     }
 
@@ -145,7 +153,9 @@ export class TournamentsController {
     const result = await this.tournamentsService.registerUser(
       req.user.userId,
       id,
-      body.paymentId || body.orderId // Pass payment reference if direct
+      body.paymentId || body.orderId, // Pass payment reference if direct
+      'APPROVED',
+      body.teamId,
     );
 
     // Send confirmation notification
@@ -205,7 +215,7 @@ export class TournamentsController {
   async submitUpiPayment(
     @Request() req,
     @Param('id') id: string,
-    @Body() body: { amount: number },
+    @Body() body: { amount: number; teamId?: string },
   ) {
     const tournament = await this.tournamentsService.findOne(id);
     if (!tournament) throw new BadRequestException('Tournament not found');
@@ -230,6 +240,7 @@ export class TournamentsController {
         id,
         undefined,
         'APPROVED',
+        body.teamId,
       );
       await this.notificationsService.create(
         req.user.userId,
@@ -238,7 +249,11 @@ export class TournamentsController {
         'success',
         `/tournaments/${id}`,
       );
-      return { success: true, message: 'Registered for free tournament.', participant };
+      return {
+        success: true,
+        message: 'Registered for free tournament.',
+        participant,
+      };
     }
 
     // Generate a server-side transaction reference (cannot be forged by client)
@@ -249,7 +264,7 @@ export class TournamentsController {
       req.user.userId,
       body.amount,
       serverTxnRef,
-      JSON.stringify({ tournamentId: id }),
+      JSON.stringify({ tournamentId: id, teamId: body.teamId }),
     );
 
     // Register with APPROVED status (instant UX) — admin can audit the transaction separately
@@ -258,6 +273,7 @@ export class TournamentsController {
       id,
       serverTxnRef,
       'APPROVED',
+      body.teamId,
     );
 
     // Send confirmation notification
