@@ -200,6 +200,36 @@ export default function AdminLoginPage() {
                             <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white" disabled={loading}>
                                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Request Access'}
                             </Button>
+
+                            <div className="relative my-6">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t border-white/10" />
+                                </div>
+                                <div className="relative flex justify-center text-[10px] uppercase tracking-widest text-gray-500">
+                                    <span className="bg-black/80 px-2">Authorized ID Providers</span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="bg-white/5 border-white/10 hover:bg-white/10 hover:text-white text-xs h-9"
+                                    onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`}
+                                >
+                                    <svg className="mr-2 h-3.5 w-3.5" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path></svg>
+                                    Google ID
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="bg-white/5 border-white/10 hover:bg-white/10 hover:text-white text-xs h-9"
+                                    onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/facebook`}
+                                >
+                                    <svg className="mr-2 h-3.5 w-3.5" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="facebook" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M504 256C504 119 393 8 256 8S8 119 8 256c0 125 93 229 208 248v-175h-63v-72h63v-55c0-62 38-96 94-96 27 0 49 5 56 6v65h-38c-30 0-36 14-36 35v45h72l-9 72h-63v175c115-19 208-123 208-248z"></path></svg>
+                                    FB ID
+                                </Button>
+                            </div>
                         </form>
                     )}
 
