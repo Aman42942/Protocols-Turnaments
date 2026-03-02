@@ -28,9 +28,6 @@ export default function WebsiteManagePage() {
 
     useEffect(() => {
         fetchConfig();
-        // Poll every 20 seconds to keep the toggle switch in sync
-        const interval = setInterval(fetchConfig, 20000);
-        return () => clearInterval(interval);
     }, []);
 
     const fetchConfig = async () => {

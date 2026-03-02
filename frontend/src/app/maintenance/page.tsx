@@ -116,7 +116,7 @@ export default function MaintenancePage() {
     }, []);
 
     useEffect(() => {
-        if (!config.endTime || !config.showTimer || timerExpired) return;
+        if (!config.endTime || !config.showTimer) return;
 
         const target = new Date(config.endTime).getTime();
 
@@ -139,24 +139,7 @@ export default function MaintenancePage() {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [config.endTime, config.showTimer, timerExpired]);
-
-    // SMART-REFRESH: Poll status after timer expires
-    useEffect(() => {
-        if (!timerExpired) return;
-
-        const checkInterval = setInterval(async () => {
-            try {
-                const res = await api.get('/maintenance');
-                if (res.data && res.data.isMaintenanceMode === false) {
-                    clearInterval(checkInterval);
-                    window.location.href = '/';
-                }
-            } catch (err) { }
-        }, 5000);
-
-        return () => clearInterval(checkInterval);
-    }, [timerExpired]);
+    }, [config.endTime, config.showTimer]);
 
     useEffect(() => {
         const lines = [
