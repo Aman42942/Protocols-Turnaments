@@ -13,12 +13,12 @@ export async function proxy(request: NextRequest) {
 
         // Add timeout to prevent hanging
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // Increased to 5s for local reliability
 
         const res = await fetch(`${backendUrl}/maintenance`, {
             next: { revalidate: 60 },
             signal: controller.signal
-        }); // Cache for 60s to reduce load
+        });
 
         clearTimeout(timeoutId);
 
@@ -26,11 +26,14 @@ export async function proxy(request: NextRequest) {
             const data = await res.json();
             isMaintenanceMode = data.isMaintenanceMode;
         }
-    } catch (err) {
-        // If backend is down or timeout, default to NOT in maintenance mode
-        // This prevents the site from being inaccessible if backend is slow/down
-        console.error('Middleware maintenance check failed', err);
-        isMaintenanceMode = false; // Fail open - allow access
+    } catch (err: any) {
+        // If it's a timeout (AbortError), fail-open silently to avoid log noise
+        if (err.name === 'AbortError') {
+            isMaintenanceMode = false;
+        } else {
+            console.error('Middleware maintenance check failed:', err.message || err);
+            isMaintenanceMode = false; // Fail open for safety
+        }
     }
 
     // 3. Get the token from cookies (Prioritize HTTP-only cookie)
