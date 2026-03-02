@@ -66,8 +66,7 @@ export async function proxy(request: NextRequest) {
                 request.nextUrl.pathname.startsWith('/static') ||
                 request.nextUrl.pathname.startsWith('/api') || // Next.js API routes
                 request.nextUrl.pathname === '/maintenance' ||
-                request.nextUrl.pathname.startsWith('/login') || // Allow login page so Admins can log in
-                request.nextUrl.pathname.startsWith('/secure-admin-login'); // Allow stealth login
+                request.nextUrl.pathname.startsWith('/secure-admin-login'); // Allow stealth login only
 
             if (!isExcluded) {
                 return NextResponse.redirect(new URL('/maintenance', request.url));
