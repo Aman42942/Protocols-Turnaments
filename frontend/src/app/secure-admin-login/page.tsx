@@ -1,174 +1,262 @@
 
 'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Shield, Lock, AlertCircle, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Shield, Lock, AlertCircle, Loader2, Mail, ArrowLeft } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/Card';
 import api from '@/lib/api';
+
+const ADMIN_ROLES = [
+    'ULTIMATE_ADMIN', 'SUPERADMIN',
+    'SENIOR_CHIEF_SECURITY_ADMIN', 'CHIEF_DEVELOPMENT_ADMIN',
+    'CHIEF_SECURITY_ADMIN', 'VICE_CHIEF_SECURITY_ADMIN',
+    'SENIOR_ADMIN', 'JUNIOR_ADMIN', 'EMPLOYEE', 'ADMIN'
+];
 
 export default function AdminLoginPage() {
     const router = useRouter();
+    const [step, setStep] = useState<'credentials' | 'otp' | '2fa'>('credentials');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
+    const [twoFACode, setTwoFACode] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
+    const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-    const handleLogin = async (e: React.FormEvent) => {
+    useEffect(() => {
+        if (resendCooldown > 0) {
+            const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [resendCooldown]);
+
+    const finalizeLogin = (data: any) => {
+        const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+
+        if (!ADMIN_ROLES.includes(payload.role)) {
+            setError('Access Denied. Administrative privileges required.');
+            setLoading(false);
+            return;
+        }
+
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user', JSON.stringify({
+            id: payload.sub,
+            email: payload.email,
+            role: payload.role,
+            name: payload.name || 'Admin'
+        }));
+
+        // Set cookie for Middleware
+        const isProduction = window.location.protocol === 'https:';
+        document.cookie = `token=${data.access_token}; path=/; max-age=86400; SameSite=Lax${isProduction ? '; Secure' : ''}`;
+
+        window.dispatchEvent(new Event('auth-change'));
+        router.push('/admin');
+    };
+
+    const handleInitialSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
         try {
-            // 1. Authenticate with backend
             const res = await api.post('/auth/login', { email, password });
-            const { access_token } = res.data;
+            const data = res.data;
 
-            // 2. Decode token to check role immediately
-            // Payload structure: { sub: userId, email: ..., role: ... }
-            const payload = JSON.parse(atob(access_token.split('.')[1]));
-
-            // Import hierarchy from lib (Dynamic import or hardcoded map if import fails in client component)
-            // Simpler: Just check against the known list of admin roles
-            const ADMIN_ROLES = [
-                'ULTIMATE_ADMIN', 'SUPERADMIN',
-                'SENIOR_CHIEF_SECURITY_ADMIN', 'CHIEF_DEVELOPMENT_ADMIN',
-                'CHIEF_SECURITY_ADMIN', 'VICE_CHIEF_SECURITY_ADMIN',
-                'SENIOR_ADMIN', 'JUNIOR_ADMIN', 'EMPLOYEE', 'ADMIN'
-            ];
-
-            if (!ADMIN_ROLES.includes(payload.role)) {
-                setError('Access Denied. You do not have administrative privileges.');
-                setLoading(false);
+            if (data.requiresOTP) {
+                setStep('otp');
+                setResendCooldown(60);
                 return;
             }
 
-            // 3. Store token and redirect
-            localStorage.setItem('token', access_token);
-            // Also store user info if needed
-            const user = {
-                id: payload.sub,
-                email: payload.email,
-                role: payload.role,
-                name: payload.name || 'Admin'
-            };
-            localStorage.setItem('user', JSON.stringify(user));
+            if (data.requires2FA) {
+                setStep('2fa');
+                return;
+            }
 
-            // Set cookie for Middleware
-            document.cookie = `token=${access_token}; path=/; max-age=86400; SameSite=Lax`;
-
-            // 4. Redirect to Admin Dashboard
-            router.push('/admin');
-
+            if (data.access_token) {
+                finalizeLogin(data);
+            }
         } catch (err: any) {
-            console.error('Login failed:', err);
             setError(err.response?.data?.message || 'Invalid credentials');
         } finally {
             setLoading(false);
         }
     };
 
+    const handleVerifyOTP = async () => {
+        const code = otpCode.join('');
+        if (code.length !== 6) return;
+        setLoading(true);
+        setError('');
+        try {
+            const res = await api.post('/auth/verify-otp', { email, code });
+            if (res.data.access_token) finalizeLogin(res.data);
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Invalid OTP');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerify2FA = async () => {
+        if (twoFACode.length !== 6) return;
+        setLoading(true);
+        setError('');
+        try {
+            const res = await api.post('/auth/2fa/validate', { email, code: twoFACode });
+            if (res.data.access_token) finalizeLogin(res.data);
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Invalid 2FA code');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResendOTP = async () => {
+        if (resendCooldown > 0) return;
+        try {
+            await api.post('/auth/resend-otp', { email });
+            setResendCooldown(60);
+            setOtpCode(['', '', '', '', '', '']);
+            setError('');
+        } catch (err: any) {
+            setError('Failed to resend code');
+        }
+    };
+
+    const handleOTPChange = (index: number, value: string) => {
+        if (!/^\d*$/.test(value)) return;
+        const newCode = [...otpCode];
+        newCode[index] = value.slice(-1);
+        setOtpCode(newCode);
+        if (value && index < 5) otpRefs.current[index + 1]?.focus();
+    };
+
+    const handleOTPKeyDown = (index: number, e: React.KeyboardEvent) => {
+        if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
+            otpRefs.current[index - 1]?.focus();
+        }
+    };
+
+    // UI Rendering Logic based on Step
     return (
-        <div className="min-h-screen flex items-center justify-center bg-black/95 text-white p-4">
+        <div className="min-h-screen flex items-center justify-center bg-black/95 text-white p-4 overflow-hidden">
             <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-red-600/10 blur-[120px] rounded-full" />
 
-            <Card className="w-full max-w-md border-red-900/30 bg-black/80 backdrop-blur-xl relative z-10 shadow-2xl shadow-red-900/10">
+            <Card className="w-full max-w-md border-red-900/30 bg-black/80 backdrop-blur-xl relative z-10 shadow-2xl">
                 <CardHeader className="space-y-1 text-center">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20">
-                        <Lock className="h-6 w-6 text-red-500" />
+                    <div className="mx-auto w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.1)]">
+                        {step === 'otp' ? <Mail className="h-6 w-6 text-red-500" /> : <Lock className="h-6 w-6 text-red-500" />}
                     </div>
-                    <CardTitle className="text-2xl font-bold tracking-tight">Admin Portal</CardTitle>
-                    <CardDescription>Restricted access. Authorized personnel only.</CardDescription>
+                    <CardTitle className="text-2xl font-bold tracking-tight">
+                        {step === 'credentials' && 'Admin Portal'}
+                        {step === 'otp' && 'Verify Email'}
+                        {step === '2fa' && '2FA Required'}
+                    </CardTitle>
+                    <CardDescription className="text-gray-400">
+                        {step === 'credentials' && 'Restricted access. Authorized personnel only.'}
+                        {step === 'otp' && `Enter the 6-digit code sent to ${email}`}
+                        {step === '2fa' && 'Provide your authenticator app code.'}
+                    </CardDescription>
                 </CardHeader>
+
                 <CardContent>
-                    <form onSubmit={handleLogin} className="space-y-4">
-                        {error && (
-                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2 text-sm text-red-400">
-                                <AlertCircle className="h-4 w-4 shrink-0" />
-                                {error}
-                            </div>
-                        )}
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-muted-foreground">Email</label>
-                            <Input
-                                type="email"
-                                placeholder="admin@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="bg-black/50 border-white/10 focus:border-red-500/50 transition-colors"
-                                required
-                            />
+                    {error && (
+                        <div className="p-3 mb-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2 text-sm text-red-400 animate-in fade-in slide-in-from-top-1">
+                            <AlertCircle className="h-4 w-4 shrink-0" />
+                            {error}
                         </div>
+                    )}
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-muted-foreground">Password</label>
-                            <Input
-                                type="password"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="bg-black/50 border-white/10 focus:border-red-500/50 transition-colors"
-                                required
-                            />
-                        </div>
-
-                        <Button
-                            type="submit"
-                            className="w-full bg-red-600 hover:bg-red-700 text-white font-medium"
-                            disabled={loading}
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Verifying...
-                                </>
-                            ) : (
-                                <span className="flex items-center gap-2">
-                                    <Shield className="h-4 w-4" /> Secure Login
-                                </span>
-                            )}
-                        </Button>
-
-                        <div className="relative my-6">
-                            <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t border-white/10" />
+                    {step === 'credentials' && (
+                        <form onSubmit={handleInitialSubmit} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-400">Security Email</label>
+                                <Input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="bg-black/50 border-white/10 focus:border-red-500/50"
+                                    required
+                                />
                             </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-black px-2 text-muted-foreground">Or continue with</span>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-400">Access Password</label>
+                                <Input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="bg-black/50 border-white/10 focus:border-red-500/50"
+                                    required
+                                />
                             </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="bg-white/5 border-white/10 hover:bg-white/10 hover:text-white"
-                                onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`}
-                            >
-                                <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path></svg>
-                                Google
+                            <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white" disabled={loading}>
+                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Request Access'}
                             </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="bg-white/5 border-white/10 hover:bg-white/10 hover:text-white"
-                                onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/facebook`}
-                            >
-                                <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="facebook" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M504 256C504 119 393 8 256 8S8 119 8 256c0 125 93 229 208 248v-175h-63v-72h63v-55c0-62 38-96 94-96 27 0 49 5 56 6v65h-38c-30 0-36 14-36 35v45h72l-9 72h-63v175c115-19 208-123 208-248z"></path></svg>
-                                Facebook
+                        </form>
+                    )}
+
+                    {step === 'otp' && (
+                        <div className="space-y-6">
+                            <div className="flex justify-center gap-3">
+                                {otpCode.map((digit, i) => (
+                                    <input
+                                        key={i}
+                                        ref={el => { otpRefs.current[i] = el; }}
+                                        type="text"
+                                        maxLength={1}
+                                        value={digit}
+                                        onChange={e => handleOTPChange(i, e.target.value)}
+                                        onKeyDown={e => handleOTPKeyDown(i, e)}
+                                        className="w-12 h-14 text-center text-xl font-bold bg-black/50 border-2 border-white/10 rounded-xl focus:border-red-500 focus:outline-none transition-all"
+                                    />
+                                ))}
+                            </div>
+                            <Button className="w-full bg-red-600" onClick={handleVerifyOTP} disabled={loading || otpCode.join('').length !== 6}>
+                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Identity'}
+                            </Button>
+                            <button onClick={handleResendOTP} disabled={resendCooldown > 0} className="w-full text-sm text-gray-500 hover:text-red-400 disabled:opacity-50">
+                                {resendCooldown > 0 ? `Retry in ${resendCooldown}s` : 'Resend Security Code'}
+                            </button>
+                        </div>
+                    )}
+
+                    {step === '2fa' && (
+                        <div className="space-y-6">
+                            <Input
+                                type="text"
+                                maxLength={6}
+                                placeholder="000 000"
+                                value={twoFACode}
+                                onChange={e => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                className="text-center text-2xl tracking-[0.5em] font-mono bg-black/50 border-white/10"
+                            />
+                            <Button className="w-full bg-red-600" onClick={handleVerify2FA} disabled={loading || twoFACode.length !== 6}>
+                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Authorize'}
                             </Button>
                         </div>
-                    </form>
-
-                    <div className="mt-6 text-center text-xs text-muted-foreground">
-                        <p>IP Address Logged & Monitored</p>
-                        <p className="mt-1">Unauthorized access attempts will be reported.</p>
-                    </div>
+                    )}
                 </CardContent>
+
+                <CardFooter className="flex flex-col gap-4 text-center pb-8">
+                    {step !== 'credentials' && (
+                        <button onClick={() => setStep('credentials')} className="text-sm text-gray-500 hover:text-white flex items-center gap-1 mx-auto transition-colors">
+                            <ArrowLeft className="h-4 w-4" /> Return to Login
+                        </button>
+                    )}
+                    <div className="space-y-1 text-[10px] uppercase tracking-widest text-gray-600">
+                        <p>Terminal Session Encrypted</p>
+                        <p>Unauthorized access is a federal offense</p>
+                    </div>
+                </CardFooter>
             </Card>
-        </div >
+        </div>
     );
 }
