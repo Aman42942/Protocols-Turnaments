@@ -116,7 +116,7 @@ export default function MaintenancePage() {
     }, []);
 
     useEffect(() => {
-        if (!config.endTime || !config.showTimer) return;
+        if (!config.endTime || !config.showTimer || timerExpired) return;
 
         const target = new Date(config.endTime).getTime();
 
@@ -126,23 +126,8 @@ export default function MaintenancePage() {
 
             if (distance < 0) {
                 clearInterval(timer);
-                if (!timerExpired) {
-                    setTimerExpired(true);
-                    setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
-
-                    // SMART-REFRESH: Poll backend status once timer hits zero
-                    const checkInterval = setInterval(async () => {
-                        try {
-                            const res = await api.get('/maintenance');
-                            if (res.data && res.data.isMaintenanceMode === false) {
-                                clearInterval(checkInterval);
-                                window.location.href = '/';
-                            }
-                        } catch (err) {
-                            // Silent fail - retry next cycle
-                        }
-                    }, 5000); // Check every 5 seconds
-                }
+                setTimerExpired(true);
+                setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
             } else {
                 setTimeLeft({
                     d: Math.floor(distance / (1000 * 60 * 60 * 24)),
@@ -155,6 +140,23 @@ export default function MaintenancePage() {
 
         return () => clearInterval(timer);
     }, [config.endTime, config.showTimer, timerExpired]);
+
+    // SMART-REFRESH: Poll status after timer expires
+    useEffect(() => {
+        if (!timerExpired) return;
+
+        const checkInterval = setInterval(async () => {
+            try {
+                const res = await api.get('/maintenance');
+                if (res.data && res.data.isMaintenanceMode === false) {
+                    clearInterval(checkInterval);
+                    window.location.href = '/';
+                }
+            } catch (err) { }
+        }, 5000);
+
+        return () => clearInterval(checkInterval);
+    }, [timerExpired]);
 
     useEffect(() => {
         const lines = [
