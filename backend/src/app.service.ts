@@ -1,10 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from './prisma/prisma.service';
 import { NotificationsService } from './notifications/notifications.service';
 import { NotificationsGateway } from './notifications/notifications.gateway';
 
 @Injectable()
 export class AppService {
+  private readonly logger = new Logger(AppService.name);
+
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
@@ -119,5 +122,20 @@ export class AppService {
     }
 
     return this.getMaintenanceStatus();
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async handleMaintenanceAutoExpiry() {
+    const status = await this.getMaintenanceStatus();
+
+    if (status.isMaintenanceMode && status.endTime) {
+      const expirationDate = new Date(status.endTime);
+      const now = new Date();
+
+      if (now >= expirationDate) {
+        this.logger.log('Maintenance period expired. Turning off maintenance mode automatically.');
+        await this.setMaintenanceStatus(false);
+      }
+    }
   }
 }
