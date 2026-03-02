@@ -27,24 +27,31 @@ export class AppService {
     const isMaintenanceMode = configMap['MAINTENANCE_MODE'] === 'true';
     const endTime = configMap['MAINTENANCE_END_TIME'] || '';
 
-    // AUTO-EXPIRY LOGIC (Atomic & Honest)
+    // AUTO-EXPIRY LOGIC (Stable with 60s Grace Period)
     if (isMaintenanceMode && endTime) {
       const now = new Date();
       const end = new Date(endTime);
 
       if (now > end) {
-        // Time has passed! Auto-disable maintenance instantly.
-        console.log(`[MAINTENANCE] Auto-expiry triggered. End time was ${endTime}`);
-        await this.setMaintenanceStatus(false);
-        return {
-          isMaintenanceMode: false,
-          title: configMap['MAINTENANCE_TITLE'] || 'SYSTEM UPGRADE',
-          message: configMap['MAINTENANCE_MESSAGE'] || '',
-          endTime: endTime,
-          showTimer: configMap['MAINTENANCE_SHOW_TIMER'] !== 'false',
-          animations: configMap['MAINTENANCE_ANIMATIONS'] !== 'false',
-          colorPrimary: configMap['MAINTENANCE_COLOR_PRIMARY'] || '#00E676',
-        };
+        // Find the last update time for MAINTENANCE_MODE
+        const modeConfig = configs.find(c => c.key === 'MAINTENANCE_MODE');
+        const lastUpdate = modeConfig?.updatedAt || new Date();
+        const secondsSinceUpdate = (now.getTime() - lastUpdate.getTime()) / 1000;
+
+        // Only auto-disable if maintenance has been ON for at least 60 seconds
+        if (secondsSinceUpdate > 60) {
+          console.log(`[MAINTENANCE] Auto-expiry triggered. End time was ${endTime}`);
+          await this.setMaintenanceStatus(false);
+          return {
+            isMaintenanceMode: false,
+            title: configMap['MAINTENANCE_TITLE'] || 'SYSTEM UPGRADE',
+            message: configMap['MAINTENANCE_MESSAGE'] || '',
+            endTime: endTime,
+            showTimer: configMap['MAINTENANCE_SHOW_TIMER'] !== 'false',
+            animations: configMap['MAINTENANCE_ANIMATIONS'] !== 'false',
+            colorPrimary: configMap['MAINTENANCE_COLOR_PRIMARY'] || '#00E676',
+          };
+        }
       }
     }
 
