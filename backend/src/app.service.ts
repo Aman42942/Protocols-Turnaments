@@ -31,18 +31,31 @@ export class AppService {
     if (isMaintenanceMode && endTime) {
       const now = new Date();
       const end = new Date(endTime);
+
+      // We add a 60-second "Grace Period" to prevent instant shutoff if the admin sets a past time accidentally
+      // This is handled by checking the 'updatedAt' of the MAINTENANCE_MODE key if possible, 
+      // but for simplicity, we'll assume if it's ON and passed, we check if it's "Live".
+      // A better way is to check when the mode was last set.
+
       if (now > end) {
-        // Time has passed! Auto-disable maintenance
-        await this.setMaintenanceStatus(false);
-        return {
-          isMaintenanceMode: false,
-          title: configMap['MAINTENANCE_TITLE'] || '',
-          message: configMap['MAINTENANCE_MESSAGE'] || '',
-          endTime: endTime,
-          showTimer: configMap['MAINTENANCE_SHOW_TIMER'] !== 'false',
-          animations: configMap['MAINTENANCE_ANIMATIONS'] !== 'false',
-          colorPrimary: configMap['MAINTENANCE_COLOR_PRIMARY'] || '#00E676',
-        };
+        // Fetch the last update time for the MAINTENANCE_MODE key to ensure we don't kill it immediately after it's turned on
+        const modeConfig = configs.find(c => c.key === 'MAINTENANCE_MODE');
+        const lastUpdate = modeConfig?.updatedAt || new Date(0);
+        const secondsSinceUpdate = (now.getTime() - lastUpdate.getTime()) / 1000;
+
+        if (secondsSinceUpdate > 60) {
+          // Time has passed and grace period (60s) is over! Auto-disable maintenance
+          await this.setMaintenanceStatus(false);
+          return {
+            isMaintenanceMode: false,
+            title: configMap['MAINTENANCE_TITLE'] || '',
+            message: configMap['MAINTENANCE_MESSAGE'] || '',
+            endTime: endTime,
+            showTimer: configMap['MAINTENANCE_SHOW_TIMER'] !== 'false',
+            animations: configMap['MAINTENANCE_ANIMATIONS'] !== 'false',
+            colorPrimary: configMap['MAINTENANCE_COLOR_PRIMARY'] || '#00E676',
+          };
+        }
       }
     }
 

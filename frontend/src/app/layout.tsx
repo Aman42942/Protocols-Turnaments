@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { MaintenanceWatcher } from "@/components/MaintenanceWatcher";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BrandingProvider } from "@/context/ThemeContext";
 import { SocketProvider } from "@/context/SocketContext";
@@ -119,6 +120,7 @@ export default function RootLayout({
           <CmsEngineProvider>
             <BrandingProvider>
               <SocketProvider>
+                <MaintenanceWatcher />
                 <Navbar />
                 <main className="min-h-screen flex flex-col pb-20 md:pb-0">
                   {children}
