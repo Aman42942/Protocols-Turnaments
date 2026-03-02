@@ -57,7 +57,7 @@ export class PaypalService {
                 {
                     amount: {
                         currency_code: currencyCode,
-                        value: amount.toFixed(2),
+                        value: Number(amount).toFixed(2),
                     },
                 },
             ],
