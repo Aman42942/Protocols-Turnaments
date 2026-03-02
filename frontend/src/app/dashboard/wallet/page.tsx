@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePayPalScriptReducer, PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
+import { load } from '@cashfreepayments/cashfree-js';
 
 // ---- SUBCOMPONENTS FOR PAYPAL ----
 const PayPalCheckout = ({ usdAmount, expectedCoins, onSuccess, onCancel, onError, currency = 'USD' }: any) => {
@@ -23,37 +24,56 @@ const PayPalCheckout = ({ usdAmount, expectedCoins, onSuccess, onCancel, onError
     if (isPending) return <div className="flex justify-center p-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
     return (
-        <PayPalButtons
-            style={{ layout: "vertical", shape: "pill", color: "blue" }}
-            createOrder={async () => {
-                const res = await api.post('/payments/paypal/create-order', { usdAmount, currency });
-                return res.data.id;
-            }}
-            onApprove={async (data: any) => {
-                try {
-                    toast.loading('Verifying Payment...');
-                    const res = await api.post('/payments/paypal/capture-order', {
-                        orderId: data.orderID,
-                        expectedCoins
-                    });
-                    toast.dismiss();
-                    toast.success(`Successfully added ${res.data.coinsAdded} Coins!`);
-                    onSuccess();
-                } catch (error: any) {
-                    toast.dismiss();
-                    toast.error(error.response?.data?.message || 'Verification Failed');
+        <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 mb-2 overflow-hidden transition-all hover:shadow-2xl">
+            <div className="flex items-center justify-between mb-4 px-1">
+                <span className="text-[10px] font-black uppercase tracking-tighter text-gray-400">Secure Payment Gateway</span>
+                <ShieldCheck className="w-4 h-4 text-blue-500" />
+            </div>
+
+            <PayPalButtons
+                style={{
+                    layout: "vertical",
+                    shape: "rect",
+                    color: "blue",
+                    height: 45,
+                    label: "pay"
+                }}
+                createOrder={async () => {
+                    const res = await api.post('/payments/paypal/create-order', { usdAmount, currency });
+                    return res.data.id;
+                }}
+                onApprove={async (data: any) => {
+                    try {
+                        toast.loading('Verifying Payment...');
+                        const res = await api.post('/payments/paypal/capture-order', {
+                            orderId: data.orderID,
+                            expectedCoins
+                        });
+                        toast.dismiss();
+                        toast.success(`Successfully added ${res.data.coinsAdded} Coins!`);
+                        onSuccess();
+                    } catch (error: any) {
+                        toast.dismiss();
+                        toast.error(error.response?.data?.message || 'Verification Failed');
+                        onError();
+                    }
+                }}
+                onCancel={() => {
+                    toast.error('Payment Cancelled');
+                    onCancel();
+                }}
+                onError={(err: any) => {
+                    toast.error('Payment Error Occurred');
                     onError();
-                }
-            }}
-            onCancel={() => {
-                toast.error('Payment Cancelled');
-                onCancel();
-            }}
-            onError={(err: any) => {
-                toast.error('Payment Error Occurred');
-                onError();
-            }}
-        />
+                }}
+            />
+
+            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-center gap-2">
+                <div className="flex -space-x-1 opacity-60">
+                    <img src="https://www.paypalobjects.com/webstatic/mktg/logo/AM_mc_vs_dc_ae.jpg" alt="Cards" className="h-4 grayscale" />
+                </div>
+            </div>
+        </div>
     );
 };
 
@@ -112,26 +132,66 @@ export default function WalletPage() {
     }, []);
 
     const handleWithdraw = async () => {
-        const coinsToWithdraw = parseFloat(withdrawAmount);
-        if (!coinsToWithdraw || coinsToWithdraw <= 0) return toast.error('Enter valid amount');
-        if (!withdrawPaypalEmail.trim()) return toast.error('Please enter your receiving email/ID');
+        if (!withdrawAmount || Number(withdrawAmount) <= 0) {
+            toast.error('Enter valid amount');
+            return;
+        }
+        if (Number(withdrawAmount) > wallet?.balance) {
+            toast.error('Insufficient balance');
+            return;
+        }
 
         setWithdrawing(true);
         try {
             await api.post('/wallet/withdraw', {
-                amount: coinsToWithdraw,
-                method: topupMethod === 'PAYPAL' ? 'PAYPAL_PAYOUT' : 'UPI',
-                reference: withdrawPaypalEmail
+                amount: Number(withdrawAmount),
+                paypalEmail: withdrawPaypalEmail
             });
-            toast.success('Withdrawal request submitted! You will receive funds within 24 hours.');
+            toast.success('Withdrawal request submitted!');
             setShowWithdraw(false);
             setWithdrawAmount('');
-            setWithdrawPaypalEmail('');
             loadData();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Withdrawal failed');
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Withdrawal failed');
         } finally {
             setWithdrawing(false);
+        }
+    };
+
+    const handleCashfreePayment = async () => {
+        if (!topupCoins || Number(topupCoins) <= 0) {
+            toast.error('Enter valid amount');
+            return;
+        }
+
+        try {
+            toast.loading('Initializing Cashfree...');
+            const res = await api.post('/payments/create-order', {
+                amount: Number(topupCoins)
+            });
+            toast.dismiss();
+
+            const mode = (process.env.NEXT_PUBLIC_CASHFREE_MODE || "production") as any;
+            console.log(`[CASHFREE] Initializing in ${mode} mode`);
+
+            const cashfree = await load({
+                mode: mode
+            });
+
+            console.log(`[CASHFREE] Opening checkout for session: ${res.data.payment_session_id}`);
+            await cashfree.checkout({
+                paymentSessionId: res.data.payment_session_id,
+                redirectTarget: "_modal"
+            });
+
+            // Note: Verification usually happens via webhook or manual check
+            // We can show a prompt or just let the user close it
+            toast.success('Checkout opened! Coins will be added after verification.');
+            setShowTopup(false);
+            setTopupCoins('');
+        } catch (error: any) {
+            toast.dismiss();
+            toast.error(error.response?.data?.message || 'Cashfree initialization failed');
         }
     };
 
@@ -377,10 +437,11 @@ export default function WalletPage() {
                                                     </div>
                                                 ) : (
                                                     <Button
-                                                        className="w-full h-14 rounded-full font-black text-lg bg-green-500 hover:bg-green-600 text-white shadow-xl shadow-green-500/20"
-                                                        onClick={() => alert('Cashfree integration to be loaded here.')}
+                                                        className="w-full h-14 rounded-full font-black text-lg bg-green-500 hover:bg-green-600 text-white shadow-xl shadow-green-500/20 group overflow-hidden relative"
+                                                        onClick={handleCashfreePayment}
                                                     >
-                                                        Pay via Cashfree (₹{inrEquivalent})
+                                                        <span className="relative z-10">Pay via Cashfree (₹{inrEquivalent})</span>
+                                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
                                                     </Button>
                                                 )}
 
