@@ -128,6 +128,10 @@ export default function MaintenancePage() {
                 clearInterval(timer);
                 setTimerExpired(true);
                 setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
+                // AUTO-REFRESH: Wait 3 seconds then reload the page to check status
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
             } else {
                 setTimeLeft({
                     d: Math.floor(distance / (1000 * 60 * 60 * 24)),

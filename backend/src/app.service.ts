@@ -24,11 +24,33 @@ export class AppService {
       return acc;
     }, {} as Record<string, string>);
 
+    const isMaintenanceMode = configMap['MAINTENANCE_MODE'] === 'true';
+    const endTime = configMap['MAINTENANCE_END_TIME'] || '';
+
+    // AUTO-EXPIRY LOGIC: If currently ON and we have an end time, check if it's passed
+    if (isMaintenanceMode && endTime) {
+      const now = new Date();
+      const end = new Date(endTime);
+      if (now > end) {
+        // Time has passed! Auto-disable maintenance
+        await this.setMaintenanceStatus(false);
+        return {
+          isMaintenanceMode: false,
+          title: configMap['MAINTENANCE_TITLE'] || '',
+          message: configMap['MAINTENANCE_MESSAGE'] || '',
+          endTime: endTime,
+          showTimer: configMap['MAINTENANCE_SHOW_TIMER'] !== 'false',
+          animations: configMap['MAINTENANCE_ANIMATIONS'] !== 'false',
+          colorPrimary: configMap['MAINTENANCE_COLOR_PRIMARY'] || '#00E676',
+        };
+      }
+    }
+
     return {
-      isMaintenanceMode: configMap['MAINTENANCE_MODE'] === 'true',
+      isMaintenanceMode: isMaintenanceMode,
       title: configMap['MAINTENANCE_TITLE'] || '',
       message: configMap['MAINTENANCE_MESSAGE'] || '',
-      endTime: configMap['MAINTENANCE_END_TIME'] || '',
+      endTime: endTime,
       showTimer: configMap['MAINTENANCE_SHOW_TIMER'] !== 'false', // Default true
       animations: configMap['MAINTENANCE_ANIMATIONS'] !== 'false', // Default true
       colorPrimary: configMap['MAINTENANCE_COLOR_PRIMARY'] || '#00E676',
