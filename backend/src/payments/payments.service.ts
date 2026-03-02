@@ -29,12 +29,16 @@ export class PaymentsService {
   }
 
   public getHttpsFrontendUrl(): string {
-    const url = this.configService.get<string>('FRONTEND_URL') || '';
-    // Cashfree requires HTTPS — fallback to production Vercel URL if local/http
-    if (!url || url.startsWith('http://') || url.includes('localhost') || url.includes('127.0.0.1')) {
-      return 'https://protocols-turnaments.vercel.app';
+    const envUrl = this.configService.get<string>('FRONTEND_URL');
+
+    // If it's a production-like URL (not localhost), use it directly
+    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+      return envUrl;
     }
-    return url;
+
+    // Cashfree production requires HTTPS for return URLs.
+    // If we're on localhost, we often have to point it to the live domain for "return" to work in PROD mode.
+    return 'https://protocols-turnaments.vercel.app';
   }
 
   async createOrder(
