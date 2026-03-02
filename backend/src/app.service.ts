@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { NotificationsService } from './notifications/notifications.service';
+import { NotificationsGateway } from './notifications/notifications.gateway';
 
 @Injectable()
 export class AppService {
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private notificationsGateway: NotificationsGateway,
   ) { }
 
   getHello(): string {
@@ -24,42 +26,11 @@ export class AppService {
       return acc;
     }, {} as Record<string, string>);
 
-    const isMaintenanceMode = configMap['MAINTENANCE_MODE'] === 'true';
-    const endTime = configMap['MAINTENANCE_END_TIME'] || '';
-
-    // AUTO-EXPIRY LOGIC (Stable with 60s Grace Period)
-    if (isMaintenanceMode && endTime) {
-      const now = new Date();
-      const end = new Date(endTime);
-
-      if (now > end) {
-        // Find the last update time for MAINTENANCE_MODE
-        const modeConfig = configs.find(c => c.key === 'MAINTENANCE_MODE');
-        const lastUpdate = modeConfig?.updatedAt || new Date();
-        const secondsSinceUpdate = (now.getTime() - lastUpdate.getTime()) / 1000;
-
-        // Only auto-disable if maintenance has been ON for at least 60 seconds
-        if (secondsSinceUpdate > 60) {
-          console.log(`[MAINTENANCE] Auto-expiry triggered. End time was ${endTime}`);
-          await this.setMaintenanceStatus(false);
-          return {
-            isMaintenanceMode: false,
-            title: configMap['MAINTENANCE_TITLE'] || 'SYSTEM UPGRADE',
-            message: configMap['MAINTENANCE_MESSAGE'] || '',
-            endTime: endTime,
-            showTimer: configMap['MAINTENANCE_SHOW_TIMER'] !== 'false',
-            animations: configMap['MAINTENANCE_ANIMATIONS'] !== 'false',
-            colorPrimary: configMap['MAINTENANCE_COLOR_PRIMARY'] || '#00E676',
-          };
-        }
-      }
-    }
-
     return {
-      isMaintenanceMode: isMaintenanceMode,
+      isMaintenanceMode: configMap['MAINTENANCE_MODE'] === 'true',
       title: configMap['MAINTENANCE_TITLE'] || '',
       message: configMap['MAINTENANCE_MESSAGE'] || '',
-      endTime: endTime,
+      endTime: configMap['MAINTENANCE_END_TIME'] || '',
       showTimer: configMap['MAINTENANCE_SHOW_TIMER'] !== 'false', // Default true
       animations: configMap['MAINTENANCE_ANIMATIONS'] !== 'false', // Default true
       colorPrimary: configMap['MAINTENANCE_COLOR_PRIMARY'] || '#00E676',
@@ -80,6 +51,7 @@ export class AppService {
 
     // Notify users if status changed
     if (isOn !== currentlyOn) {
+      this.notificationsGateway.broadcastMaintenanceStatus({ isMaintenanceMode: isOn });
       if (isOn) {
         await this.notificationsService.broadcast(
           'Site Under Maintenance 🛠️',
@@ -128,6 +100,7 @@ export class AppService {
 
     // Notify if status changed
     if (newStatus !== currentlyOn) {
+      this.notificationsGateway.broadcastMaintenanceStatus({ isMaintenanceMode: newStatus });
       if (newStatus) {
         await this.notificationsService.broadcast(
           'Site Under Maintenance 🛠️',
