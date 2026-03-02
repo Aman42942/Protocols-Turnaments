@@ -5,7 +5,6 @@ import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSp
 import { Loader2, ShieldAlert, Clock, Fingerprint, Activity, Zap, Cpu, Gamepad2, Wrench, Shield, Database, Network, Terminal, Moon, Sun } from 'lucide-react';
 import api from '@/lib/api';
 import { useTheme } from 'next-themes';
-import { useRouter } from 'next/navigation';
 
 // PARALLAX SHARD COMPONENT TO AVOID HOOKS IN LOOPS
 const ParallaxShard = ({ dx, dy, i, theme }: { dx: any, dy: any, i: number, theme: string | undefined }) => {
@@ -49,11 +48,8 @@ const ParallaxShard = ({ dx, dy, i, theme }: { dx: any, dy: any, i: number, them
 };
 
 export default function MaintenancePage() {
-    const router = useRouter();
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
-    const [adminClicks, setAdminClicks] = useState(0);
-    const [showGhostEntrance, setShowGhostEntrance] = useState(false);
 
     // Ensure component is mounted for theme detection
     useEffect(() => { setMounted(true); }, []);
@@ -162,20 +158,6 @@ export default function MaintenancePage() {
         return () => clearInterval(interval);
     }, []);
 
-    useEffect(() => {
-        if (adminClicks > 0) {
-            const timer = setTimeout(() => setAdminClicks(0), 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [adminClicks]);
-
-    const handleAdminPortalTrigger = () => {
-        setAdminClicks(prev => {
-            const next = prev + 1;
-            if (next >= 5) setShowGhostEntrance(true);
-            return next;
-        });
-    };
 
     if (loading || !mounted) return <div className="min-h-screen bg-[#050505] flex items-center justify-center"><Loader2 className="w-12 h-12 text-blue-500 animate-spin" /></div>;
 
@@ -410,10 +392,7 @@ export default function MaintenancePage() {
             {/* PERSISTENT HUD OVERLAY (Non-parallax) */}
             <div className={`absolute inset-0 z-20 pointer-events-none transition-opacity duration-700 ${isLight ? 'opacity-60' : 'opacity-40'}`}>
                 {/* Top Left: System Stats */}
-                <div
-                    className="absolute top-12 left-12 font-mono text-[10px] tracking-[0.2em] flex flex-col gap-2 pointer-events-auto cursor-crosshair select-none group/stats"
-                    onClick={handleAdminPortalTrigger}
-                >
+                <div className="absolute top-12 left-12 font-mono text-[10px] tracking-[0.2em] flex flex-col gap-2">
                     <div className="flex items-center gap-3">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         <span className={isLight ? 'text-gray-600' : 'text-white/60'}>SYSTEM STATUS: <span className={isLight ? 'text-gray-900' : 'text-white'}>OPTIMIZING</span></span>
@@ -422,7 +401,7 @@ export default function MaintenancePage() {
                         <Activity className="w-3 h-3" style={{ color: config.colorPrimary }} />
                         <span className={isLight ? 'text-gray-500' : 'text-white/40'}>BANDWIDTH: <span className={isLight ? 'text-gray-800' : 'text-white/80'}>9.4 GB/S</span></span>
                     </div>
-                    <div className={`flex flex-col gap-1 px-2 py-1 border transition-all duration-300 ${isLight ? 'border-black/5 bg-black/[0.02] group-hover/stats:border-black/20' : 'border-white/5 bg-white/[0.02] group-hover/stats:border-white/20'}`}>
+                    <div className={`flex flex-col gap-1 px-2 py-1 border ${isLight ? 'border-black/5 bg-black/[0.02]' : 'border-white/5 bg-white/[0.02]'}`}>
                         <div className="flex items-center gap-3">
                             <Terminal className={`w-3 h-3 ${isLight ? 'text-black/40' : 'text-white/40'}`} />
                             <span className={isLight ? 'text-gray-500' : 'text-white/60'}>LOGS:</span>
@@ -435,20 +414,6 @@ export default function MaintenancePage() {
                             ))}
                         </div>
                     </div>
-
-                    {showGhostEntrance && (
-                        <motion.button
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                router.push('/secure-admin-login');
-                            }}
-                            className="mt-4 px-3 py-1.5 bg-red-600/20 border border-red-500/30 text-red-500 text-[9px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all rounded backdrop-blur-md shadow-[0_0_15px_rgba(239,68,68,0.2)]"
-                        >
-                            Override Terminal Access
-                        </motion.button>
-                    )}
                 </div>
 
                 {/* Bottom Right: Location/Time */}
