@@ -158,6 +158,7 @@ export default function WalletPage() {
         }
     };
 
+    // Cashfree Production Integration - Verified 2026-03-02
     const handleCashfreePayment = async () => {
         if (!topupCoins || Number(topupCoins) <= 0) {
             toast.error('Enter valid amount');
