@@ -33,12 +33,10 @@ export function MaintenanceWatcher() {
                         if (!isMaintenancePage && !isSecureAdminPage && !isAdminRoute) {
                             window.location.href = '/maintenance';
                         }
-                    } else {
-                        // Site is UP! If user is stuck on maintenance page, send them home
-                        if (isMaintenancePage) {
-                            window.location.href = '/';
-                        }
                     }
+                    // REMOVED: isMaintenancePage redirect to '/'
+                    // This was causing a loop with the timer. 
+                    // Let the MaintenancePage handle its own refresh logic.
                 }
             } catch (error) {
                 // Silent fail - don't disrupt user if backend has a hiccup
