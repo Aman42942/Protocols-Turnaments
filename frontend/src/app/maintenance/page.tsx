@@ -129,10 +129,19 @@ export default function MaintenancePage() {
                 if (!timerExpired) {
                     setTimerExpired(true);
                     setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
-                    // AUTO-REFRESH: Wait 5 seconds then reload once
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 5000);
+
+                    // SMART-REFRESH: Poll backend status once timer hits zero
+                    const checkInterval = setInterval(async () => {
+                        try {
+                            const res = await api.get('/maintenance');
+                            if (res.data && res.data.isMaintenanceMode === false) {
+                                clearInterval(checkInterval);
+                                window.location.href = '/';
+                            }
+                        } catch (err) {
+                            // Silent fail - retry next cycle
+                        }
+                    }, 5000); // Check every 5 seconds
                 }
             } else {
                 setTimeLeft({
@@ -145,7 +154,7 @@ export default function MaintenancePage() {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [config.endTime, config.showTimer]);
+    }, [config.endTime, config.showTimer, timerExpired]);
 
     useEffect(() => {
         const lines = [
