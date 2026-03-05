@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
@@ -18,8 +18,8 @@ import { usePayPalScriptReducer, PayPalScriptProvider, PayPalButtons } from '@pa
 import { load } from '@cashfreepayments/cashfree-js';
 
 
-// ---- MAIN WALLET COMPONENT ----
-export default function WalletPage() {
+// ---- INNER WALLET COMPONENT (needs Suspense because of useSearchParams) ----
+function WalletContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const orderIdParam = searchParams.get('order_id');
@@ -444,3 +444,20 @@ export default function WalletPage() {
     );
 }
 
+// ---- DEFAULT EXPORT: wraps in Suspense for Next.js static generation ----
+export default function WalletPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center animate-pulse">
+                        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                    </div>
+                    <p className="text-muted-foreground text-sm font-medium tracking-wider">Loading Wallet...</p>
+                </div>
+            </div>
+        }>
+            <WalletContent />
+        </Suspense>
+    );
+}
