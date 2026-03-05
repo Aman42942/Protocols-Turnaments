@@ -45,7 +45,7 @@ export default function AdminSettingsPage() {
             return;
         }
 
-        const loadSettings = () => {
+        const loadSettings = async () => {
             fetchUpiDetails();
 
             // Load other settings from localStorage
@@ -61,7 +61,7 @@ export default function AdminSettingsPage() {
         };
 
         loadSettings();
-    }, []); // Removed upiDetails.upiId to avoid Infinite loop, and categorized correctly
+    }, []);
 
     const fetchUpiDetails = async () => {
         try {
@@ -74,7 +74,6 @@ export default function AdminSettingsPage() {
         setLoading(true);
 
         try {
-            // 2. Save other settings to localStorage
             const settings = {
                 siteName,
                 maxTeamSize,

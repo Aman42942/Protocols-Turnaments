@@ -36,9 +36,14 @@ export class PaymentsService {
       return envUrl;
     }
 
-    // Cashfree production requires HTTPS for return URLs.
-    // If we're on localhost, we often have to point it to the live domain for "return" to work in PROD mode.
-    return 'https://protocols-turnaments.vercel.app';
+    // Cashfree PRODUCTION mode strictly requires HTTPS for return URLs.
+    // If we are in Production mode, we MUST use the live domain (Vercel).
+    // If we are in Sandbox/Local mode, we can use localhost.
+    if (this.isProduction) {
+      return 'https://protocols-turnaments.vercel.app';
+    }
+
+    return 'http://localhost:3000';
   }
 
   async createOrder(
@@ -75,7 +80,7 @@ export class PaymentsService {
         customer_email: userEmail || 'gamer@protocol.app',
       },
       order_meta: {
-        return_url: returnUrl || `${this.getHttpsFrontendUrl()}/tournaments?order_id={order_id}`,
+        return_url: returnUrl || `${this.getHttpsFrontendUrl()}/dashboard/wallet?order_id={order_id}`,
       },
     };
 

@@ -7,6 +7,7 @@ import { PaymentsModule } from '../payments/payments.module';
 import { WalletModule } from '../wallet/wallet.module';
 import { AuthModule } from '../auth/auth.module';
 import { OrganizerModule } from '../organizer/organizer.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -15,9 +16,10 @@ import { OrganizerModule } from '../organizer/organizer.module';
     WalletModule,
     AuthModule,
     OrganizerModule,
+    NotificationsModule,
   ],
   controllers: [OperationsController],
   providers: [OperationsService, OperationsGateway],
   exports: [OperationsService],
 })
-export class AdminOperationsModule {}
+export class AdminOperationsModule { }

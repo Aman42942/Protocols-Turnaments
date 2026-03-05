@@ -8,12 +8,13 @@ import { FraudService } from './fraud.service';
 import { PaypalService } from './paypal.service';
 import { ConfigModule } from '@nestjs/config';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CashfreePayoutsService } from './cashfree-payouts.service';
 
 @Module({
   imports: [ConfigModule, WalletModule, NotificationsModule, PrismaModule],
   controllers: [PaymentsController],
-  providers: [PaymentsService, PayoutService, FraudService, PaypalService],
-  exports: [PaymentsService, PayoutService, FraudService, PaypalService],
+  providers: [PaymentsService, PayoutService, FraudService, PaypalService, CashfreePayoutsService],
+  exports: [PaymentsService, PayoutService, FraudService, PaypalService, CashfreePayoutsService],
 })
 export class PaymentsModule { }
 

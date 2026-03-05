@@ -306,6 +306,12 @@ export class TournamentsService {
         return this.prisma.$transaction(async (tx) => {
           const wallet = await tx.wallet.findUnique({ where: { userId } });
 
+          // Deduct from User Wallet (Since it was credited in the controller)
+          await tx.wallet.update({
+            where: { userId },
+            data: { balance: { decrement: tournament.entryFeePerPerson } },
+          });
+
           // Record Transaction (Completed since it's already verified)
           await tx.transaction.create({
             data: {

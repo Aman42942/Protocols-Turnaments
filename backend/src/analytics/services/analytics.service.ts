@@ -79,62 +79,56 @@ export class AnalyticsService {
     });
     const totalINRDeposited = inrAgg._sum.amount || 0;
 
-    // 2. Total USD Deposited
-    const usdAgg = await this.prisma.transaction.aggregate({
-      where: { type: 'DEPOSIT', status: 'COMPLETED', currency: 'USD' },
-      _sum: { amount: true },
-    });
-    // In our system, the "amount" field in transaction for a deposit stores the FINAL COINS.
-    // Wait, let's fix this logic: the deposit creates a transaction where `amount` = Coins added, 
-    // but `currency` is USD and `conversionRate` is rate. 
-    // True USD deposited = Coins / ConversionRate.
+    // 2. Total USD/GBP Deposited (Calculated from conversion rates)
     const usdTransactions = await this.prisma.transaction.findMany({
       where: { type: 'DEPOSIT', status: 'COMPLETED', currency: 'USD' },
       select: { amount: true, conversionRate: true }
     });
-
     let totalUSDPaid = 0;
-    usdTransactions.forEach(tx => {
-      if (tx.conversionRate > 0) {
-        totalUSDPaid += (tx.amount / tx.conversionRate);
-      }
-    });
+    usdTransactions.forEach(tx => { if (tx.conversionRate > 0) totalUSDPaid += (tx.amount / tx.conversionRate); });
 
-    // 2.5 Total GBP Deposited
     const gbpTransactions = await this.prisma.transaction.findMany({
       where: { type: 'DEPOSIT', status: 'COMPLETED', currency: 'GBP' },
       select: { amount: true, conversionRate: true }
     });
-
     let totalGBPPaid = 0;
-    gbpTransactions.forEach(tx => {
-      if (tx.conversionRate > 0) {
-        totalGBPPaid += (tx.amount / tx.conversionRate);
-      }
-    });
+    gbpTransactions.forEach(tx => { if (tx.conversionRate > 0) totalGBPPaid += (tx.amount / tx.conversionRate); });
 
-    // 3. Total Coins Minted (All deposits regardless of currency)
+    // 3. Coins Minted/Burned
     const coinsMintedAgg = await this.prisma.transaction.aggregate({
       where: { type: 'DEPOSIT', status: 'COMPLETED' },
       _sum: { amount: true },
     });
     const totalCoinsMinted = coinsMintedAgg._sum.amount || 0;
 
-    // 4. Total Coins Wasted/Spent (Entry Fees or Withdrawals)
     const coinsSpentAgg = await this.prisma.transaction.aggregate({
       where: { type: { in: ['ENTRY_FEE', 'WITHDRAWAL'] }, status: 'COMPLETED' },
       _sum: { amount: true },
     });
     const totalCoinsBurned = coinsSpentAgg._sum.amount || 0;
 
-    // 5. Total Coins Currently In Wallets (Economy Size)
-    // Leak Detection: Minted - Burned should exactly equal current wallet balances
+    // 4. Pending Withdrawals (Liability)
+    const pendingWithdrawalsAgg = await this.prisma.transaction.aggregate({
+      where: { type: 'WITHDRAWAL', status: 'PENDING' },
+      _sum: { amount: true },
+    });
+    const pendingWithdrawalCoins = pendingWithdrawalsAgg._sum.amount || 0;
+
+    // 5. Total Coins In Wallets
     const walletAgg = await this.prisma.wallet.aggregate({
       _sum: { balance: true, frozenBalance: true },
     });
     const totalCoinsInWallets = (walletAgg._sum.balance || 0) + (walletAgg._sum.frozenBalance || 0);
 
     const leakDelta = totalCoinsMinted - totalCoinsBurned - totalCoinsInWallets;
+
+    // 6. Recent Withdrawals for Management
+    const recentWithdrawals = await this.prisma.transaction.findMany({
+      where: { type: 'WITHDRAWAL' },
+      include: { wallet: { include: { user: { select: { name: true, email: true, avatar: true } } } } },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    });
 
     return {
       totalINRDeposited,
@@ -143,6 +137,20 @@ export class AnalyticsService {
       totalCoinsMinted,
       totalCoinsBurned,
       totalCoinsInWallets,
+      pendingWithdrawalCoins,
+      recentWithdrawals: recentWithdrawals.map(tx => ({
+        id: tx.id,
+        userName: tx.wallet.user.name,
+        userEmail: tx.wallet.user.email,
+        userAvatar: tx.wallet.user.avatar,
+        amount: tx.amount,
+        currency: tx.currency,
+        status: tx.status,
+        method: tx.method,
+        createdAt: tx.createdAt,
+        metadata: tx.metadata ? JSON.parse(tx.metadata) : null,
+        realValue: (tx.amount / tx.conversionRate).toFixed(2)
+      })),
       leakSystem: {
         delta: leakDelta,
         status: Math.abs(leakDelta) < 1 ? 'SECURE' : 'LEAK_DETECTED'

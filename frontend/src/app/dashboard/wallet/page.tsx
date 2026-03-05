@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -17,108 +17,60 @@ import toast from 'react-hot-toast';
 import { usePayPalScriptReducer, PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { load } from '@cashfreepayments/cashfree-js';
 
-// ---- SUBCOMPONENTS FOR PAYPAL ----
-const PayPalCheckout = ({ usdAmount, expectedCoins, onSuccess, onCancel, onError, currency = 'USD' }: any) => {
-    const [{ isPending }] = usePayPalScriptReducer();
-
-    if (isPending) return <div className="flex justify-center p-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
-
-    return (
-        <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 mb-2 overflow-hidden transition-all hover:shadow-2xl">
-            <div className="flex items-center justify-between mb-4 px-1">
-                <span className="text-[10px] font-black uppercase tracking-tighter text-gray-400">Secure Payment Gateway</span>
-                <ShieldCheck className="w-4 h-4 text-blue-500" />
-            </div>
-
-            <PayPalButtons
-                style={{
-                    layout: "vertical",
-                    shape: "rect",
-                    color: "blue",
-                    height: 45,
-                    label: "pay"
-                }}
-                createOrder={async () => {
-                    const res = await api.post('/payments/paypal/create-order', { usdAmount, currency });
-                    return res.data.id;
-                }}
-                onApprove={async (data: any) => {
-                    try {
-                        toast.loading('Verifying Payment...');
-                        const res = await api.post('/payments/paypal/capture-order', {
-                            orderId: data.orderID,
-                            expectedCoins
-                        });
-                        toast.dismiss();
-                        toast.success(`Successfully added ${res.data.coinsAdded} Coins!`);
-                        onSuccess();
-                    } catch (error: any) {
-                        toast.dismiss();
-                        toast.error(error.response?.data?.message || 'Verification Failed');
-                        onError();
-                    }
-                }}
-                onCancel={() => {
-                    toast.error('Payment Cancelled');
-                    onCancel();
-                }}
-                onError={(err: any) => {
-                    toast.error('Payment Error Occurred');
-                    onError();
-                }}
-            />
-
-            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-center gap-2">
-                <div className="flex -space-x-1 opacity-60">
-                    <img src="https://www.paypalobjects.com/webstatic/mktg/logo/AM_mc_vs_dc_ae.jpg" alt="Cards" className="h-4 grayscale" />
-                </div>
-            </div>
-        </div>
-    );
-};
 
 // ---- MAIN WALLET COMPONENT ----
 export default function WalletPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const orderIdParam = searchParams.get('order_id');
     const [wallet, setWallet] = useState<any>(null);
     const [ledger, setLedger] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    // Topup State
-    const [showTopup, setShowTopup] = useState(false);
-    const [topupMethod, setTopupMethod] = useState<'UPI' | 'PAYPAL' | 'PAYPAL_GBP'>('UPI');
-    const [topupCoins, setTopupCoins] = useState('');
-    const [exchangeRate, setExchangeRate] = useState(85); // fallback usd
-    const [gbpExchangeRate, setGbpExchangeRate] = useState(110); // fallback gbp
-    const [paypalClientId, setPaypalClientId] = useState('');
+    // Per-currency withdrawal fees (%) fetched from CMS
+    const [fees, setFees] = useState({ INR: 0, USD: 0, GBP: 0 });
+
 
     // Withdraw state
     const [showWithdraw, setShowWithdraw] = useState(false);
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [withdrawing, setWithdrawing] = useState(false);
+    const [withdrawCurrency, setWithdrawCurrency] = useState('INR');
     const [withdrawPaypalEmail, setWithdrawPaypalEmail] = useState('');
+    const [withdrawUpiId, setWithdrawUpiId] = useState('');
+    const [rates, setRates] = useState({ USD: 85, GBP: 110 });
+
 
     const loadData = async () => {
         try {
-            const [walletRes, ledgerRes, rateRes, gbpRes] = await Promise.allSettled([
+            const [walletRes, ledgerRes, rateRes, gbpRes, feeInrRes, feeUsdRes, feeGbpRes] = await Promise.allSettled([
                 api.get('/wallet'),
                 api.get('/analytics/user-ledger'),
-                api.get(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/PAYPAL_EXCHANGE_RATE`),
-                api.get(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/GBP_TO_COIN_RATE`),
+                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/PAYPAL_EXCHANGE_RATE`),
+                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/GBP_TO_COIN_RATE`),
+                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/WITHDRAWAL_FEE_INR`),
+                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/WITHDRAWAL_FEE_USD`),
+                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/WITHDRAWAL_FEE_GBP`),
             ]);
 
             if (walletRes.status === 'fulfilled') setWallet(walletRes.value.data);
             if (ledgerRes.status === 'fulfilled') setLedger(ledgerRes.value.data);
-            if (rateRes.status === 'fulfilled') {
-                const rate = Number(rateRes.value.data?.value);
-                if (!isNaN(rate) && rate > 0) setExchangeRate(rate);
-            }
-            if (gbpRes.status === 'fulfilled') {
-                const rate = Number(gbpRes.value.data?.value);
-                if (!isNaN(rate) && rate > 0) setGbpExchangeRate(rate);
-            }
 
-            setPaypalClientId(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
+            const newRates = { ...rates };
+            if (rateRes.status === 'fulfilled' && rateRes.value.data?.value) {
+                newRates.USD = Number(rateRes.value.data.value);
+            }
+            if (gbpRes.status === 'fulfilled' && gbpRes.value.data?.value) {
+                newRates.GBP = Number(gbpRes.value.data.value);
+            }
+            setRates(newRates);
+
+            // Load fees
+            setFees({
+                INR: feeInrRes.status === 'fulfilled' ? Number(feeInrRes.value.data?.value || 0) : 0,
+                USD: feeUsdRes.status === 'fulfilled' ? Number(feeUsdRes.value.data?.value || 0) : 0,
+                GBP: feeGbpRes.status === 'fulfilled' ? Number(feeGbpRes.value.data?.value || 0) : 0,
+            });
 
         } catch (err) {
             console.error('Failed to load wallet data:', err);
@@ -131,6 +83,7 @@ export default function WalletPage() {
         loadData();
     }, []);
 
+
     const handleWithdraw = async () => {
         if (!withdrawAmount || Number(withdrawAmount) <= 0) {
             toast.error('Enter valid amount');
@@ -141,11 +94,22 @@ export default function WalletPage() {
             return;
         }
 
+        if (withdrawCurrency === 'INR' && !withdrawUpiId) {
+            toast.error('Enter UPI ID');
+            return;
+        }
+        if ((withdrawCurrency === 'USD' || withdrawCurrency === 'GBP') && !withdrawPaypalEmail) {
+            toast.error('Enter PayPal Email');
+            return;
+        }
+
         setWithdrawing(true);
         try {
             await api.post('/wallet/withdraw', {
                 amount: Number(withdrawAmount),
-                paypalEmail: withdrawPaypalEmail
+                currency: withdrawCurrency,
+                paypalEmail: (withdrawCurrency === 'USD' || withdrawCurrency === 'GBP') ? withdrawPaypalEmail : undefined,
+                upiId: withdrawCurrency === 'INR' ? withdrawUpiId : undefined
             });
             toast.success('Withdrawal request submitted!');
             setShowWithdraw(false);
@@ -158,43 +122,7 @@ export default function WalletPage() {
         }
     };
 
-    // Cashfree Production Integration - Verified 2026-03-02
-    const handleCashfreePayment = async () => {
-        if (!topupCoins || Number(topupCoins) <= 0) {
-            toast.error('Enter valid amount');
-            return;
-        }
 
-        try {
-            toast.loading('Initializing Cashfree...');
-            const res = await api.post('/payments/create-order', {
-                amount: Number(topupCoins)
-            });
-            toast.dismiss();
-
-            const mode = (process.env.NEXT_PUBLIC_CASHFREE_MODE || "production") as any;
-            console.log(`[CASHFREE] Initializing in ${mode} mode`);
-
-            const cashfree = await load({
-                mode: mode
-            });
-
-            console.log(`[CASHFREE] Opening checkout for session: ${res.data.payment_session_id}`);
-            await cashfree.checkout({
-                paymentSessionId: res.data.payment_session_id,
-                redirectTarget: "_modal"
-            });
-
-            // Note: Verification usually happens via webhook or manual check
-            // We can show a prompt or just let the user close it
-            toast.success('Checkout opened! Coins will be added after verification.');
-            setShowTopup(false);
-            setTopupCoins('');
-        } catch (error: any) {
-            toast.dismiss();
-            toast.error(error.response?.data?.message || 'Cashfree initialization failed');
-        }
-    };
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -230,10 +158,6 @@ export default function WalletPage() {
         );
     }
 
-    const requestedCoins = parseFloat(topupCoins) || 0;
-    const usdEquivalent = (requestedCoins / exchangeRate).toFixed(2);
-    const gbpEquivalent = (requestedCoins / gbpExchangeRate).toFixed(2);
-    const inrEquivalent = requestedCoins; // 1 Coin = 1 INR basically
 
     return (
         <div className="min-h-screen bg-background">
@@ -248,7 +172,7 @@ export default function WalletPage() {
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <Coins className="h-5 w-5 opacity-90 text-yellow-200" />
-                                <span className="text-sm font-bold tracking-wider opacity-90 text-yellow-100">VIRTUAL COINS BALANCE</span>
+                                <span className="text-sm font-bold tracking-wider opacity-90 text-yellow-100">WINNINGS & REWARDS BALANCE</span>
                             </div>
                             <div className="flex items-baseline gap-1 mb-2">
                                 <span className="text-6xl font-black tracking-tighter drop-shadow-sm">
@@ -256,26 +180,18 @@ export default function WalletPage() {
                                 </span>
                                 <span className="text-xl font-bold opacity-80">.{(wallet?.balance % 1).toFixed(2).substring(2)}</span>
                             </div>
-                            <p className="text-sm text-yellow-100 font-medium">1 Coin ≈ ₹1 INR ≈ ${(1 / exchangeRate).toFixed(3)} USD</p>
+                            <p className="text-sm text-yellow-100 font-medium">Earn coins by winning tournaments. Redeem them for real-world rewards.</p>
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-3 min-w-[280px]">
                             <Button
                                 size="lg"
-                                className="bg-white text-yellow-600 hover:bg-white/90 font-black tracking-wide shadow-xl flex-1 items-center gap-2"
-                                onClick={() => { setShowTopup(true); setShowWithdraw(false); }}
-                            >
-                                <ArrowDownLeft className="h-5 w-5" />
-                                TOP UP COINS
-                            </Button>
-                            <Button
-                                size="lg"
                                 variant="outline"
-                                className="bg-black/20 border-white/20 text-white hover:bg-black/40 font-bold tracking-wide flex-1 items-center gap-2"
-                                onClick={() => { setShowWithdraw(true); setShowTopup(false); }}
+                                className="bg-white/10 hover:bg-white/20 border-white/30 text-white font-black tracking-wide min-w-[200px] h-14 rounded-2xl items-center gap-3 backdrop-blur-sm transition-all"
+                                onClick={() => setShowWithdraw(true)}
                             >
-                                <ArrowUpRight className="h-5 w-5" />
-                                WITHDRAW
+                                <ArrowUpRight className="h-6 w-6" />
+                                WITHDRAW WINNINGS
                             </Button>
                         </div>
                     </div>
@@ -312,150 +228,143 @@ export default function WalletPage() {
                     </div>
                 </div>
 
-                {/* ===== TOPUP MODAL/PANEL ===== */}
+
+                {/* ===== WITHDRAWAL MODAL ===== */}
                 <AnimatePresence>
-                    {showTopup && (
+                    {showWithdraw && (
                         <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="overflow-hidden"
+                            className="bg-card border border-border rounded-3xl overflow-hidden shadow-2xl relative z-0 mb-8"
                         >
-                            <Card className="border-primary/20 shadow-2xl overflow-hidden bg-card relative z-0">
-                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-primary to-green-500" />
-                                <CardHeader className="bg-muted/30 pb-4">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <CardTitle className="text-2xl font-black flex items-center gap-2">
-                                                <Coins className="h-6 w-6 text-yellow-500" />
-                                                Purchase Coins
-                                            </CardTitle>
-                                            <CardDescription className="font-medium mt-1">Select your preferred payment method.</CardDescription>
-                                        </div>
-                                        <Button variant="ghost" size="sm" className="rounded-full bg-muted shadow-sm hover:bg-muted/80" onClick={() => setShowTopup(false)}>✕</Button>
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-yellow-500" />
+                            <CardHeader className="pb-4">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <CardTitle className="text-2xl font-black flex items-center gap-2">
+                                            <Banknote className="h-6 w-6 text-orange-500" />
+                                            Withdraw Winnings
+                                        </CardTitle>
+                                        <CardDescription className="font-medium mt-1">Transfer your prize coins to your real-world account.</CardDescription>
                                     </div>
-                                </CardHeader>
-                                <CardContent className="p-6">
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setShowWithdraw(false)}>✕</Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-6">
+                                        {/* Currency Selection */}
+                                        <div>
+                                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Choose Currency</label>
+                                            <div className="flex gap-2">
+                                                {['INR', 'USD', 'GBP'].map((curr) => (
+                                                    <button
+                                                        key={curr}
+                                                        onClick={() => setWithdrawCurrency(curr)}
+                                                        className={`flex-1 flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all ${withdrawCurrency === curr ? 'border-orange-500 bg-orange-500/10' : 'border-border bg-muted/30 hover:bg-muted'}`}
+                                                    >
+                                                        <span className={`font-black text-sm ${withdrawCurrency === curr ? 'text-orange-500' : 'text-muted-foreground'}`}>{curr}</span>
+                                                        <span className="text-[10px] text-muted-foreground mt-0.5">
+                                                            {curr === 'INR' ? 'UPI' : 'PayPal'}
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
 
-                                        {/* LEFT COMPONENT */}
-                                        <div className="space-y-6">
-                                            {/* Topup Amount Input */}
+                                        <div>
+                                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Amount to Withdraw (Coins)</label>
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500"><Coins className="w-5 h-5" /></span>
+                                                <Input
+                                                    type="number"
+                                                    placeholder="0"
+                                                    value={withdrawAmount}
+                                                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                                                    className="text-2xl font-black pl-12 h-14 bg-muted/50 border-border/50"
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase">Available: {wallet?.balance?.toLocaleString()} Coins</p>
+                                        </div>
+
+                                        {withdrawCurrency === 'INR' ? (
                                             <div>
-                                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Amount of Coins to Buy</label>
+                                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">UPI ID</label>
                                                 <div className="relative">
-                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-500"><Coins className="w-6 h-6" /></span>
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"><IndianRupee className="w-5 h-5" /></span>
                                                     <Input
-                                                        type="number"
-                                                        placeholder="e.g. 500"
-                                                        value={topupCoins}
-                                                        onChange={(e) => setTopupCoins(e.target.value)}
-                                                        className="text-3xl font-black pl-14 h-16 bg-muted/50 border-border/50 focus:border-primary/50"
-                                                        min={1}
+                                                        placeholder="username@bank"
+                                                        value={withdrawUpiId}
+                                                        onChange={(e) => setWithdrawUpiId(e.target.value)}
+                                                        className="pl-12 h-14 bg-muted/50 border-border/50 font-medium"
                                                     />
                                                 </div>
                                             </div>
-
-                                            {/* Gateway Selection */}
+                                        ) : (
                                             <div>
-                                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Payment Gateway (Global)</label>
-                                                <div className="flex gap-3">
-                                                    <button
-                                                        onClick={() => setTopupMethod('UPI')}
-                                                        className={`flex-1 flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all ${topupMethod === 'UPI' ? 'border-green-500 bg-green-500/10' : 'border-border bg-muted/30 hover:bg-muted'}`}
-                                                    >
-                                                        <IndianRupee className={`w-8 h-8 mb-2 ${topupMethod === 'UPI' ? 'text-green-500' : 'text-muted-foreground'}`} />
-                                                        <span className={`font-bold text-sm ${topupMethod === 'UPI' ? 'text-green-500' : 'text-muted-foreground'}`}>India (INR)</span>
-                                                        <span className="text-[10px] text-muted-foreground mt-1 text-center">UPI / Cards / NetBanking</span>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => setTopupMethod('PAYPAL')}
-                                                        className={`flex-1 flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all ${topupMethod === 'PAYPAL' ? 'border-blue-500 bg-blue-500/10' : 'border-border bg-muted/30 hover:bg-muted'}`}
-                                                    >
-                                                        <Globe className={`w-8 h-8 mb-2 ${topupMethod === 'PAYPAL' ? 'text-blue-500' : 'text-muted-foreground'}`} />
-                                                        <span className={`font-bold text-sm ${topupMethod === 'PAYPAL' ? 'text-blue-500' : 'text-muted-foreground'}`}>International (USD)</span>
-                                                        <span className="text-[10px] text-muted-foreground mt-1 text-center">PayPal / Credit Card</span>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => setTopupMethod('PAYPAL_GBP')}
-                                                        className={`flex-1 flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all ${topupMethod === 'PAYPAL_GBP' ? 'border-purple-500 bg-purple-500/10' : 'border-border bg-muted/30 hover:bg-muted'}`}
-                                                    >
-                                                        <span className={`text-4xl font-serif mb-2 leading-none ${topupMethod === 'PAYPAL_GBP' ? 'text-purple-500' : 'text-muted-foreground'}`}>£</span>
-                                                        <span className={`font-bold text-sm ${topupMethod === 'PAYPAL_GBP' ? 'text-purple-500' : 'text-muted-foreground'}`}>UK (GBP)</span>
-                                                        <span className="text-[10px] text-muted-foreground mt-1 text-center">PayPal / Credit Card</span>
-                                                    </button>
+                                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">PayPal Email Address</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"><Globe className="w-5 h-5" /></span>
+                                                    <Input
+                                                        type="email"
+                                                        placeholder="your-paypal@email.com"
+                                                        value={withdrawPaypalEmail}
+                                                        onChange={(e) => setWithdrawPaypalEmail(e.target.value)}
+                                                        className="pl-12 h-14 bg-muted/50 border-border/50 font-medium"
+                                                    />
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        {/* RIGHT COMPONENT: SUMMARY & CHECKOUT */}
-                                        <div className="bg-muted/30 rounded-3xl p-6 border border-border/50 flex flex-col justify-between">
-                                            <div>
-                                                <h3 className="text-sm font-bold text-foreground border-b border-border/50 pb-3 mb-4">Order Summary</h3>
-
-                                                <div className="flex justify-between items-center mb-3">
-                                                    <span className="text-muted-foreground font-medium">Coins</span>
-                                                    <span className="font-black text-lg">{requestedCoins.toLocaleString()}</span>
-                                                </div>
-
-                                                <div className="flex justify-between items-center mb-6">
-                                                    <span className="text-muted-foreground font-medium">Exchange Rate</span>
-                                                    <span className="font-bold text-sm border border-border px-2 py-1 rounded-lg">
-                                                        {topupMethod === 'PAYPAL' ? `$1 = ${exchangeRate} Coins` : topupMethod === 'PAYPAL_GBP' ? `£1 = ${gbpExchangeRate} Coins` : `₹1 = 1 Coin`}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                <div className="bg-card border border-border rounded-xl p-4 flex justify-between items-center shadow-inner">
-                                                    <span className="text-sm font-bold tracking-wider uppercase text-muted-foreground">Total to Pay</span>
-                                                    <span className={`text-2xl font-black ${topupMethod === 'PAYPAL' ? 'text-blue-500' : topupMethod === 'PAYPAL_GBP' ? 'text-purple-500' : 'text-green-500'}`}>
-                                                        {topupMethod === 'PAYPAL' ? `$${usdEquivalent}` : topupMethod === 'PAYPAL_GBP' ? `£${gbpEquivalent}` : `₹${inrEquivalent.toLocaleString()}`}
-                                                    </span>
-                                                </div>
-
-                                                {/* CHECKOUT BUTTONS */}
-                                                {!requestedCoins || requestedCoins <= 0 ? (
-                                                    <Button disabled className="w-full h-14 rounded-full font-bold opacity-50 bg-muted text-muted-foreground">Enter Amount to Buy</Button>
-                                                ) : (topupMethod === 'PAYPAL' || topupMethod === 'PAYPAL_GBP') ? (
-                                                    <div className="min-h-[55px]">
-                                                        {paypalClientId ? (
-                                                            <PayPalScriptProvider options={{ "clientId": paypalClientId, currency: topupMethod === 'PAYPAL_GBP' ? "GBP" : "USD", intent: "capture" }}>
-                                                                <PayPalCheckout
-                                                                    usdAmount={topupMethod === 'PAYPAL_GBP' ? gbpEquivalent : usdEquivalent}
-                                                                    currency={topupMethod === 'PAYPAL_GBP' ? "GBP" : "USD"}
-                                                                    expectedCoins={requestedCoins}
-                                                                    onSuccess={() => { setShowTopup(false); setTopupCoins(''); loadData(); }}
-                                                                    onError={() => { }}
-                                                                    onCancel={() => { }}
-                                                                />
-                                                            </PayPalScriptProvider>
-                                                        ) : (
-                                                            <div className="bg-red-500/10 text-red-500 p-3 rounded-xl text-center text-sm font-medium">PayPal configuration missing on server.</div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <Button
-                                                        className="w-full h-14 rounded-full font-black text-lg bg-green-500 hover:bg-green-600 text-white shadow-xl shadow-green-500/20 group overflow-hidden relative"
-                                                        onClick={handleCashfreePayment}
-                                                    >
-                                                        <span className="relative z-10">Pay via Cashfree (₹{inrEquivalent})</span>
-                                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
-                                                    </Button>
-                                                )}
-
-                                                {(topupMethod === 'PAYPAL' || topupMethod === 'PAYPAL_GBP') && (
-                                                    <p className="text-[10px] text-center text-muted-foreground flex items-center justify-center gap-1">
-                                                        <ShieldCheck className="w-3 h-3" /> Payments are securely processed by PayPal.
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
-                                </CardContent>
-                            </Card>
+
+                                    <div className="bg-orange-500/5 rounded-3xl p-6 border border-orange-500/10 flex flex-col justify-between">
+                                        <div className="space-y-4">
+                                            <div className="flex items-start gap-3">
+                                                <Info className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                                                <div className="text-xs text-muted-foreground leading-relaxed">
+                                                    <p>Withdrawals are processed within <span className="text-orange-600 font-bold">24-48 hours</span>.</p>
+                                                    <p className="mt-1">Rate: <span className="font-bold text-foreground">1 {withdrawCurrency} = {withdrawCurrency === 'INR' ? '1' : withdrawCurrency === 'USD' ? rates.USD : rates.GBP} Coins</span></p>
+                                                </div>
+                                            </div>
+                                            <div className="p-4 bg-orange-500/10 rounded-2xl border border-orange-500/20">
+                                                {/* Fee row */}
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-xs font-bold text-orange-700">Service Fee ({fees[withdrawCurrency as keyof typeof fees]}%)</span>
+                                                    <span className="text-xs font-bold text-orange-700">
+                                                        {fees[withdrawCurrency as keyof typeof fees] === 0
+                                                            ? '₹0 (FREE)'
+                                                            : `${((Number(withdrawAmount) || 0) * fees[withdrawCurrency as keyof typeof fees] / 100).toFixed(2)} Coins`
+                                                        }
+                                                    </span>
+                                                </div>
+                                                {/* Estimated value row */}
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-xs font-bold text-orange-700">Estimated Value (After Fee)</span>
+                                                    <span className="text-sm font-black text-orange-800">
+                                                        ≈ {withdrawCurrency === 'USD' ? '$' : withdrawCurrency === 'GBP' ? '£' : '₹'}
+                                                        {(() => {
+                                                            const amt = Number(withdrawAmount) || 0;
+                                                            const feePercent = fees[withdrawCurrency as keyof typeof fees];
+                                                            const coinsAfterFee = amt - (amt * feePercent / 100);
+                                                            const rate = withdrawCurrency === 'INR' ? 1 : withdrawCurrency === 'USD' ? rates.USD : rates.GBP;
+                                                            return (coinsAfterFee / rate).toFixed(2);
+                                                        })()}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            className="w-full h-14 rounded-2xl font-black text-lg bg-orange-500 hover:bg-orange-600 text-white shadow-xl shadow-orange-500/20 mt-6"
+                                            onClick={handleWithdraw}
+                                            disabled={withdrawing || !withdrawAmount || (withdrawCurrency === 'INR' ? !withdrawUpiId : !withdrawPaypalEmail)}
+                                        >
+                                            {withdrawing ? <Loader2 className="h-5 w-5 animate-spin" /> : "Request Withdrawal"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -467,10 +376,27 @@ export default function WalletPage() {
                             <div>
                                 <CardTitle className="text-xl flex items-center gap-2 font-black">
                                     <History className="h-5 w-5 text-primary" />
-                                    Coin Ledger
+                                    Transaction Ledger
                                 </CardTitle>
-                                <CardDescription className="font-medium mt-1">Detailed history of your virtual currency.</CardDescription>
+                                <CardDescription className="font-medium mt-1 leading-none">
+                                    A detailed history of your tournament entries and prize winnings.
+                                </CardDescription>
                             </div>
+
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={loading}
+                                onClick={async () => {
+                                    setLoading(true);
+                                    await loadData();
+                                    toast.success('Ledger Refreshed');
+                                }}
+                                className="bg-muted shadow-sm hover:bg-muted/80 border-border font-bold h-9"
+                            >
+                                <History className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                                {loading ? 'Refreshing...' : 'Refresh History'}
+                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">

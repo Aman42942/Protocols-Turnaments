@@ -64,12 +64,24 @@ export class WalletController {
   @Post('withdraw')
   async withdraw(
     @Request() req,
-    @Body() body: { amount: number; method?: string },
+    @Body() body: {
+      amount: number;
+      method?: string;
+      currency?: string;
+      paypalEmail?: string;
+      upiId?: string;
+    },
   ) {
+    const metadataObj: any = {};
+    if (body.paypalEmail) metadataObj.paypalEmail = body.paypalEmail;
+    if (body.upiId) metadataObj.upiId = body.upiId;
+
     return this.walletService.withdraw(
       req.user.userId,
       body.amount,
-      body.method || 'BANK_TRANSFER',
+      body.currency || 'INR',
+      body.method || (body.currency === 'INR' ? 'UPI' : 'PAYPAL'),
+      Object.keys(metadataObj).length > 0 ? JSON.stringify(metadataObj) : undefined,
     );
   }
 

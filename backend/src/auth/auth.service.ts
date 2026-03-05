@@ -503,6 +503,29 @@ export class AuthService {
     return { ...tokens, user: userWithoutPassword };
   }
 
+  /**
+   * Reusable TOTP verification (No side effects)
+   */
+  async verifyTOTP(userId: string, code: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
+      return false;
+    }
+
+    const totp = new OTPAuth.TOTP({
+      issuer: 'Protocal Tournament',
+      label: user.email,
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(user.twoFactorSecret),
+    });
+
+    const delta = totp.validate({ token: code, window: 1 });
+    return delta !== null;
+  }
+
+
   async disable2FA(userId: string, code: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new BadRequestException('User not found');

@@ -466,8 +466,21 @@ export class WalletService {
     return { wallet: updatedWallet, transaction };
   }
 
-  async withdraw(userId: string, amount: number, method: string) {
+  async withdraw(userId: string, amount: number, targetCurrency: string, method: string, metadata?: string) {
     if (amount <= 0) throw new BadRequestException('Amount must be positive');
+
+    // 1. Fetch Conversion Rate if needed
+    let conversionRate = 1.0;
+    if (targetCurrency === 'USD') {
+      const config = await this.prisma.systemConfig.findUnique({ where: { key: 'PAYPAL_EXCHANGE_RATE' } });
+      conversionRate = Number(config?.value) || 85.0;
+    } else if (targetCurrency === 'GBP') {
+      const config = await this.prisma.systemConfig.findUnique({ where: { key: 'GBP_TO_COIN_RATE' } });
+      conversionRate = Number(config?.value) || 110.0;
+    }
+
+    const realWorldValue = (amount / conversionRate).toFixed(2);
+    const symbol = targetCurrency === 'USD' ? '$' : targetCurrency === 'GBP' ? '£' : '₹';
 
     try {
       const [updatedWallet, transaction] = await this.prisma.$transaction(
@@ -486,9 +499,12 @@ export class WalletService {
               walletId: wallet.id,
               type: 'WITHDRAWAL',
               amount,
+              currency: targetCurrency,
+              conversionRate,
               status: 'PENDING',
-              method: method || 'BANK_TRANSFER',
-              description: `Withdrawal of ₹${amount} via ${method || 'Bank Transfer'}`,
+              method: method || (targetCurrency === 'INR' ? 'UPI' : 'PAYPAL'),
+              description: `Withdrawal of ${amount} Coins (${symbol}${realWorldValue}) via ${targetCurrency}`,
+              metadata,
             },
           });
 

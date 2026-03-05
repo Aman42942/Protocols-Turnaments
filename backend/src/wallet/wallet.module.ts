@@ -13,4 +13,4 @@ import { ActivityLogModule } from '../activity-log/activity-log.module';
   providers: [WalletService],
   exports: [WalletService],
 })
-export class WalletModule {}
+export class WalletModule { }

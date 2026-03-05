@@ -16,7 +16,7 @@ import { Roles } from '../../auth/roles.decorator';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 export class OperationsController {
-  constructor(private readonly operationsService: OperationsService) {}
+  constructor(private readonly operationsService: OperationsService) { }
 
   @Get('dashboard')
   async getDashboard() {
@@ -49,5 +49,15 @@ export class OperationsController {
   async triggerPayout(@Param('id') id: string, @Request() req) {
     const adminId = req.user?.id || 'admin-id-placeholder';
     return this.operationsService.triggerManualPayout(id, adminId);
+  }
+
+  @Post('withdrawal/:id/approve')
+  async approveWithdrawal(
+    @Param('id') id: string,
+    @Body('twoFactorToken') token: string,
+    @Request() req,
+  ) {
+    const adminId = req.user?.id || 'admin-id-placeholder';
+    return this.operationsService.approveWithdrawal(id, adminId, token);
   }
 }

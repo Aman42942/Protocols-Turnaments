@@ -21,7 +21,7 @@ export class AdminTransactionsController {
   constructor(
     private readonly walletService: WalletService,
     private readonly activityLogService: ActivityLogService,
-  ) {}
+  ) { }
 
   @Get()
   async getAllTransactions(

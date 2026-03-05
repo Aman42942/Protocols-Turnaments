@@ -8,11 +8,14 @@ import {
     Trophy, Calendar, Users, Wallet, AlertCircle, ArrowLeft, Loader2,
     CheckCircle, Clock, Gamepad2, Shield, Swords, Target, MapPin,
     Star, Zap, Timer, Crown, ChevronRight, ExternalLink, MessageCircle,
-    Share2, Copy, Hash, Eye, EyeOff, Link2, Globe, Settings2
+    Share2, Copy, Hash, Eye, EyeOff, Link2, Globe, Settings2, Phone
 } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { load } from '@cashfreepayments/cashfree-js';
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import { toast } from 'react-hot-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import { LiveLeaderboard } from '@/components/tournament/LiveLeaderboard';
 import { TournamentActivityFeed } from '@/components/tournament/TournamentActivityFeed';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -118,9 +121,42 @@ export default function TournamentDetailPage() {
     const [showTeamSelector, setShowTeamSelector] = useState(false);
     const [myParticipant, setMyParticipant] = useState<any>(null);
     const [teamMembers, setTeamMembers] = useState<any[]>([]);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [exchangeRate, setExchangeRate] = useState(85);
+    const [gbpExchangeRate, setGbpExchangeRate] = useState(110);
+    const [paypalClientId, setPaypalClientId] = useState('');
+    const [walletBalance, setWalletBalance] = useState(0);
+    const [billingPhone, setBillingPhone] = useState('');
+
+    const loadRates = async () => {
+        try {
+            const [rateRes, gbpRes, walletRes] = await Promise.allSettled([
+                api.get(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/PAYPAL_EXCHANGE_RATE`),
+                api.get(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/GBP_TO_COIN_RATE`),
+                api.get('/wallet'),
+            ]);
+            if (rateRes.status === 'fulfilled') {
+                const rate = Number(rateRes.value.data?.value);
+                if (!isNaN(rate) && rate > 0) setExchangeRate(rate);
+            }
+            if (gbpRes.status === 'fulfilled') {
+                const rate = Number(gbpRes.value.data?.value);
+                if (!isNaN(rate) && rate > 0) setGbpExchangeRate(rate);
+            }
+            if (walletRes.status === 'fulfilled') {
+                setWalletBalance(walletRes.value.data?.balance || 0);
+            }
+            setPaypalClientId(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
+        } catch (err) {
+            console.error('Failed to load rates/wallet:', err);
+        }
+    };
 
     useEffect(() => {
-        if (params.id) { fetchTournament(); }
+        if (params.id) {
+            fetchTournament();
+            loadRates();
+        }
     }, [params.id]);
 
     const fetchTournament = async () => {
@@ -178,18 +214,64 @@ export default function TournamentDetailPage() {
                     teamId: selectedTeamId
                 });
                 setRegistered(true);
-                alert(res.data.message || 'Registered successfully! 🎉');
+                toast.success(res.data.message || 'Registered successfully! 🎉');
                 fetchTournament(); // Refresh
             } catch (err: any) {
-                alert(err.response?.data?.message || 'Registration failed');
+                toast.error(err.response?.data?.message || 'Registration failed');
             } finally {
                 setRegistering(false);
             }
             return;
         }
 
-        // Case 2: PAID Entry -> Cashfree hosted payment page (redirect)
-        handleCashfreeRegister();
+        // Case 2: PAID Entry -> Open Payment Method Modal
+        setShowPaymentModal(true);
+    };
+
+    const handleWalletRegister = async () => {
+        if (!tournament) return;
+        if (walletBalance < tournament.entryFeePerPerson) {
+            toast.error('Insufficient wallet balance');
+            return;
+        }
+
+        setRegistering(true);
+        setShowPaymentModal(false);
+        try {
+            const res = await api.post(`/tournaments/${params.id}/register`, {
+                teamId: selectedTeamId
+            });
+            setRegistered(true);
+            toast.success('Joined using wallet balance! 💎');
+            fetchTournament();
+            loadRates(); // Refresh balance
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Registration failed');
+        } finally {
+            setRegistering(false);
+        }
+    };
+
+    const handlePaypalRegister = async (orderId: string) => {
+        if (!tournament) return;
+        setRegistering(true);
+        setShowPaymentModal(false);
+        try {
+            toast.loading('Verifying PayPal payment...', { id: 'paypal-verify' });
+            const res = await api.post(`/tournaments/${params.id}/register`, {
+                orderId: orderId,
+                signature: 'PAYPAL_DIRECT',
+                teamId: selectedTeamId
+            });
+            setRegistered(true);
+            toast.success('PayPal Payment Verified & Registered! 🎉', { id: 'paypal-verify' });
+            fetchTournament();
+            loadRates();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Verification failed', { id: 'paypal-verify' });
+        } finally {
+            setRegistering(false);
+        }
     };
 
     const handleCashfreeRegister = async () => {
@@ -198,7 +280,8 @@ export default function TournamentDetailPage() {
         try {
             // Step 1: Create Order on backend with team selection
             const orderRes = await api.post(`/tournaments/${params.id}/create-order`, {
-                teamId: selectedTeamId
+                teamId: selectedTeamId,
+                phone: billingPhone
             });
             const { payment_session_id, cf_env } = orderRes.data;
 
@@ -234,6 +317,7 @@ export default function TournamentDetailPage() {
         const teamId = urlParams.get('team_id');
 
         try {
+            toast.loading('Verifying your payment...', { id: 'cf-verify' });
             const verifyRes = await api.post(`/tournaments/${params.id}/register`, {
                 orderId: orderId,
                 paymentId: orderId,
@@ -241,13 +325,13 @@ export default function TournamentDetailPage() {
                 teamId: teamId || undefined
             });
             setRegistered(true);
-            alert(verifyRes.data.message || 'Payment Verified & Registered! 🎉');
+            toast.success(verifyRes.data.message || 'Payment Verified & Registered! 🎉', { id: 'cf-verify' });
             // Clean URL
             window.history.replaceState({}, '', window.location.pathname);
             fetchTournament(); // Refresh stats
         } catch (err: any) {
             console.error('Final verification failed:', err);
-            alert(err.response?.data?.message || 'Verification failed. Please contact support.');
+            toast.error(err.response?.data?.message || 'Verification failed. Please contact support.', { id: 'cf-verify' });
         } finally {
             setRegistering(false);
         }
@@ -311,6 +395,211 @@ export default function TournamentDetailPage() {
     const isValornat = tournament.game.toUpperCase() === 'VALORANT';
     const gameColor = GAME_COLORS[tournament.game] || GAME_COLORS['Valorant'];
     const gameRules = GAME_RULES[tournament.game] || GAME_RULES['Valorant'];
+
+    const PaymentMethodModal = () => (
+        <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+            <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden bg-background border-border/40 rounded-[2.5rem] shadow-[0_0_100px_-20px_rgba(255,100,0,0.15)] dark:shadow-[0_0_100px_-20px_rgba(255,100,0,0.1)]">
+                <div className="h-2 bg-gradient-to-r from-orange-600 via-primary to-purple-600" />
+
+                <div className="p-8 md:p-10">
+                    <DialogHeader className="mb-8 relative">
+                        <div className="absolute -top-14 -left-10 w-32 h-32 bg-primary/20 blur-[60px] rounded-full pointer-events-none" />
+                        <DialogTitle className="text-4xl font-[900] italic tracking-tighter leading-tight text-foreground">
+                            CHOOSE YOUR <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400">ENTRY METHOD</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-muted-foreground font-bold uppercase tracking-[0.2em] text-[10px] mt-2">
+                            Tournament Entry Fee: <span className="text-primary font-black ml-1">{tournament.entryFeePerPerson} Coins</span>
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {/* Wallet Option - Premium Glassmorphism */}
+                        <div className="group relative">
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/50 to-orange-500/50 rounded-3xl blur opacity-0 group-hover:opacity-30 transition duration-500" />
+                            <button
+                                onClick={handleWalletRegister}
+                                className={cn(
+                                    "relative w-full flex items-center justify-between p-6 rounded-3xl border transition-all duration-300",
+                                    "bg-card/50 backdrop-blur-sm border-border/50 hover:bg-card/80",
+                                    walletBalance >= tournament.entryFeePerPerson
+                                        ? "hover:border-primary/50"
+                                        : "hover:border-red-500/50"
+                                )}
+                            >
+                                <div className="flex items-center gap-5">
+                                    <div className={cn(
+                                        "w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-lg",
+                                        walletBalance >= tournament.entryFeePerPerson
+                                            ? "bg-primary/20 text-primary shadow-primary/20"
+                                            : "bg-red-500/10 text-red-400 shadow-red-500/10"
+                                    )}>
+                                        <Wallet className="w-7 h-7" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className={cn(
+                                            "font-black text-sm uppercase tracking-wider transition-colors",
+                                            walletBalance >= tournament.entryFeePerPerson ? "group-hover:text-primary" : "group-hover:text-red-400"
+                                        )}>Pay with Wallet</p>
+                                        <p className="text-[11px] text-muted-foreground font-bold mt-1 uppercase tracking-tighter">
+                                            Balance: <span className={walletBalance >= tournament.entryFeePerPerson ? "text-primary" : "text-red-400"}>{walletBalance.toLocaleString()} Coins</span>
+                                        </p>
+                                    </div>
+                                </div>
+                                {walletBalance < tournament.entryFeePerPerson ? (
+                                    <div className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20">
+                                        <p className="text-[9px] font-black text-red-500 uppercase tracking-widest">Low Balance</p>
+                                    </div>
+                                ) : (
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-inner">
+                                        <ChevronRight className="w-4 h-4 text-primary" />
+                                    </div>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Domestic Gateway Section Title */}
+                        <div className="flex items-center gap-3 px-2 mb-2">
+                            <div className="h-px flex-1 bg-border/40" />
+                            <span className="text-[10px] font-black tracking-widest uppercase text-muted-foreground whitespace-nowrap">Domestic Gateway (India)</span>
+                            <div className="h-px flex-1 bg-border/40" />
+                        </div>
+
+                        {/* Billing Phone Input */}
+                        <div className="relative group/input mb-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-muted-foreground group-focus-within/input:text-primary transition-colors">
+                                <Phone className="h-4 w-4" />
+                            </div>
+                            <input
+                                type="tel"
+                                placeholder="Enter Phone Number for Payment"
+                                value={billingPhone}
+                                onChange={(e) => setBillingPhone(e.target.value)}
+                                className="w-full bg-muted/20 border border-border/40 focus:border-primary/50 rounded-2xl py-4 pl-12 pr-6 text-sm outline-none transition-all placeholder:text-muted-foreground/50 font-medium text-foreground"
+                            />
+                            <div className="absolute top-1.5 right-6 text-[8px] font-black uppercase tracking-widest text-primary/60">Required for Bank</div>
+                        </div>
+
+                        {/* Direct Payment Methods Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Cashfree - India */}
+                            <button
+                                onClick={() => {
+                                    if (!billingPhone || billingPhone.length < 10) {
+                                        toast.error('Please enter a valid phone number for Cashfree checkout');
+                                        return;
+                                    }
+                                    handleCashfreeRegister();
+                                }}
+                                className="group relative bg-card border border-border/50 hover:border-blue-500/50 rounded-3xl p-5 transition-all text-left flex flex-col justify-between h-40 overflow-hidden"
+                            >
+                                <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-600/5 blur-3xl group-hover:bg-blue-600/10 transition-all" />
+                                <div className="flex justify-between items-start">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                                        <Zap className="w-6 h-6" />
+                                    </div>
+                                    <Badge className="bg-blue-500/10 text-blue-400 text-[9px] border-0 font-black">INDIA</Badge>
+                                </div>
+                                <div>
+                                    <p className="font-black text-xs uppercase tracking-widest text-foreground/90">Domestic Gateway</p>
+                                    <p className="text-[10px] text-muted-foreground font-bold mt-1">UPI, Cards, NetBanking</p>
+                                    <div className="mt-3 flex items-center gap-2">
+                                        <span className="text-sm font-black text-blue-400">₹{tournament.entryFeePerPerson}</span>
+                                        <div className="h-1 w-1 rounded-full bg-foreground/20" />
+                                        <span className="text-[9px] font-bold text-muted-foreground uppercase">Instant</span>
+                                    </div>
+                                </div>
+                            </button>
+
+                            {/* PayPal USD - International */}
+                            {paypalClientId && (
+                                <div className="group relative bg-card border border-border/50 hover:border-yellow-500/50 rounded-3xl p-5 transition-all flex flex-col justify-between h-40 overflow-hidden">
+                                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-600/5 blur-3xl group-hover:bg-yellow-600/10 transition-all" />
+                                    <div className="flex justify-between items-start">
+                                        <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 text-xl font-black">
+                                            $
+                                        </div>
+                                        <Badge className="bg-yellow-500/10 text-yellow-400 text-[9px] border-0 font-black">GLOBAL</Badge>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <p className="font-black text-xs uppercase tracking-widest text-foreground/90">PayPal USD</p>
+                                            <span className="text-xs font-black text-yellow-500">${(tournament.entryFeePerPerson / exchangeRate).toFixed(2)}</span>
+                                        </div>
+                                        <div className="scale-90 origin-left -ml-2 -mb-2 h-[38px] overflow-hidden rounded-full bg-card">
+                                            <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD" }}>
+                                                <PayPalButtons
+                                                    style={{
+                                                        layout: "horizontal",
+                                                        height: 38,
+                                                        shape: "pill",
+                                                        label: "paypal",
+                                                        tagline: false
+                                                    }}
+                                                    createOrder={async (data, actions) => {
+                                                        const res = await api.post(`/tournaments/${params.id}/create-paypal-order`, {
+                                                            teamId: selectedTeamId,
+                                                            currency: 'USD'
+                                                        });
+                                                        return res.data.id;
+                                                    }}
+                                                    onApprove={async (data: any) => handlePaypalRegister(data.orderID)}
+                                                />
+                                            </PayPalScriptProvider>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PayPal GBP - UK */}
+                            {paypalClientId && (
+                                <div className="md:col-span-2 group relative bg-card border border-border/50 hover:border-purple-500/50 rounded-3xl p-5 px-6 transition-all flex items-center justify-between overflow-hidden">
+                                    <div className="absolute -top-20 -right-20 w-48 h-48 bg-purple-600/5 blur-[80px] group-hover:bg-purple-600/10 transition-all" />
+                                    <div className="flex items-center gap-5">
+                                        <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 text-xl font-black">
+                                            £
+                                        </div>
+                                        <div>
+                                            <div className="font-black text-xs uppercase tracking-widest text-foreground/90 flex items-center gap-2">
+                                                UK Region <Badge className="bg-purple-500/10 text-purple-400 text-[8px] border-0 h-4">GBP</Badge>
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground font-bold mt-0.5">Pay exactly £{(tournament.entryFeePerPerson / gbpExchangeRate).toFixed(2)} GBP</p>
+                                        </div>
+                                    </div>
+                                    <div className="w-44 scale-90 origin-right h-[38px] overflow-hidden rounded-full bg-card">
+                                        <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "GBP" }}>
+                                            <PayPalButtons
+                                                style={{
+                                                    layout: "horizontal",
+                                                    height: 38,
+                                                    shape: "pill",
+                                                    color: "blue",
+                                                    tagline: false
+                                                }}
+                                                createOrder={async (data, actions) => {
+                                                    const res = await api.post(`/tournaments/${params.id}/create-paypal-order`, {
+                                                        teamId: selectedTeamId,
+                                                        currency: 'GBP'
+                                                    });
+                                                    return res.data.id;
+                                                }}
+                                                onApprove={async (data: any) => handlePaypalRegister(data.orderID)}
+                                            />
+                                        </PayPalScriptProvider>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="mt-8 flex items-center justify-center gap-2 opacity-30 grayscale group-hover:grayscale-0 transition-all duration-700">
+                        <Shield className="w-4 h-4" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Secure Tier-1 Encrypted Checkout</span>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
 
     return (
         <div className="min-h-screen bg-background">
@@ -901,6 +1190,7 @@ export default function TournamentDetailPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
+            <PaymentMethodModal />
         </div>
     );
 }

@@ -26,6 +26,8 @@ import {
   ComplianceEvent,
 } from '../organizer/compliance.service';
 import { UsersService } from '../users/users.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { PaypalService } from '../payments/paypal.service';
 
 @Controller('tournaments')
 export class TournamentsController {
@@ -37,6 +39,8 @@ export class TournamentsController {
     private readonly activityLogService: ActivityLogService,
     private readonly complianceService: ComplianceService,
     private readonly usersService: UsersService,
+    private readonly prisma: PrismaService,
+    private readonly paypalService: PaypalService,
   ) { }
 
   @Post()
@@ -88,7 +92,7 @@ export class TournamentsController {
   async createOrder(
     @Request() req,
     @Param('id') id: string,
-    @Body() body: { teamId?: string },
+    @Body() body: { teamId?: string; phone?: string },
   ) {
     // Validate registration before creating order
     const { tournament } = await this.tournamentsService.validateRegistration(
@@ -103,10 +107,35 @@ export class TournamentsController {
       tournament.entryFeePerPerson,
       req.user.userId,
       user?.email,
-      undefined,
+      body.phone,
       `${this.paymentsService.getHttpsFrontendUrl()}/tournaments/${id}?order_id={order_id}${body.teamId ? `&team_id=${body.teamId}` : ''}`,
     );
     return order;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/create-paypal-order')
+  async createPaypalOrder(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() body: { teamId?: string, currency?: string },
+  ) {
+    const { tournament } = await this.tournamentsService.validateRegistration(
+      req.user.userId,
+      id,
+      body.teamId,
+    );
+
+    const currency = body.currency || 'USD';
+    const rateConfigKey = currency === 'GBP' ? 'GBP_TO_COIN_RATE' : 'PAYPAL_EXCHANGE_RATE';
+    const cmsRate = await this.prisma.siteContent.findUnique({ where: { key: rateConfigKey } });
+
+    let rate = currency === 'GBP' ? 110 : 85;
+    if (cmsRate && cmsRate.value) rate = Number(cmsRate.value);
+
+    const targetAmount = tournament.entryFeePerPerson / rate;
+
+    return this.paypalService.createOrder(targetAmount, currency);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -129,24 +158,52 @@ export class TournamentsController {
 
     // Verify payment if entry fee exists
     if (entryFee > 0) {
-      if (!body.paymentId || !body.orderId || !body.signature) {
+      if (!body.orderId) {
         throw new BadRequestException(
           'Payment details missing. Please complete payment first.',
         );
       }
 
-      // Verify payment with Cashfree
-      await this.paymentsService.verifyPayment(body.orderId);
+      if (body.signature === 'PAYPAL_DIRECT') {
+        const captureResult = await this.paypalService.captureOrder(body.orderId);
+        if (!captureResult.success) throw new BadRequestException('PayPal payment failed');
 
-      // Deposit the verified amount into user's wallet so it can be deducted by registerUser
-      // This ensures a complete transaction history (Money In -> Money Out)
-      await this.walletService.deposit(
-        req.user.userId,
-        entryFee,
-        'CASHFREE', // Using CASHFREE label as per PaymentsService implementation
-        body.paymentId,
-        JSON.stringify({ tournamentId: id, teamId: body.teamId }),
-      );
+        const currency = captureResult.data.currency;
+        const rateConfigKey = currency === 'GBP' ? 'GBP_TO_COIN_RATE' : 'PAYPAL_EXCHANGE_RATE';
+        const cmsRate = await this.prisma.siteContent.findUnique({ where: { key: rateConfigKey } });
+
+        let rate = currency === 'GBP' ? 110 : 85;
+        if (cmsRate && cmsRate.value) rate = Number(cmsRate.value);
+
+        const paidAmount = captureResult.data.amount;
+        const calculatedCoins = paidAmount * rate;
+
+        if (Math.abs(calculatedCoins - entryFee) > 1) {
+          throw new BadRequestException('Payment amount mismatch.');
+        }
+
+        await this.walletService.deposit(
+          req.user.userId,
+          calculatedCoins,
+          'PAYPAL',
+          captureResult.data.captureId,
+          JSON.stringify({ tournamentId: id, teamId: body.teamId }),
+          currency,
+          rate
+        );
+      } else {
+        // Verify payment with Cashfree
+        await this.paymentsService.verifyPayment(body.orderId);
+
+        // Deposit the verified amount into user's wallet
+        await this.walletService.deposit(
+          req.user.userId,
+          entryFee,
+          'CASHFREE',
+          body.paymentId || body.orderId,
+          JSON.stringify({ tournamentId: id, teamId: body.teamId }),
+        );
+      }
     }
 
     // Register the user in the tournament (Will deduct fee from wallet or use provided payment)
