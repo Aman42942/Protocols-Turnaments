@@ -66,10 +66,10 @@ export class GlobalSecurityGuard implements CanActivate {
     }
 
     private serializePayload(request: any): string {
-        const parts = [];
-        if (request.body && typeof request.body === 'object') parts.push(JSON.stringify(request.body));
-        if (request.query && typeof request.query === 'object') parts.push(JSON.stringify(request.query));
-        if (request.params && typeof request.params === 'object') parts.push(JSON.stringify(request.params));
+        const parts: string[] = [];
+        if (request.body && typeof request.body === 'object') parts.push(JSON.stringify(request.body as Record<string, any>));
+        if (request.query && typeof request.query === 'object') parts.push(JSON.stringify(request.query as Record<string, any>));
+        if (request.params && typeof request.params === 'object') parts.push(JSON.stringify(request.params as Record<string, any>));
         return parts.join(' | ');
     }
 }

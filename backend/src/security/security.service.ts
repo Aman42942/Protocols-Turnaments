@@ -187,7 +187,7 @@ export class SecurityService {
         });
 
         for (const admin of admins) {
-            await this.notificationsService.createNotification(admin.id, title, message, 'error', '/admin/security');
+            await this.notificationsService.create(admin.id, title, message, 'error', '/admin/security');
         }
     }
 }
