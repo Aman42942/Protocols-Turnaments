@@ -5,13 +5,14 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, Users, CreditCard, Settings,
-    LayoutDashboard, LogOut, X, Activity, ShieldCheck, Palette, PieChart, Globe, FileText
+    LayoutDashboard, LogOut, X, Activity, ShieldCheck, Palette, PieChart, Globe, FileText, ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 const NAV_ITEMS = [
     { name: 'Overview', href: '/admin', icon: LayoutDashboard, color: '#3b82f6', accent: 'before:bg-blue-500', glow: 'group-hover:shadow-blue-500/40' },
+    { name: 'Security & Firewall', href: '/admin/security', icon: ShieldAlert, color: '#ef4444', accent: 'before:bg-red-500', glow: 'group-hover:shadow-red-500/40' },
     { name: 'Tournaments', href: '/admin/tournaments', icon: Trophy, color: '#f97316', accent: 'before:bg-orange-500', glow: 'group-hover:shadow-orange-500/40' },
     { name: 'Users', href: '/admin/users', icon: Users, color: '#22c55e', accent: 'before:bg-green-500', glow: 'group-hover:shadow-green-500/40' },
     { name: 'Transactions', href: '/admin/transactions', icon: CreditCard, color: '#a855f7', accent: 'before:bg-purple-500', glow: 'group-hover:shadow-purple-500/40' },

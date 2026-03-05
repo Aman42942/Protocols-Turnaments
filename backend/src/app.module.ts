@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -26,6 +26,9 @@ import { RedisModule } from './redis/redis.module';
 import { RbacModule } from './rbac/rbac.module';
 import { OrganizerModule } from './organizer/organizer.module';
 import { CmsModule } from './cms/cms.module';
+import { SecurityModule } from './security/security.module';
+import { GlobalSecurityGuard } from './security/global-security.guard';
+import { SecurityThrottlerGuard } from './security/security-throttler.guard';
 
 @Module({
   imports: [
@@ -53,13 +56,18 @@ import { CmsModule } from './cms/cms.module';
     RbacModule,
     OrganizerModule,
     CmsModule,
+    SecurityModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: SecurityThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: GlobalSecurityGuard,
     },
   ],
 })

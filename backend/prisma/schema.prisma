@@ -429,3 +429,35 @@ model AdSlide {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
+
+// ── Security & Monitoring System ──
+
+model SecurityLog {
+  id        String   @id @default(uuid())
+  type      String   // SQLI, XSS, RATE_LIMIT, BRUTE_FORCE, SUSPICIOUS
+  ipAddress String
+  userId    String?
+  path      String
+  method    String
+  payload   String?  @db.Text
+  severity  String   // LOW, MEDIUM, HIGH, CRITICAL
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([ipAddress])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+model BannedIp {
+  id           String    @id @default(uuid())
+  ipAddress    String    @unique
+  reason       String
+  attemptCount Int       @default(1)
+  expiresAt    DateTime? 
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([ipAddress])
+}
+
