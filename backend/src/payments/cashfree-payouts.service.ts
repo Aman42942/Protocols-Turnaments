@@ -2,6 +2,21 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
+export interface CashfreeTransferParams {
+    transferId: string;
+    amount: number;           // Real-world INR amount (NOT coins)
+    name: string;
+    email?: string;
+    phone?: string;
+    // UPI
+    vpa?: string;
+    // Bank
+    bankAccount?: string;
+    ifsc?: string;
+    transferMode?: 'upi' | 'imps' | 'neft' | 'rtgs';
+    remark?: string;
+}
+
 @Injectable()
 export class CashfreePayoutsService {
     private readonly logger = new Logger(CashfreePayoutsService.name);
@@ -16,7 +31,7 @@ export class CashfreePayoutsService {
         const env = this.configService.get<string>('CASHFREE_ENV') || 'SANDBOX';
         this.isProduction = env === 'PRODUCTION';
 
-        // Using Payouts V2 base URLs
+        // Cashfree Payouts V2 base URLs
         this.baseUrl = this.isProduction
             ? 'https://api.cashfree.com/payout'
             : 'https://sandbox.cashfree.com/payout';
@@ -26,119 +41,144 @@ export class CashfreePayoutsService {
         return {
             'x-client-id': this.appId,
             'x-client-secret': this.secretKey,
-            'x-api-version': '2024-01-01', // Recommended version for Payouts V2
+            'x-api-version': '2024-01-01',
             'Content-Type': 'application/json',
         };
     }
 
     /**
-     * Request a single transfer (Direct Transfer V2)
-     * This is used for automated withdrawals to UPI or Bank.
+     * Request a direct transfer using Cashfree Payouts V2
+     * Uses INLINE beneficiary details — no pre-registration required.
+     *
+     * Supports:
+     *   - UPI (requires vpa)
+     *   - Bank (requires bankAccount + ifsc, mode = imps/neft/rtgs)
      */
-    async requestTransfer(params: {
-        transferId: string;
-        amount: number;
-        beneficiaryId: string;
-        transferMode?: 'upi' | 'imps' | 'neft' | 'rtgs';
-        remark?: string;
-    }) {
-        const { transferId, amount, beneficiaryId, transferMode = 'upi', remark = 'Wallet Withdrawal' } = params;
+    async requestTransfer(params: CashfreeTransferParams) {
+        const {
+            transferId,
+            amount,
+            name,
+            email = 'user@protocol.app',
+            phone = '9999999999',
+            vpa,
+            bankAccount,
+            ifsc,
+            transferMode,
+            remark = 'Protocol Tournament Withdrawal',
+        } = params;
+
+        // Determine mode
+        let mode = transferMode;
+        if (!mode) {
+            mode = vpa ? 'upi' : 'imps';
+        }
 
         if (!this.appId || !this.secretKey) {
-            this.logger.warn('[MOCK] Payouts keys missing. Returning mock success.');
-            return { success: true, transferId, status: 'SUCCESS', message: 'Mock Transfer Successful' };
+            this.logger.warn('[MOCK] Cashfree Payouts keys missing — returning mock success.');
+            return {
+                success: true,
+                transferId,
+                cf_transfer_id: `MOCK_${Date.now()}`,
+                status: 'SUCCESS',
+                message: 'Mock Transfer Successful (no keys)',
+            };
+        }
+
+        // Build inline beneficiary instrument details
+        const beneficiaryInstrumentDetails: any = {};
+        if (mode === 'upi' && vpa) {
+            beneficiaryInstrumentDetails.vpa = vpa;
+        } else if (bankAccount && ifsc) {
+            beneficiaryInstrumentDetails.bank_account_number = bankAccount;
+            beneficiaryInstrumentDetails.ifsc = ifsc;
+        } else {
+            throw new BadRequestException('Either UPI VPA or Bank Account + IFSC must be provided for payout');
         }
 
         const body = {
             transfer_id: transferId,
             transfer_amount: amount,
             transfer_currency: 'INR',
-            beneficiary_details: {
-                beneficiary_id: beneficiaryId,
-            },
-            transfer_mode: transferMode,
+            transfer_mode: mode,
             transfer_remarks: remark,
+            beneficiary_details: {
+                beneficiary_id: `BEN_${transferId.substring(0, 20)}`,
+                beneficiary_name: name,
+                beneficiary_contact_details: {
+                    beneficiary_email: email,
+                    beneficiary_phone: phone,
+                },
+                beneficiary_instrument_details: beneficiaryInstrumentDetails,
+            },
         };
 
         try {
-            this.logger.log(`[CASHFREE PAYOUTS] Initiating Transfer: ${transferId} | Amount: ₹${amount} | Mode: ${transferMode}`);
+            this.logger.log(`[CASHFREE PAYOUTS] Initiating Transfer | ID: ${transferId} | ₹${amount} | Mode: ${mode} | To: ${vpa || bankAccount}`);
             const response = await axios.post(
                 `${this.baseUrl}/transfers`,
                 body,
-                { headers: this.headers() }
+                { headers: this.headers() },
             );
 
+            this.logger.log(`[CASHFREE PAYOUTS] Transfer response: ${JSON.stringify(response.data)}`);
             return response.data;
         } catch (error: any) {
             const cfError = error.response?.data;
             this.logger.error('[CASHFREE PAYOUTS ERROR] Transfer Failed:', JSON.stringify(cfError || error.message));
-            throw new BadRequestException(cfError?.message || 'Payout transfer failed');
+            throw new BadRequestException(
+                cfError?.message || cfError?.sub_code || 'Cashfree payout transfer failed',
+            );
         }
     }
 
     /**
-     * Get Transfer Status
+     * Get real-time status of a transfer by transferId
      */
-    async getTransferStatus(transferId: string) {
+    async getTransferStatus(transferId: string): Promise<{
+        transferId: string;
+        status: string;
+        amount?: number;
+        utr?: string;
+        rawData: any;
+    }> {
+        if (!this.appId || !this.secretKey) {
+            return { transferId, status: 'MOCK_SUCCESS', rawData: {} };
+        }
+
         try {
             const response = await axios.get(
                 `${this.baseUrl}/transfers/${transferId}`,
-                { headers: this.headers() }
+                { headers: this.headers() },
             );
-            return response.data;
+            const data = response.data;
+            return {
+                transferId,
+                status: data.transfer_status || data.status || 'UNKNOWN',
+                amount: data.transfer_amount,
+                utr: data.utr,
+                rawData: data,
+            };
         } catch (error: any) {
             this.logger.error('[CASHFREE PAYOUTS ERROR] Status Check Failed:', error.response?.data || error.message);
-            throw new BadRequestException('Failed to fetch payout status');
+            throw new BadRequestException('Failed to fetch payout transfer status from Cashfree');
         }
     }
 
     /**
-     * Add Beneficiary (Required before transfer for some flows, 
-     * or use beneficiary_details directly in transfer if supported)
+     * Verify Cashfree Payout webhook signature
      */
-    async addBeneficiary(params: {
-        beneficiaryId: string;
-        name: string;
-        email?: string;
-        phone?: string;
-        bankAccount?: string;
-        ifsc?: string;
-        vpa?: string; // UPI ID
-    }) {
-        const { beneficiaryId, name, email, phone, bankAccount, ifsc, vpa } = params;
-
-        const body: any = {
-            beneficiary_id: beneficiaryId,
-            beneficiary_name: name,
-            beneficiary_contact_details: {
-                beneficiary_email: email || 'user@protocol.app',
-                beneficiary_phone: phone || '9999999999',
-            },
-        };
-
-        if (vpa) {
-            body.beneficiary_instrument_details = {
-                vpa: vpa,
-            };
-        } else if (bankAccount && ifsc) {
-            body.beneficiary_instrument_details = {
-                bank_account_number: bankAccount,
-                ifsc: ifsc,
-            };
-        }
-
+    verifyWebhookSignature(rawBody: string, signature: string, timestamp: string): boolean {
         try {
-            this.logger.log(`[CASHFREE PAYOUTS] Adding Beneficiary: ${beneficiaryId}`);
-            const response = await axios.post(
-                `${this.baseUrl}/beneficiaries`,
-                body,
-                { headers: this.headers() }
-            );
-            return response.data;
-        } catch (error: any) {
-            const cfError = error.response?.data;
-            this.logger.error('[CASHFREE PAYOUTS ERROR] Add Beneficiary Failed:', JSON.stringify(cfError || error.message));
-            throw new BadRequestException(cfError?.message || 'Failed to add beneficiary');
+            const crypto = require('crypto');
+            const data = timestamp + rawBody;
+            const computedSignature = crypto
+                .createHmac('sha256', this.secretKey)
+                .update(data)
+                .digest('base64');
+            return computedSignature === signature;
+        } catch {
+            return false;
         }
     }
 }

@@ -1,23 +1,27 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, Param, RawBodyRequest } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { WalletService } from '../wallet/wallet.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaypalService } from './paypal.service';
+import { CashfreePayoutsService } from './cashfree-payouts.service';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../auth/role.enum';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, Logger } from '@nestjs/common';
 
 @Controller('payments')
 export class PaymentsController {
+  private readonly logger = new Logger(PaymentsController.name);
+
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly walletService: WalletService,
     private readonly notificationsService: NotificationsService,
     private readonly paypalService: PaypalService,
+    private readonly cashfreePayoutsService: CashfreePayoutsService,
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) { }
@@ -218,5 +222,139 @@ export class PaymentsController {
     }
 
     throw new BadRequestException('Payment capture failed.');
+  }
+
+  /**
+   * POST /payments/payout-webhook
+   * Cashfree sends async payout event updates here.
+   * Events handled: TRANSFER_SUCCESS, TRANSFER_FAILED
+   */
+  @Post('payout-webhook')
+  async handlePayoutWebhook(@Request() req, @Body() body: any) {
+    const signature = req.headers['x-webhook-signature'] as string;
+    const timestamp = req.headers['x-webhook-timestamp'] as string;
+
+    // Verify webhook authenticity
+    const rawBody = JSON.stringify(body);
+    const isValid = this.cashfreePayoutsService.verifyWebhookSignature(rawBody, signature || '', timestamp || '');
+
+    if (!isValid) {
+      this.logger.warn('[PAYOUT WEBHOOK] Invalid signature — ignoring event');
+      // Return 200 to prevent Cashfree from retrying with invalid signature
+      return { status: 'ignored', reason: 'invalid_signature' };
+    }
+
+    const eventType: string = body.type || body.event || '';
+    const transferData = body.data?.transfer || body.transfer || body.data || {};
+    const transferId: string = transferData.transfer_id || transferData.transferId || '';
+    const utr: string = transferData.utr || '';
+
+    this.logger.log(`[PAYOUT WEBHOOK] Event: ${eventType} | TransferID: ${transferId}`);
+
+    if (!transferId) {
+      return { status: 'ok', note: 'no_transfer_id' };
+    }
+
+    // Find the matching transaction by reference
+    const tx = await this.prisma.transaction.findFirst({
+      where: { reference: { contains: transferId } },
+      include: { wallet: { include: { user: true } } },
+    });
+
+    if (!tx) {
+      this.logger.warn(`[PAYOUT WEBHOOK] No transaction found for transferId: ${transferId}`);
+      return { status: 'ok', note: 'transaction_not_found' };
+    }
+
+    if (eventType === 'TRANSFER_SUCCESS' || eventType === 'transfer.success') {
+      await this.prisma.transaction.update({
+        where: { id: tx.id },
+        data: {
+          status: 'COMPLETED',
+          description: `${tx.description} — CONFIRMED via webhook (UTR: ${utr})`,
+        },
+      });
+      // Deduct from frozenBalance now
+      await this.prisma.wallet.update({
+        where: { id: tx.walletId },
+        data: { frozenBalance: { decrement: tx.amount } },
+      });
+      await this.notificationsService.create(
+        tx.wallet.user.id,
+        'Withdrawal Confirmed ✅',
+        `Your withdrawal has been successfully credited! UTR: ${utr}`,
+        'success',
+        '/dashboard/wallet',
+      );
+      this.logger.log(`[PAYOUT WEBHOOK] Transfer ${transferId} SUCCEEDED. TX ${tx.id} marked COMPLETED.`);
+
+    } else if (eventType === 'TRANSFER_FAILED' || eventType === 'transfer.failed') {
+      await this.prisma.transaction.update({
+        where: { id: tx.id },
+        data: {
+          status: 'FAILED',
+          description: `${tx.description} — FAILED via webhook`,
+        },
+      });
+      // Unlock frozen coins back to balance
+      await this.prisma.wallet.update({
+        where: { id: tx.walletId },
+        data: {
+          balance: { increment: tx.amount },
+          frozenBalance: { decrement: tx.amount },
+        },
+      });
+      await this.notificationsService.create(
+        tx.wallet.user.id,
+        'Withdrawal Failed ❌',
+        `Your withdrawal failed and ${tx.amount} coins have been returned to your wallet.`,
+        'error',
+        '/dashboard/wallet',
+      );
+      this.logger.log(`[PAYOUT WEBHOOK] Transfer ${transferId} FAILED. Coins refunded to user.`);
+    }
+
+    return { status: 'ok' };
+  }
+
+  /**
+   * GET /payments/payout-status/:transferId
+   * Admin manually polls Cashfree for the latest transfer status
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.ULTIMATE_ADMIN)
+  @Get('payout-status/:transferId')
+  async getPayoutStatus(@Param('transferId') transferId: string) {
+    const cfStatus = await this.cashfreePayoutsService.getTransferStatus(transferId);
+
+    // Update DB if status changed to SUCCESS or FAILED
+    const tx = await this.prisma.transaction.findFirst({
+      where: { reference: { contains: transferId } },
+      include: { wallet: true },
+    });
+
+    if (tx && tx.status === 'PENDING') {
+      if (cfStatus.status === 'SUCCESS' || cfStatus.status === 'COMPLETED') {
+        await this.prisma.transaction.update({
+          where: { id: tx.id },
+          data: { status: 'COMPLETED', description: `${tx.description} — Confirmed by admin poll` },
+        });
+        await this.prisma.wallet.update({
+          where: { id: tx.walletId },
+          data: { frozenBalance: { decrement: tx.amount } },
+        });
+      } else if (cfStatus.status === 'FAILED' || cfStatus.status === 'REVERSED') {
+        await this.prisma.transaction.update({
+          where: { id: tx.id },
+          data: { status: 'FAILED', description: `${tx.description} — Failed confirmed by admin poll` },
+        });
+        await this.prisma.wallet.update({
+          where: { id: tx.walletId },
+          data: { balance: { increment: tx.amount }, frozenBalance: { decrement: tx.amount } },
+        });
+      }
+    }
+
+    return { transferId, cashfreeStatus: cfStatus, transactionId: tx?.id };
   }
 }

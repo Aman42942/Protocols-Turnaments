@@ -13,6 +13,7 @@ import {
   ComplianceEvent,
 } from '../../organizer/compliance.service';
 import { CashfreePayoutsService } from '../../payments/cashfree-payouts.service';
+import { PaypalPayoutsService } from '../../payments/paypal-payouts.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { AuthService } from '../../auth/auth.service';
 
@@ -27,6 +28,7 @@ export class OperationsService {
     private gateway: OperationsGateway,
     private compliance: ComplianceService,
     private payouts: CashfreePayoutsService,
+    private paypalPayouts: PaypalPayoutsService,
     private notifications: NotificationsService,
     private authService: AuthService,
   ) { }
@@ -151,9 +153,11 @@ export class OperationsService {
 
   /**
    * Approve Withdrawal Request (Triggers Automated Payout)
+   * - INR  → Cashfree Payouts V2 (UPI or Bank)
+   * - USD/GBP → PayPal Payouts API v1
    */
   async approveWithdrawal(transactionId: string, adminId: string, twoFactorToken?: string) {
-    // 1. Fetch transaction and associated user
+    // 1. Fetch transaction + user
     const tx = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
       include: { wallet: { include: { user: true } } },
@@ -163,106 +167,190 @@ export class OperationsService {
     if (tx.type !== 'WITHDRAWAL') throw new BadRequestException('Transaction is not a withdrawal');
     if (tx.status !== 'PENDING') throw new BadRequestException('Withdrawal is not pending');
 
-    // 2. Security Check (Enforce 2FA for Admins)
+    // 2. Admin 2FA check (production only)
     const isAdminAuthenticated = await this.authService.verifyTOTP(adminId, twoFactorToken || '');
-
     if (!isAdminAuthenticated && process.env.NODE_ENV === 'production') {
-      this.logger.warn(`Admin ${adminId} attempted withdrawal with invalid or missing 2FA token`);
-      throw new BadRequestException('Security verification failed: Valid 2FA code is required for production payouts.');
+      this.logger.warn(`Admin ${adminId} attempted withdrawal with invalid 2FA`);
+      throw new BadRequestException('Security verification failed: Valid 2FA code is required.');
     } else if (!isAdminAuthenticated) {
-      this.logger.warn(`[STAGING/DEV] Admin ${adminId} payout authorized without 2FA or invalid code.`);
+      this.logger.warn(`[STAGING/DEV] Admin ${adminId} authorized without 2FA.`);
     }
 
     const user = tx.wallet.user;
+
+    // 3. Parse metadata (stores UPI ID, PayPal email, realValue, currency)
     let metadata: any = {};
     try {
       if (tx.metadata) metadata = JSON.parse(tx.metadata);
-    } catch (e) {
+    } catch {
       this.logger.error(`Failed to parse metadata for tx: ${transactionId}`);
     }
 
-    const upiId = metadata.upiId;
-    if (!upiId && tx.method === 'UPI') {
-      throw new BadRequestException('UPI ID missing in transaction metadata');
-    }
+    // 4. Determine the actual payout amount from metadata (realValue = fiat amount stored at request time)
+    const currency: string = metadata.currency || tx.currency || 'INR';
+    const realPayoutAmount = parseFloat(metadata.realValue) || (tx.amount / (tx.conversionRate || 1));
+
+    this.logger.log(`[PAYOUT] Approving ${currency} withdrawal | User: ${user.email} | Fiat: ${currency} ${realPayoutAmount} | Coins: ${tx.amount}`);
 
     try {
-      this.logger.log(`[PAYOUT] Processing automated withdrawal for ${user.email} | Amount: ₹${tx.amount}`);
+      let payoutRef = '';
+      let payoutStatus = 'PENDING';
 
-      // 3. Add Beneficiary to Cashfree (If needed/for first time)
-      // Note: Cashfree Payouts V2 allows using beneficiary ID. We'll use user ID as beneficiary ID.
-      const beneficiaryId = `BEN_${user.id.replace(/-/g, '')}`;
+      // ─── INR via Cashfree UPI/Bank ─────────────────────────────────────────
+      if (currency === 'INR') {
+        const upiId = metadata.upiId;
+        const bankAccount = metadata.bankAccount;
+        const ifsc = metadata.ifsc;
 
-      try {
-        await this.payouts.addBeneficiary({
-          beneficiaryId,
+        if (!upiId && !bankAccount) {
+          throw new BadRequestException('UPI ID or Bank Account details missing in metadata for INR withdrawal');
+        }
+
+        const transferId = `WIT_${tx.id.replace(/-/g, '').substring(0, 12)}_${Date.now()}`;
+        const payoutResult = await this.payouts.requestTransfer({
+          transferId,
+          amount: realPayoutAmount,
           name: user.name || 'Gamer',
           email: user.email,
+          phone: (user as any).phone || '9999999999',
           vpa: upiId,
+          bankAccount,
+          ifsc,
+          transferMode: upiId ? 'upi' : 'imps',
+          remark: `Protocol Withdrawal - ${tx.id.substring(0, 8)}`,
         });
-      } catch (err) {
-        // If beneficiary already exists, Cashfree might throw an error. 
-        // We log it but continue since we only need them to exist.
-        this.logger.warn(`Beneficiary add attempt: ${err.message}`);
+
+        payoutRef = payoutResult.cf_transfer_id || payoutResult.transfer_id || transferId;
+        payoutStatus = payoutResult.transfer_status || 'PENDING';
+
+        // ─── USD / GBP via PayPal Payouts ──────────────────────────────────────
+      } else if (currency === 'USD' || currency === 'GBP') {
+        const paypalEmail = metadata.paypalEmail;
+        if (!paypalEmail) {
+          throw new BadRequestException('PayPal email missing in metadata for USD/GBP withdrawal');
+        }
+
+        const paypalResult = await this.paypalPayouts.sendPayout({
+          paypalEmail,
+          amount: realPayoutAmount,
+          currency: currency as 'USD' | 'GBP',
+          senderItemId: tx.id.replace(/-/g, '').substring(0, 20),
+          note: `Protocol Tournament Withdrawal`,
+        });
+
+        payoutRef = paypalResult.batchId || `PAYPAL_${Date.now()}`;
+        payoutStatus = paypalResult.status || 'PENDING';
+
+      } else {
+        throw new BadRequestException(`Unsupported withdrawal currency: ${currency}`);
       }
 
-      // 4. Request Transfer
-      const payoutResult = await this.payouts.requestTransfer({
-        transferId: `WIT_${tx.id.substring(0, 10)}_${Date.now()}`,
-        amount: tx.amount / tx.conversionRate, // Convert Coins back to real-world value (INR usually)
-        beneficiaryId,
-        transferMode: 'upi',
-        remark: `Tournament Winnings Withdrawal - ${tx.id.substring(0, 8)}`,
-      });
+      // 5. Update transaction status
+      // Note: Cashfree V2 is async — status may be PENDING until webhook arrives.
+      //       We mark COMPLETED only when payoutStatus indicates immediate success.
+      const finalStatus = (payoutStatus === 'SUCCESS' || payoutStatus === 'COMPLETED') ? 'COMPLETED' : 'PENDING';
 
-      // 5. Update Transaction Status
       const updatedTx = await this.prisma.transaction.update({
         where: { id: transactionId },
         data: {
-          status: 'COMPLETED',
-          reference: payoutResult.cf_transfer_id || payoutResult.transfer_id,
-          description: `${tx.description} — PAID (Ref: ${payoutResult.transfer_id})`,
+          status: finalStatus,
+          reference: payoutRef,
+          description: `${tx.description} — PAYOUT_${finalStatus} (Ref: ${payoutRef})`,
         },
       });
 
-      // 6. Notify User
+      // 6. If immediately completed, deduct from frozenBalance
+      if (finalStatus === 'COMPLETED') {
+        await this.prisma.wallet.update({
+          where: { id: tx.walletId },
+          data: { frozenBalance: { decrement: tx.amount } },
+        });
+      }
+
+      // 7. Notify user
+      const currencySymbol = currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '₹';
       await this.notifications.create(
         user.id,
-        'Withdrawal Successful 💸',
-        `Your withdrawal of ₹${(tx.amount / tx.conversionRate).toFixed(2)} has been processed successfully.`,
-        'success',
-        '/dashboard/wallet'
+        finalStatus === 'COMPLETED' ? 'Withdrawal Successful 💸' : 'Withdrawal Processing ⏳',
+        finalStatus === 'COMPLETED'
+          ? `Your withdrawal of ${currencySymbol}${realPayoutAmount.toFixed(2)} has been sent successfully.`
+          : `Your withdrawal of ${currencySymbol}${realPayoutAmount.toFixed(2)} is being processed. You will be notified once completed.`,
+        finalStatus === 'COMPLETED' ? 'success' : 'info',
+        '/dashboard/wallet',
       );
 
-      // 7. Compliance Logging
+      // 8. Compliance log
       await this.compliance.log({
         organizerId: 'SYSTEM',
-        event: ComplianceEvent.PRIZE_DISTRIBUTED, // Reusing event or creating a new one
+        event: ComplianceEvent.PRIZE_DISTRIBUTED,
         details: {
           transactionId,
-          amount: tx.amount,
-          payoutRef: payoutResult.transfer_id,
-          method: 'CASHFREE_PAYOUTS'
+          currency,
+          amount: realPayoutAmount,
+          payoutRef,
+          method: currency === 'INR' ? 'CASHFREE_PAYOUTS' : 'PAYPAL_PAYOUTS',
         },
         performedBy: adminId,
       });
 
-      return { success: true, transaction: updatedTx };
+      return { success: true, transaction: updatedTx, payoutRef, payoutStatus: finalStatus };
 
     } catch (error: any) {
-      this.logger.error(`[PAYOUT FAILED] Withdrawal ${tx.id} failed: ${error.message}`);
+      this.logger.error(`[PAYOUT FAILED] Withdrawal ${tx.id}: ${error.message}`);
 
-      // OPTIONAL: Mark as FAILED or keep as PENDING for manual retry? 
-      // Usually keeping as PENDING is safer for admin to check error and retry.
-      // But we will log the failure in the description.
+      // Keep as PENDING for retry — log the failure
       await this.prisma.transaction.update({
         where: { id: transactionId },
         data: {
-          description: `${tx.description} — PAYOUT FAILED: ${error.message}`,
+          description: `${tx.description} — PAYOUT_FAILED: ${error.message}`,
         },
       });
 
       throw new BadRequestException(`Payout failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Reject Withdrawal — refund coins from frozenBalance back to balance
+   */
+  async rejectWithdrawal(transactionId: string, adminId: string) {
+    const tx = await this.prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: { wallet: { include: { user: true } } },
+    });
+
+    if (!tx) throw new NotFoundException('Transaction not found');
+    if (tx.type !== 'WITHDRAWAL') throw new BadRequestException('Not a withdrawal transaction');
+    if (tx.status !== 'PENDING') throw new BadRequestException('Only PENDING withdrawals can be rejected');
+
+    // Unlock coins: frozenBalance → balance
+    await this.prisma.wallet.update({
+      where: { id: tx.walletId },
+      data: {
+        balance: { increment: tx.amount },
+        frozenBalance: { decrement: tx.amount },
+      },
+    });
+
+    // Update transaction status
+    await this.prisma.transaction.update({
+      where: { id: transactionId },
+      data: {
+        status: 'FAILED',
+        description: `${tx.description} — REJECTED by admin. Coins refunded.`,
+      },
+    });
+
+    // Notify user
+    await this.notifications.create(
+      tx.wallet.user.id,
+      'Withdrawal Rejected ❌',
+      `Your withdrawal request of ${tx.amount} coins has been rejected. Coins have been returned to your wallet.`,
+      'error',
+      '/dashboard/wallet',
+    );
+
+    this.logger.log(`[REJECT] Withdrawal ${transactionId} rejected by ${adminId}. ${tx.amount} coins unlocked.`);
+    return { success: true, message: 'Withdrawal rejected and coins returned to user wallet.' };
   }
 }
