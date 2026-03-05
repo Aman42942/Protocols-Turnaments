@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Coins, DollarSign, IndianRupee, ShieldAlert, ShieldCheck,
     Activity, Save, Loader2, Banknote, Globe, ArrowRight,
-    CheckCircle2, XCircle, Search, Calendar, User, Mail, Repeat, Percent
+    CheckCircle2, XCircle, Search, Calendar, User, Mail, Repeat, Percent, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
@@ -27,6 +27,9 @@ export default function EconomyDashboard() {
     const [feeInr, setFeeInr] = useState('0');
     const [feeUsd, setFeeUsd] = useState('0');
     const [feeGbp, setFeeGbp] = useState('0');
+    // PayPal toggle
+    const [paypalEnabled, setPaypalEnabled] = useState(true);
+    const [savingPaypalToggle, setSavingPaypalToggle] = useState(false);
 
     const fetchEconomyData = async () => {
         try {
@@ -60,6 +63,13 @@ export default function EconomyDashboard() {
             if (feeInrRes.ok) { const d = await feeInrRes.json(); if (d?.value !== undefined) setFeeInr(d.value); }
             if (feeUsdRes.ok) { const d = await feeUsdRes.json(); if (d?.value !== undefined) setFeeUsd(d.value); }
             if (feeGbpRes.ok) { const d = await feeGbpRes.json(); if (d?.value !== undefined) setFeeGbp(d.value); }
+
+            // Load PayPal enabled toggle
+            const paypalEnabledRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/PAYPAL_ENABLED`);
+            if (paypalEnabledRes.ok) {
+                const d = await paypalEnabledRes.json();
+                setPaypalEnabled(d?.value !== 'false');
+            }
         } catch (error) {
             toast.error('Failed to load economy data');
         } finally {
@@ -137,6 +147,24 @@ export default function EconomyDashboard() {
             toast.error('Failed to save fees');
         } finally {
             setSavingFees(false);
+        }
+    };
+
+    const savePaypalToggle = async (enabled: boolean) => {
+        setSavingPaypalToggle(true);
+        try {
+            const token = localStorage.getItem('token');
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ key: 'PAYPAL_ENABLED', value: enabled ? 'true' : 'false' })
+            });
+            setPaypalEnabled(enabled);
+            toast.success(`PayPal ${enabled ? 'Enabled ✅' : 'Disabled 🔴'}`);
+        } catch {
+            toast.error('Failed to update PayPal toggle');
+        } finally {
+            setSavingPaypalToggle(false);
         }
     };
 
@@ -327,7 +355,69 @@ export default function EconomyDashboard() {
                 </div>
             </div>
 
+            {/* ── PAYPAL PAYMENT METHOD TOGGLE ────────────────────────── */}
+            <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="rounded-3xl border border-border bg-card shadow-xl overflow-hidden"
+            >
+                <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
+                    <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${paypalEnabled ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-destructive/10 border border-destructive/20'}`}>
+                            <Globe className={`w-5 h-5 ${paypalEnabled ? 'text-blue-400' : 'text-destructive'}`} />
+                        </div>
+                        <div>
+                            <p className="text-sm font-black uppercase tracking-widest">PayPal Payment Method</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Controls USD &amp; GBP payments via PayPal across entire platform</p>
+                        </div>
+                    </div>
+                    {/* Live status badge */}
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-black uppercase tracking-wider ${paypalEnabled ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-destructive/10 border-destructive/30 text-destructive'}`}>
+                        <motion.span
+                            animate={{ opacity: [1, 0.3, 1] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                            className={`w-1.5 h-1.5 rounded-full ${paypalEnabled ? 'bg-green-400' : 'bg-destructive'}`}
+                        />
+                        {paypalEnabled ? 'ENABLED' : 'DISABLED'}
+                    </div>
+                </div>
+
+                <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                        <p className="font-semibold text-sm">
+                            {paypalEnabled
+                                ? '✅ PayPal is currently active — users can pay with USD & GBP via PayPal.'
+                                : '🔴 PayPal is currently disabled — only INR (UPI/Bank) payments are available.'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            Affects: Tournament Entry Payments • Wallet Deposits • Withdrawals (USD/GBP)
+                        </p>
+                    </div>
+                    {/* Toggle button */}
+                    <motion.button
+                        whileTap={{ scale: 0.93 }}
+                        whileHover={{ scale: 1.04 }}
+                        disabled={savingPaypalToggle}
+                        onClick={() => savePaypalToggle(!paypalEnabled)}
+                        className={`flex items-center gap-3 px-5 py-3 rounded-2xl border font-black text-sm transition-all min-w-[160px] justify-center ${paypalEnabled
+                            ? 'bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive hover:text-white'
+                            : 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500 hover:text-white'
+                            }`}
+                    >
+                        {savingPaypalToggle ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : paypalEnabled ? (
+                            <><ToggleRight className="w-5 h-5" /> Disable PayPal</>
+                        ) : (
+                            <><ToggleLeft className="w-5 h-5" /> Enable PayPal</>
+                        )}
+                    </motion.button>
+                </div>
+            </motion.div>
+
             {/* LIVE ECONOMY SIMULATOR */}
+
             <LivePreviewSimulator
                 exchangeRate={exchangeRate}
                 gbpExchangeRate={gbpExchangeRate}

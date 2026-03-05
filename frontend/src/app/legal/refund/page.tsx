@@ -1,56 +1,29 @@
-'use client';
+import LegalPage from '@/components/LegalPage';
+import { CreditCard } from 'lucide-react';
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { useRouter } from 'next/navigation';
-
-export default function RefundPolicy() {
-    const router = useRouter();
-
+export default function RefundPage() {
     return (
-        <div className="min-h-screen bg-muted/30 py-12 px-4">
-            <div className="container max-w-4xl mx-auto">
-                <Button variant="ghost" className="mb-6" onClick={() => router.back()}>← Back</Button>
+        <LegalPage
+            cmsKey="LEGAL_REFUND"
+            title="Refund Policy"
+            subtitle="Our commitment to fair and transparent refunds"
+            icon={<CreditCard className="w-7 h-7 text-amber-400" />}
+            fallbackContent={`1. Tournament Cancellation
+If a tournament is cancelled by the organizer before it begins, a full coin credit is issued to all registered participants within 24 hours.
 
-                <Card className="border-primary/10 shadow-xl">
-                    <CardHeader className="bg-primary/5 border-b text-center py-10">
-                        <CardTitle className="text-3xl font-black uppercase tracking-tighter">Refund & Cancellation Policy</CardTitle>
-                        <p className="text-muted-foreground mt-2">Effective Date: February 15, 2026</p>
-                    </CardHeader>
-                    <CardContent className="p-8 prose prose-slate max-w-none">
-                        <section className="mb-8">
-                            <h3 className="text-xl font-bold mb-3">1. Tournament Entry Fees</h3>
-                            <p>Entry fees for tournaments are generally non-refundable once the tournament has started or the brackets have been generated. This ensures stability and fairness for all participants.</p>
-                        </section>
+2. Entry Fee Refunds
+- Entry fees are non-refundable once a tournament officially begins.
+- If a match is cancelled by the admin before it starts, the entry fee is refunded to your coin wallet.
 
-                        <section className="mb-8">
-                            <h3 className="text-xl font-bold mb-3">2. Wallet Deposits</h3>
-                            <p>Funds deposited into the Protocol Tournament wallet are intended for use within the platform. Refunds of wallet balance back to the original payment method are processed upon request, subject to a 5% processing fee.</p>
-                        </section>
+3. Withdrawal Refunds
+- Failed withdrawals are automatically refunded to your coin wallet within 1-3 business days.
+- If a withdrawal is rejected by admin, coins are immediately returned to your balance.
 
-                        <section className="mb-8">
-                            <h3 className="text-xl font-bold mb-3">3. Cancellations</h3>
-                            <p>If a tournament is cancelled by the organizers for any reason (technical issues, lack of participants, etc.), 100% of the entry fee will be automatically credited back to the participants&apos; wallets.</p>
-                        </section>
+4. Payment Processing Fees
+- Gateway processing fees (Cashfree/PayPal) are non-refundable once the transaction is completed.
 
-                        <section className="mb-8">
-                            <h3 className="text-xl font-bold mb-3">4. Disqualification</h3>
-                            <p>Participants disqualified for cheating, toxic behavior, or violating game-specific rules will NOT be eligible for a refund of their entry fee.</p>
-                        </section>
-
-                        <section className="mb-8">
-                            <h3 className="text-xl font-bold mb-3">5. Processing Time</h3>
-                            <p>Approved refunds are processed within 5-7 business days to the original payment source.</p>
-                        </section>
-
-                        <div className="mt-12 p-6 bg-muted rounded-xl border-2 border-dashed text-center">
-                            <p className="font-bold">Need help with a refund?</p>
-                            <p className="text-sm text-muted-foreground">Contact our support team at support@protocol.com or via the Support Hub.</p>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
+5. Contact Us
+For refund disputes, please email support@protocolapp.com within 7 days of the transaction.`}
+        />
     );
 }

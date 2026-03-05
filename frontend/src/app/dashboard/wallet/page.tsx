@@ -29,6 +29,7 @@ function WalletContent() {
 
     // Per-currency withdrawal fees (%) fetched from CMS
     const [fees, setFees] = useState({ INR: 0, USD: 0, GBP: 0 });
+    const [paypalEnabled, setPaypalEnabled] = useState(true);
 
 
     // Withdraw state
@@ -43,7 +44,7 @@ function WalletContent() {
 
     const loadData = async () => {
         try {
-            const [walletRes, ledgerRes, rateRes, gbpRes, feeInrRes, feeUsdRes, feeGbpRes] = await Promise.allSettled([
+            const [walletRes, ledgerRes, rateRes, gbpRes, feeInrRes, feeUsdRes, feeGbpRes, paypalEnabledRes] = await Promise.allSettled([
                 api.get('/wallet'),
                 api.get('/analytics/user-ledger'),
                 api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/PAYPAL_EXCHANGE_RATE`),
@@ -51,6 +52,7 @@ function WalletContent() {
                 api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/WITHDRAWAL_FEE_INR`),
                 api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/WITHDRAWAL_FEE_USD`),
                 api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/WITHDRAWAL_FEE_GBP`),
+                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/PAYPAL_ENABLED`),
             ]);
 
             if (walletRes.status === 'fulfilled') setWallet(walletRes.value.data);
@@ -71,6 +73,11 @@ function WalletContent() {
                 USD: feeUsdRes.status === 'fulfilled' ? Number(feeUsdRes.value.data?.value || 0) : 0,
                 GBP: feeGbpRes.status === 'fulfilled' ? Number(feeGbpRes.value.data?.value || 0) : 0,
             });
+
+            // Load PayPal enabled state
+            if (paypalEnabledRes.status === 'fulfilled') {
+                setPaypalEnabled(paypalEnabledRes.value.data?.value !== 'false');
+            }
 
         } catch (err) {
             console.error('Failed to load wallet data:', err);
@@ -258,20 +265,26 @@ function WalletContent() {
                                         <div>
                                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Choose Currency</label>
                                             <div className="flex gap-2">
-                                                {['INR', 'USD', 'GBP'].map((curr) => (
-                                                    <button
-                                                        key={curr}
-                                                        onClick={() => setWithdrawCurrency(curr)}
-                                                        className={`flex-1 flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all ${withdrawCurrency === curr ? 'border-orange-500 bg-orange-500/10' : 'border-border bg-muted/30 hover:bg-muted'}`}
-                                                    >
-                                                        <span className={`font-black text-sm ${withdrawCurrency === curr ? 'text-orange-500' : 'text-muted-foreground'}`}>{curr}</span>
-                                                        <span className="text-[10px] text-muted-foreground mt-0.5">
-                                                            {curr === 'INR' ? 'UPI' : 'PayPal'}
-                                                        </span>
-                                                    </button>
-                                                ))}
+                                                {(['INR', 'USD', 'GBP'] as const)
+                                                    .filter(curr => curr === 'INR' || paypalEnabled)
+                                                    .map((curr) => (
+                                                        <button
+                                                            key={curr}
+                                                            onClick={() => setWithdrawCurrency(curr)}
+                                                            className={`flex-1 flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all ${withdrawCurrency === curr ? 'border-orange-500 bg-orange-500/10' : 'border-border bg-muted/30 hover:bg-muted'}`}
+                                                        >
+                                                            <span className={`font-black text-sm ${withdrawCurrency === curr ? 'text-orange-500' : 'text-muted-foreground'}`}>{curr}</span>
+                                                            <span className="text-[10px] text-muted-foreground mt-0.5">
+                                                                {curr === 'INR' ? 'UPI' : 'PayPal'}
+                                                            </span>
+                                                        </button>
+                                                    ))}
                                             </div>
+                                            {!paypalEnabled && (
+                                                <p className="text-xs text-amber-500 mt-2 font-medium">⚠️ International payments (PayPal) are currently disabled by admin.</p>
+                                            )}
                                         </div>
+
 
                                         <div>
                                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Amount to Withdraw (Coins)</label>

@@ -127,6 +127,7 @@ export default function TournamentDetailPage() {
     const [paypalClientId, setPaypalClientId] = useState('');
     const [walletBalance, setWalletBalance] = useState(0);
     const [billingPhone, setBillingPhone] = useState('');
+    const [paypalEnabled, setPaypalEnabled] = useState(true);
 
     const loadRates = async () => {
         try {
@@ -147,6 +148,11 @@ export default function TournamentDetailPage() {
                 setWalletBalance(walletRes.value.data?.balance || 0);
             }
             setPaypalClientId(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
+
+            const paypalEnabledRes = await api.get(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/PAYPAL_ENABLED`);
+            if (paypalEnabledRes.data?.value !== undefined) {
+                setPaypalEnabled(paypalEnabledRes.data.value !== 'false');
+            }
         } catch (err) {
             console.error('Failed to load rates/wallet:', err);
         }
@@ -512,7 +518,7 @@ export default function TournamentDetailPage() {
                             </button>
 
                             {/* PayPal USD - International */}
-                            {paypalClientId && (
+                            {paypalClientId && paypalEnabled && (
                                 <div className="group relative bg-card border border-border/50 hover:border-yellow-500/50 rounded-3xl p-5 transition-all flex flex-col justify-between h-40 overflow-hidden">
                                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-600/5 blur-3xl group-hover:bg-yellow-600/10 transition-all" />
                                     <div className="flex justify-between items-start">
@@ -552,7 +558,7 @@ export default function TournamentDetailPage() {
                             )}
 
                             {/* PayPal GBP - UK */}
-                            {paypalClientId && (
+                            {paypalClientId && paypalEnabled && (
                                 <div className="md:col-span-2 group relative bg-card border border-border/50 hover:border-purple-500/50 rounded-3xl p-5 px-6 transition-all flex items-center justify-between overflow-hidden">
                                     <div className="absolute -top-20 -right-20 w-48 h-48 bg-purple-600/5 blur-[80px] group-hover:bg-purple-600/10 transition-all" />
                                     <div className="flex items-center gap-5">
