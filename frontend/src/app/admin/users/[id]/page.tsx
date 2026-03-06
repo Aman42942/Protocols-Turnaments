@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/Badge';
 import api from '@/lib/api';
 import {
     User, Mail, Calendar, Shield, MapPin, Gamepad2, ArrowLeft,
-    Wallet, TrendingUp, TrendingDown, Clock, AlertCircle, Loader2, Edit
+    Wallet, TrendingUp, TrendingDown, Clock, AlertCircle, Loader2, Edit,
+    Lock, Unlock, Smartphone, Globe, UserX
 } from 'lucide-react';
 import {
     Dialog, DialogContent, DialogDescription, DialogFooter,
@@ -33,6 +34,10 @@ interface UserDetails {
     freeFireId?: string;
     createdAt: string;
     banned: boolean;
+    phone?: string;
+    dob?: string;
+    address?: string;
+    canChangeVisibility: boolean;
     wallet: {
         id: string;
         balance: number;
@@ -61,6 +66,14 @@ interface Transaction {
     createdAt: string;
 }
 
+interface Session {
+    id: string;
+    tokenHash: string;
+    ipAddress: string;
+    device: string;
+    lastActive: string;
+}
+
 export default function UserDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     // Unwrap params using React.use()
     const { id: userId } = use(params);
@@ -75,6 +88,10 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
     const [updatingRole, setUpdatingRole] = useState(false);
     const [currentUserRole, setCurrentUserRole] = useState<string>('');
     const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+
+    // Sessions
+    const [sessions, setSessions] = useState<Session[]>([]);
+    const [sessionsLoading, setSessionsLoading] = useState(true);
 
     useEffect(() => {
         try {
@@ -108,10 +125,22 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
         }
     }, [userId]);
 
+    const fetchUserSessions = useCallback(async () => {
+        try {
+            const res = await api.get(`/users/admin/${userId}/sessions`);
+            setSessions(res.data);
+        } catch (err) {
+            console.error('Failed to fetch sessions:', err);
+        } finally {
+            setSessionsLoading(false);
+        }
+    }, [userId]);
+
     useEffect(() => {
         fetchUserDetails();
         fetchUserTransactions();
-    }, [fetchUserDetails, fetchUserTransactions]);
+        fetchUserSessions();
+    }, [fetchUserDetails, fetchUserTransactions, fetchUserSessions]);
 
     const handleUpdateRole = async () => {
         if (!selectedRole || !user) return;
@@ -126,6 +155,26 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
             alert(err.response?.data?.message || 'Failed to update role');
         } finally {
             setUpdatingRole(false);
+        }
+    };
+
+    const handleTogglePrivacy = async () => {
+        if (!user || !confirm("Are you sure you want to toggle this user's ability to override privacy settings?")) return;
+        try {
+            await api.post(`/users/admin/${user.id}/toggle-privacy`);
+            fetchUserDetails();
+        } catch (e: any) {
+            alert(e.response?.data?.message || 'Failed to toggle privacy permission.');
+        }
+    };
+
+    const handleRevokeSession = async (sessionId: string) => {
+        if (!confirm('Force logout this device?')) return;
+        try {
+            await api.delete(`/users/admin/sessions/${sessionId}`);
+            setSessions(sessions.filter(s => s.id !== sessionId));
+        } catch (e: any) {
+            alert(e.response?.data?.message || 'Failed to revoke session');
         }
     };
 
@@ -257,6 +306,81 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
                                     ))
                                 }
                             </div>
+                        </div>
+
+                        {/* Personal Details */}
+                        <div className="pt-4 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                                    <User className="w-4 h-4" /> Identity Verification
+                                </h3>
+                                <div className="space-y-2 text-sm text-muted-foreground">
+                                    <p><strong className="text-foreground">Phone:</strong> {user.phone || 'N/A'}</p>
+                                    <p><strong className="text-foreground">Date of Birth:</strong> {user.dob ? new Date(user.dob).toLocaleDateString() : 'N/A'}</p>
+                                    <p><strong className="text-foreground">Address:</strong> {user.address || 'N/A'}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                                    <Shield className="w-4 h-4" /> Security Overrides
+                                </h3>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
+                                        <div>
+                                            <p className="text-xs font-medium text-foreground">Privacy Override</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">Allows user to modify Profile Visibility</p>
+                                        </div>
+                                        <Button
+                                            variant={user.canChangeVisibility ? "default" : "secondary"}
+                                            size="sm"
+                                            className="h-7 text-xs"
+                                            onClick={handleTogglePrivacy}
+                                        >
+                                            {user.canChangeVisibility ? <Unlock className="h-3 w-3 mr-1" /> : <Lock className="h-3 w-3 mr-1" />}
+                                            {user.canChangeVisibility ? 'Allowed' : 'Locked'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Active Sessions */}
+                        <div className="pt-4 border-t border-border">
+                            <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center justify-between">
+                                <span className="flex items-center gap-2"><Smartphone className="w-4 h-4" /> Active Devices & Sessions</span>
+                                <Badge variant="secondary" className="text-[10px]">{sessions.length} Active</Badge>
+                            </h3>
+                            {sessionsLoading ? (
+                                <div className="flex justify-center p-4"><Loader2 className="animate-spin h-4 w-4 text-primary" /></div>
+                            ) : sessions.length === 0 ? (
+                                <p className="text-xs text-muted-foreground italic">No active sessions.</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {sessions.map((session) => (
+                                        <div key={session.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-border bg-muted/10 gap-2">
+                                            <div>
+                                                <p className="font-bold text-xs truncate max-w-[200px] sm:max-w-xs flex items-center gap-2">
+                                                    {session.device || 'Unknown Device'}
+                                                    {session.device?.toLowerCase().includes('mobile') ? <Smartphone className="h-3 w-3 text-muted-foreground inline" /> : <Globe className="h-3 w-3 text-muted-foreground inline" />}
+                                                </p>
+                                                <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                                                    <span className="bg-muted px-1.5 py-0.5 rounded font-mono">{session.ipAddress}</span>
+                                                    <span>•</span>
+                                                    <span>Active: {new Date(session.lastActive).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-7 text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10 border-red-500/20"
+                                                onClick={() => handleRevokeSession(session.id)}
+                                            >
+                                                <UserX className="h-3 w-3 mr-1" /> Revoke
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

@@ -15,6 +15,7 @@ interface DashboardData {
     teamsCount: number;
     notifications: any[];
     upcomingTournaments: any[];
+    profileCompletion: number;
 }
 
 const containerVariants = {
@@ -47,6 +48,7 @@ export function DashboardView() {
         teamsCount: 0,
         notifications: [],
         upcomingTournaments: [],
+        profileCompletion: 0,
     });
     const [loading, setLoading] = useState(true);
 
@@ -81,6 +83,7 @@ export function DashboardView() {
                 teamsCount: teams.length,
                 notifications: notifications?.notifications || notifications || [],
                 upcomingTournaments: upcoming,
+                profileCompletion: user?.profileCompletion || 0,
             });
         } catch (err) {
             console.error('Dashboard fetch error:', err);
@@ -141,7 +144,37 @@ export function DashboardView() {
                         </h1>
                         <p className="text-muted-foreground mt-1 text-lg">Welcome back, <span className="text-primary font-semibold">{data.userName}</span></p>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex items-center gap-4 sm:gap-6">
+                        {/* Circular Progress Bar */}
+                        <Link href="/dashboard/settings" className="group hidden sm:flex items-center gap-3 bg-card p-2 pr-4 rounded-full border border-border hover:border-primary/50 transition-colors">
+                            <div className="relative h-10 w-10 flex items-center justify-center">
+                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                    <path
+                                        className="text-muted/30"
+                                        strokeWidth="3"
+                                        stroke="currentColor"
+                                        fill="none"
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    />
+                                    <path
+                                        className={`${data.profileCompletion === 100 ? 'text-green-500' : 'text-primary'}`}
+                                        strokeDasharray={`${data.profileCompletion}, 100`}
+                                        strokeWidth="3"
+                                        strokeLinecap="round"
+                                        stroke="currentColor"
+                                        fill="none"
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        style={{ transition: 'stroke-dasharray 1s ease-in-out' }}
+                                    />
+                                </svg>
+                                <span className="absolute text-[10px] font-bold font-orbitron">{data.profileCompletion}%</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">Profile Setup</span>
+                                <span className="text-[10px] text-muted-foreground">{data.profileCompletion === 100 ? 'Complete' : 'Pending Tasks'}</span>
+                            </div>
+                        </Link>
+
                         <Link href="/dashboard/wallet">
                             <Button className="h-12 px-6 rounded-xl border-2 border-primary/40 bg-background hover:bg-muted transition-all duration-300 shadow-sm">
                                 <Wallet className="mr-2 h-5 w-5 text-primary" />
