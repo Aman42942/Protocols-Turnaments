@@ -104,7 +104,7 @@ export function Navbar() {
         { name: 'About', href: '/about', icon: Settings },
     ];
 
-    if (pathname && (pathname.startsWith('/secure-admin-login') || pathname.startsWith('/admin') || pathname === '/maintenance')) {
+    if (pathname && (pathname.startsWith('/secure-admin-login') || pathname.startsWith('/admin') || pathname === '/maintenance' || pathname === '/banned')) {
         return null;
     }
 

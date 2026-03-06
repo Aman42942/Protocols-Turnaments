@@ -104,19 +104,12 @@ export default function BannedPage() {
                             <p className="text-xs text-zinc-600">Please provide this ID if you contact support.</p>
                         </div>
 
-                        <div className="pt-6 flex flex-col sm:flex-row gap-4">
+                        <div className="pt-6 flex justify-center">
                             <Button
                                 onClick={handleContactSupport}
-                                className="w-full bg-red-600 hover:bg-red-700 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all"
+                                className="w-full sm:w-2/3 bg-red-600 hover:bg-red-700 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all"
                             >
                                 Appeal Ban <ArrowRight className="w-4 h-4 ml-2" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="w-full border-zinc-800 hover:bg-white hover:text-black transition-all"
-                                onClick={() => window.location.href = '/'}
-                            >
-                                <Home className="w-4 h-4 mr-2" /> Return Home
                             </Button>
                         </div>
                     </motion.div>
