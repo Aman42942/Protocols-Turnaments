@@ -10,11 +10,12 @@ async function main() {
 
     try {
         // Check if exists
+        let user;
         const existing = await prisma.user.findUnique({ where: { email } });
         if (existing) {
             console.log('Admin user already exists. Updating password/role...');
             const hashedPassword = await bcrypt.hash(password, 10);
-            await prisma.user.update({
+            user = await prisma.user.update({
                 where: { email },
                 data: {
                     password: hashedPassword,
@@ -27,7 +28,7 @@ async function main() {
         } else {
             console.log('Creating new Admin user...');
             const hashedPassword = await bcrypt.hash(password, 10);
-            await prisma.user.create({
+            user = await prisma.user.create({
                 data: {
                     email,
                     password: hashedPassword,
@@ -37,6 +38,21 @@ async function main() {
                 }
             });
         }
+
+        // Ensure wallet exists for this admin
+        const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+        if (!wallet) {
+            console.log('Initializing Admin Wallet...');
+            await prisma.wallet.create({
+                data: {
+                    userId: user.id,
+                    balance: 0,
+                    frozenBalance: 0,
+                    currency: 'INR'
+                }
+            });
+        }
+
         console.log(`\nSUCCESS! Admin User Ready:\nEmail: ${email}\nPassword: ${password}\n`);
     } catch (e) {
         console.error('FAILED to create admin:', e);
