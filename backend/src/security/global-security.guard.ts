@@ -6,8 +6,9 @@ export class GlobalSecurityGuard implements CanActivate {
     private readonly logger = new Logger(GlobalSecurityGuard.name);
 
     // Advanced Regex for detecting SQL Injection
+    // Removed `--` and `;` from strict global checks because UUIDs and some URL parameters use them and cause false positive Auto-Bans.
     private readonly sqliRegex = new RegExp(
-        /(?:'|"|`|;|--|\/\*|\*\/)|(?:\b(?:UNION|SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|EXEC|EXECUTE|xp_cmdshell|sp_executesql)\b)/i
+        /(?:\b(?:UNION|SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|EXEC|EXECUTE|xp_cmdshell|sp_executesql)\b\s+)/i
     );
 
     // Advanced Regex for detecting Cross-Site Scripting (XSS)
@@ -66,17 +67,17 @@ export class GlobalSecurityGuard implements CanActivate {
             throw new ForbiddenException('Malicious payload detected and blocked.');
         }
 
-        // Check SQLi
         // We only strictly check SQLi in query string or strictly defined params because JSON bodies often contain harmless characters like quotes/semicolons.
-        // The regex is quite aggressive, so we apply it primarily on the raw URL string or params.
-        if (this.sqliRegex.test(request.originalUrl)) {
+        // The regex is applied to the decoded URL path + query to avoid false positives on hyphenated IDs.
+        const decodedUrl = decodeURIComponent(request.originalUrl);
+        if (this.sqliRegex.test(decodedUrl)) {
             await this.securityService.logThreat({
                 type: SecurityEventType.SQLI,
                 ipAddress: ip,
                 userId: request.user?.id,
                 path: request.originalUrl,
                 method: request.method,
-                payload: request.originalUrl,
+                payload: decodedUrl,
                 severity: SecuritySeverity.CRITICAL,
             });
             throw new ForbiddenException('Malicious query format detected and blocked.');
