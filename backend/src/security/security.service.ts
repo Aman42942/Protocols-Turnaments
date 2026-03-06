@@ -24,6 +24,8 @@ export class SecurityService {
     // In-memory cache for fast lookups
     private bannedIpsCache: Set<string> = new Set();
     private autoBanEnabledCache: boolean = true;
+    private bannedPageTitleCache: string = 'Access Denied';
+    private bannedPageMessageCache: string = 'Your IP address has been permanently blocked due to suspicious activity.';
     private lastCacheUpdate = 0;
 
     constructor(
@@ -46,15 +48,30 @@ export class SecurityService {
         return this.bannedIpsCache.has(ip);
     }
 
+    /**
+     * Get Banned Page Configuration (Title and Message)
+     */
+    getBannedPageConfig() {
+        return {
+            title: this.bannedPageTitleCache,
+            message: this.bannedPageMessageCache,
+        };
+    }
+
     private async refreshBannedIpsCache() {
         try {
-            const [bans, config] = await Promise.all([
+            const [bans, autoBanConfig, titleConfig, msgConfig] = await Promise.all([
                 this.prisma.bannedIp.findMany({ select: { ipAddress: true } }),
-                this.prisma.systemConfig.findUnique({ where: { key: 'AUTO_BAN_ENABLED' } })
+                this.prisma.systemConfig.findUnique({ where: { key: 'AUTO_BAN_ENABLED' } }),
+                this.prisma.systemConfig.findUnique({ where: { key: 'BANNED_PAGE_TITLE' } }),
+                this.prisma.systemConfig.findUnique({ where: { key: 'BANNED_PAGE_MESSAGE' } })
             ]);
 
             this.bannedIpsCache = new Set(bans.map((b) => b.ipAddress));
-            this.autoBanEnabledCache = config ? config.value === 'true' : true; // Default true if not set
+            this.autoBanEnabledCache = autoBanConfig ? autoBanConfig.value === 'true' : true;
+            this.bannedPageTitleCache = titleConfig?.value || 'Access Denied';
+            this.bannedPageMessageCache = msgConfig?.value || 'Your IP address has been permanently blocked due to suspicious activity.';
+
             this.lastCacheUpdate = Date.now();
         } catch (e) {
             this.logger.error('Failed to refresh security caches', e);
@@ -179,6 +196,27 @@ export class SecurityService {
             where: { ipAddress: ip, resolved: false },
             data: { resolved: true },
         });
+    }
+
+    /**
+     * Update Banned Page Configuration manually (Admin)
+     */
+    async updateBannedPageConfig(title: string, message: string) {
+        await Promise.all([
+            this.prisma.systemConfig.upsert({
+                where: { key: 'BANNED_PAGE_TITLE' },
+                update: { value: title },
+                create: { key: 'BANNED_PAGE_TITLE', value: title }
+            }),
+            this.prisma.systemConfig.upsert({
+                where: { key: 'BANNED_PAGE_MESSAGE' },
+                update: { value: message },
+                create: { key: 'BANNED_PAGE_MESSAGE', value: message }
+            })
+        ]);
+
+        // Force refresh cache
+        await this.refreshBannedIpsCache();
     }
 
     /**

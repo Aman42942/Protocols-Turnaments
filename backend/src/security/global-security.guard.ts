@@ -24,7 +24,14 @@ export class GlobalSecurityGuard implements CanActivate {
         // 1. Fast Banned IP Check
         const isBanned = await this.securityService.isIpBanned(ip);
         if (isBanned) {
-            throw new ForbiddenException('Your IP address has been permanently blocked due to suspicious activity.');
+            const config = this.securityService.getBannedPageConfig();
+            throw new ForbiddenException({
+                message: config.message,
+                title: config.title,
+                banned: true,
+                statusCode: 403,
+                error: 'Forbidden'
+            });
         }
 
         // --- WHITELIST ROUTES ---

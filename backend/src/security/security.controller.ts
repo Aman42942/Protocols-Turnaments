@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Delete, Query, UseGuards, Patch } from '@nestjs/common';
 import { SecurityService } from './security.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -57,5 +57,27 @@ export class SecurityController {
             data: { resolved: true }
         });
         return { success: true };
+    }
+
+    @Post('banned-ips')
+    @Roles('ADMIN')
+    async banIpManually(@Query('ip') ip: string, @Query('reason') reason?: string) {
+        if (!ip) throw new Error('IP is required');
+        await this.securityService.banIp(ip, reason || 'Manually banned by Admin');
+        return { success: true, message: `IP ${ip} has been blocked.` };
+    }
+
+    @Get('banned-page-config')
+    @Roles('ADMIN')
+    async getBannedPageConfig() {
+        return this.securityService.getBannedPageConfig();
+    }
+
+    @Patch('banned-page-config')
+    @Roles('ADMIN')
+    async updateBannedPageConfig(@Query('title') title: string, @Query('message') message: string) {
+        if (!title || !message) throw new Error('Title and Message are required');
+        await this.securityService.updateBannedPageConfig(title, message);
+        return { success: true, message: 'Banned page content updated.' };
     }
 }
