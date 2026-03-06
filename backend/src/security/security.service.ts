@@ -149,7 +149,10 @@ export class SecurityService {
 
         // Threshold is 5 points (e.g., 2 Highs + 1 Med, or 2 Criticals, etc.)
         if (score >= 5) {
-            await this.banIp(ip, 'AUTOPILOT: Repeated security violations detected.');
+            // DISABLED AUTOPILOT BAN AS PER USER REQUEST. It was causing false positives on regular user interactions.
+            // We just log the threat instead of dropping an immediate IP Ban.
+            this.logger.warn(`AUTOPILOT: High Threat Score (${score}) detected for IP: ${ip}. Auto-ban is disabled.`);
+            // await this.banIp(ip, 'AUTOPILOT: Repeated security violations detected.');
         }
     }
 
