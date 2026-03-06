@@ -39,7 +39,9 @@ export class GlobalSecurityGuard implements CanActivate {
         // that naturally trigger the strict WAF regex. We bypass deep inspection for these.
         const whitelistedPrefixes = [
             '/auth/google',
-            '/payments/webhook'
+            '/payments/webhook',
+            '/auth/set-password', // Passwords may contain SQLi/XSS-like characters by user intent
+            '/users/me'           // Profile URLs/Bios may contain complex strings/links
         ];
 
         if (whitelistedPrefixes.some(prefix => request.originalUrl.startsWith(prefix))) {

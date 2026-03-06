@@ -32,6 +32,7 @@ export function EditProfileDialog({ user, onUpdate, children }: EditProfileDialo
         country: user?.country || "",
         bgmiId: user?.bgmiId || "",
         freeFireId: user?.freeFireId || "",
+        avatar: user?.avatar || "",
     });
 
     // Update form when user prop changes
@@ -43,6 +44,7 @@ export function EditProfileDialog({ user, onUpdate, children }: EditProfileDialo
                 country: user.country || "",
                 bgmiId: user.bgmiId || "",
                 freeFireId: user.freeFireId || "",
+                avatar: user.avatar || "",
             });
         }
     }, [user]);
@@ -140,6 +142,17 @@ export function EditProfileDialog({ user, onUpdate, children }: EditProfileDialo
                                     placeholder="UID..."
                                 />
                             </div>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="avatar" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Profile Image URL</Label>
+                            <Input
+                                id="avatar"
+                                name="avatar"
+                                value={formData.avatar}
+                                onChange={handleChange}
+                                className="rounded-xl border-border/50 bg-background/50 text-xs"
+                                placeholder="https://imgur.com/...png"
+                            />
                         </div>
                     </div>
                     <DialogFooter>
