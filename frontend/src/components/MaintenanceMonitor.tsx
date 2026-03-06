@@ -10,6 +10,7 @@ export function MaintenanceMonitor() {
     const pathname = usePathname();
     const socket = useSocket();
     const [isAdmin, setIsAdmin] = useState(false);
+    const [isMaintenanceActive, setIsMaintenanceActive] = useState(false);
 
     // Initial role check
     useEffect(() => {
@@ -33,6 +34,8 @@ export function MaintenanceMonitor() {
     }, []);
 
     const handleStatusChange = (isMaintenanceMode: boolean) => {
+        setIsMaintenanceActive(isMaintenanceMode);
+
         // Only react if we definitely know their admin status or lack thereof
         if (isMaintenanceMode) {
             // Maintenance ON - Kick non-admins
@@ -77,5 +80,14 @@ export function MaintenanceMonitor() {
         return () => clearInterval(interval);
     }, [isAdmin, pathname, router]);
 
-    return null; // Component does not render anything
+    if (isAdmin && isMaintenanceActive) {
+        return (
+            <div className="fixed top-0 left-0 right-0 z-[99999] bg-red-600 text-white text-center text-[10px] md:text-xs font-black uppercase tracking-widest py-1.5 shadow-lg shadow-red-900/50 flex items-center justify-center gap-2">
+                <span className="animate-pulse w-2 h-2 rounded-full bg-white block"></span>
+                SYSTEM MAINTENANCE IS CURRENTLY ACTIVE. REGULAR USERS ARE LOCKED OUT.
+            </div>
+        );
+    }
+
+    return null;
 }

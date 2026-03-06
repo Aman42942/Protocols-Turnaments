@@ -14,9 +14,13 @@ export async function proxy(request: NextRequest) {
         // Add timeout to prevent hanging
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // Increased to 5s for local reliability
-
-        const res = await fetch(`${backendUrl}/maintenance`, {
+        // Append timestamp to utterly defeat aggressive Vercel/Next.js Edge caching
+        const res = await fetch(`${backendUrl}/maintenance?t=${Date.now()}`, {
             cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+            },
             signal: controller.signal
         });
 
