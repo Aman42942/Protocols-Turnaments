@@ -105,6 +105,26 @@ export class UsersController {
     }
   }
 
+  @Post('admin/:id/toggle-privacy')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN', 'ULTIMATE_ADMIN')
+  async togglePrivacy(@Param('id') id: string, @Request() req) {
+    try {
+      const result = await this.usersService.togglePrivacyOverride(req.user.userId, id);
+      await this.activityLogService.log(
+        req.user.userId,
+        // @ts-ignore
+        'TOGGLE_PRIVACY_OVERRIDE',
+        { canChangeVisibility: result.canChangeVisibility },
+        id,
+        req.ip,
+      );
+      return result;
+    } catch (error) {
+      throw new UnauthorizedException(error.message);
+    }
+  }
+
   // Super Admin: Delete user
   @Delete('admin/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

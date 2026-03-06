@@ -24,17 +24,15 @@ export class UsersService {
         role: true,
         avatar: true,
         country: true,
-        bio: true,
-        riotId: true,
-        pubgId: true,
-        bgmiId: true,
-        freeFireId: true,
-        socials: true,
         banned: true,
         createdAt: true,
+        phone: true,
+        dob: true,
+        address: true,
+        canChangeVisibility: true,
         wallet: true,
         teams: { include: { team: true } },
-      },
+      } as any,
     }) as any;
   }
 
@@ -181,6 +179,30 @@ export class UsersService {
       where: { id: targetUserId },
       data: { banned: !targetUser.banned },
     });
+  }
+
+  // Admin: Toggle Privacy Override
+  async togglePrivacyOverride(requesterId: string, targetUserId: string) {
+    const requester = await this.prisma.user.findUnique({
+      where: { id: requesterId },
+      select: { role: true },
+    });
+
+    if (!requester || (requester.role !== 'SUPERADMIN' && requester.role !== 'ADMIN' && requester.role !== 'ULTIMATE_ADMIN')) {
+      throw new Error('Unauthorized');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { canChangeVisibility: true } as any
+    });
+
+    if (!targetUser) throw new Error('Target user not found');
+
+    return this.prisma.user.update({
+      where: { id: targetUserId },
+      data: { canChangeVisibility: !(targetUser as any).canChangeVisibility } as any,
+    }) as any;
   }
 
   // Admin: Delete user
