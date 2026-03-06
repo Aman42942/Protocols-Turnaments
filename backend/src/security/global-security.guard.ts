@@ -5,9 +5,9 @@ import { SecurityService, SecurityEventType, SecuritySeverity } from './security
 export class GlobalSecurityGuard implements CanActivate {
     private readonly logger = new Logger(GlobalSecurityGuard.name);
 
-    // Advanced Regex for detecting SQL Injection
+    // Advanced Regex for detecting SQL Injection (Relaxed to avoid OAuth false positives)
     private readonly sqliRegex = new RegExp(
-        /(?:'|"|`|;|--|\/\*|\*\/)|(?:\b(?:UNION|SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|EXEC|EXECUTE|xp_cmdshell|sp_executesql)\b)/i
+        /(?:\b(?:UNION|SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|EXEC|EXECUTE|xp_cmdshell|sp_executesql)\b\s+)|(?:--\s)|(?:\/\*.*?\*\/)/i
     );
 
     // Advanced Regex for detecting Cross-Site Scripting (XSS)
