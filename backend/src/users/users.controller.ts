@@ -126,4 +126,40 @@ export class UsersController {
   async getUserById(@Param('id') id: string) {
     return this.usersService.findById(id);
   }
+
+  // ========== SESSION MANAGEMENT ==========
+
+  @Get('me/sessions')
+  @UseGuards(AuthGuard('jwt'))
+  async getMySessions(@Request() req) {
+    return this.usersService.getActiveSessions(req.user.userId);
+  }
+
+  @Delete('me/sessions/:sessionId')
+  @UseGuards(AuthGuard('jwt'))
+  async revokeMySession(@Request() req, @Param('sessionId') sessionId: string) {
+    return this.usersService.revokeSession(req.user.userId, sessionId);
+  }
+
+  @Get('admin/:id/sessions')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN')
+  async getUserSessions(@Param('id') userId: string) {
+    return this.usersService.adminGetUserSessions(userId);
+  }
+
+  @Delete('admin/sessions/:sessionId')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN')
+  async adminRevokeSession(@Param('sessionId') sessionId: string, @Request() req) {
+    const result = await this.usersService.adminRevokeSession(sessionId);
+    await this.activityLogService.log(
+      req.user.userId,
+      'ADMIN_REVOKE_SESSION',
+      { sessionId },
+      undefined,
+      req.ip,
+    );
+    return result;
+  }
 }

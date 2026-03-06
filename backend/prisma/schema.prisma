@@ -41,6 +41,18 @@ model User {
   bio                String?
   socials            String?
   hashedRefreshToken String?
+  dob                DateTime?
+  gender             String?
+  phone              String?                 @unique
+  address            String?                 @db.Text
+  city               String?
+  state              String?
+  pincode            String?
+  profileCompletion  Int                     @default(0)
+  profileVisibility  String                  @default("PUBLIC")
+  canChangeVisibility Boolean                @default(false)
+  showGameIds        Boolean                 @default(true)
+  sessions           UserSession[]
   activityLogs       ActivityLog[]
   notifications      Notification[]
   teams              TeamMember[]
@@ -459,5 +471,18 @@ model BannedIp {
   updatedAt    DateTime  @updatedAt
 
   @@index([ipAddress])
+}
+
+model UserSession {
+  id         String   @id @default(uuid())
+  userId     String
+  tokenHash  String   @unique
+  device     String?
+  ipAddress  String
+  lastActive DateTime @default(now())
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 

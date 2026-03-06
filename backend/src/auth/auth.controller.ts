@@ -54,7 +54,8 @@ export class AuthController {
     @Res({ passthrough: true }) res,
   ) {
     const ip = req.headers['x-forwarded-for'] || req.ip || 'Unknown';
-    const result = (await this.authService.login(body, ip)) as any;
+    const device = req.headers['user-agent'] || 'Unknown Device';
+    const result = (await this.authService.login(body, ip, device)) as any;
 
     // Set HTTP-only cookie for Refresh Token if present
     if (result.refresh_token) {
@@ -77,7 +78,8 @@ export class AuthController {
   async refresh(@Req() req, @Res({ passthrough: true }) res) {
     const userId = req.user['sub'];
     const refreshToken = req.user['refreshToken'];
-    const tokens = await this.authService.refreshTokens(userId, refreshToken);
+    const sessionId = req.user['sid']; // extract from refresh token payload
+    const tokens = await this.authService.refreshTokens(userId, refreshToken, sessionId);
 
     res.cookie('refresh_token', tokens.refresh_token, {
       httpOnly: true,
@@ -95,7 +97,8 @@ export class AuthController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   async logout(@Req() req, @Res({ passthrough: true }) res) {
-    await this.authService.logout(req.user['id'] || req.user['sub']);
+    const sessionId = req.user['sid'];
+    await this.authService.logout(req.user['id'] || req.user['sub'], sessionId);
     res.clearCookie('refresh_token');
     return { message: 'Logged out successfully' };
   }
@@ -109,10 +112,12 @@ export class AuthController {
     @Res({ passthrough: true }) res,
   ) {
     const ip = req.headers['x-forwarded-for'] || req.ip || 'Unknown';
+    const device = req.headers['user-agent'] || 'Unknown Device';
     const result = (await this.authService.verifyLoginOTP(
       body.email,
       body.code,
       ip,
+      device
     )) as any;
 
     if (result.refresh_token) {
@@ -153,10 +158,12 @@ export class AuthController {
     @Res({ passthrough: true }) res,
   ) {
     const ip = req.headers['x-forwarded-for'] || req.ip || 'Unknown';
+    const device = req.headers['user-agent'] || 'Unknown Device';
     const result = (await this.authService.validate2FA(
       body.email,
       body.code,
       ip,
+      device
     )) as any;
 
     if (result.refresh_token) {
@@ -195,7 +202,9 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req, @Res({ passthrough: true }) res) {
-    const tokens = (await this.authService.login(req.user)) as any;
+    const ip = req.headers['x-forwarded-for'] || req.ip || 'Unknown';
+    const device = req.headers['user-agent'] || 'Unknown Device';
+    const tokens = (await this.authService.login(req.user, ip, device)) as any;
 
     if (tokens.refresh_token) {
       res.cookie('refresh_token', tokens.refresh_token, {
@@ -225,7 +234,9 @@ export class AuthController {
   @Get('facebook/callback')
   @UseGuards(AuthGuard('facebook'))
   async facebookAuthRedirect(@Req() req, @Res({ passthrough: true }) res) {
-    const tokens = (await this.authService.login(req.user)) as any;
+    const ip = req.headers['x-forwarded-for'] || req.ip || 'Unknown';
+    const device = req.headers['user-agent'] || 'Unknown Device';
+    const tokens = (await this.authService.login(req.user, ip, device)) as any;
 
     if (tokens.refresh_token) {
       res.cookie('refresh_token', tokens.refresh_token, {

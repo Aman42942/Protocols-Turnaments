@@ -39,6 +39,33 @@ export class UsersService {
   }
 
   async updateProfile(id: string, data: any) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new Error('User not found');
+
+    const mergedData = { ...user, ...data };
+
+    // Calculate Completion Score (Total 100%)
+    let score = 0;
+    if (mergedData.emailVerified && mergedData.name) score += 20;
+    if (mergedData.phone) score += 10;
+    if (mergedData.dob) score += 10;
+    if (mergedData.gender) score += 10;
+    if (mergedData.address) score += 5;
+    if (mergedData.city) score += 5;
+    if (mergedData.state) score += 5;
+    if (mergedData.pincode) score += 5;
+    if (mergedData.pubgId || mergedData.bgmiId || mergedData.freeFireId || mergedData.riotId) score += 10;
+    if (mergedData.avatar) score += 10;
+    if (mergedData.bio) score += 10;
+
+    // Enforce Privacy Change Permission
+    let safeVisibility = undefined;
+    if (data.profileVisibility !== undefined) {
+      if ((user as any).canChangeVisibility) {
+        safeVisibility = data.profileVisibility;
+      }
+    }
+
     return this.prisma.user.update({
       where: { id },
       data: {
@@ -51,7 +78,19 @@ export class UsersService {
         bgmiId: data.bgmiId,
         freeFireId: data.freeFireId,
         socials: data.socials,
-      },
+        // Personal Fields
+        dob: data.dob ? new Date(data.dob) : undefined,
+        gender: data.gender,
+        phone: data.phone,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        pincode: data.pincode,
+        // Privacy & Scoring
+        profileVisibility: safeVisibility,
+        showGameIds: data.showGameIds,
+        profileCompletion: score > 100 ? 100 : score,
+      } as any,
     });
   }
 
@@ -254,6 +293,52 @@ export class UsersService {
         avatar: true,
       },
       take: 10,
+    });
+  }
+
+  // ========== SESSION MANAGEMENT ==========
+
+  async getActiveSessions(userId: string) {
+    return this.prisma.userSession.findMany({
+      where: { userId },
+      orderBy: { lastActive: 'desc' },
+      select: {
+        id: true,
+        device: true,
+        ipAddress: true,
+        lastActive: true,
+        createdAt: true,
+      }
+    });
+  }
+
+  async revokeSession(userId: string, sessionId: string) {
+    // Ensure the session belongs to the user
+    const session = await this.prisma.userSession.findFirst({
+      where: { id: sessionId, userId }
+    });
+
+    if (!session) {
+      throw new Error('Session not found or unauthorized');
+    }
+
+    return this.prisma.userSession.delete({
+      where: { id: sessionId }
+    });
+  }
+
+  // Admin: Revoke any session
+  async adminRevokeSession(sessionId: string) {
+    return this.prisma.userSession.delete({
+      where: { id: sessionId }
+    });
+  }
+
+  // Admin: Get all sessions for a user
+  async adminGetUserSessions(userId: string) {
+    return this.prisma.userSession.findMany({
+      where: { userId },
+      orderBy: { lastActive: 'desc' }
     });
   }
 }

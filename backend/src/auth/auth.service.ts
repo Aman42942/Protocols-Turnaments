@@ -163,6 +163,8 @@ export class AuthService {
       userWithoutPassword.email,
       userWithoutPassword.role,
       userWithoutPassword.name || undefined,
+      'Unknown',
+      'System Verification'
     );
     return {
       message: 'Email verified successfully!',
@@ -207,10 +209,10 @@ export class AuthService {
     return null;
   }
 
-  async login(userOrBody: any, ip?: string) {
+  async login(userOrBody: any, ip?: string, device?: string) {
     // If called from OAuth flow, user is already validated
     if (userOrBody.id) {
-      const tokens = await this.getTokens(userOrBody.id, userOrBody.email, userOrBody.role, userOrBody.name);
+      const tokens = await this.getTokens(userOrBody.id, userOrBody.email, userOrBody.role, userOrBody.name, ip, device);
       const { password, ...userWithoutPassword } = userOrBody;
       return { ...tokens, user: userWithoutPassword };
     }
@@ -316,7 +318,7 @@ export class AuthService {
 
   // ========== OTP VERIFICATION ==========
 
-  async verifyLoginOTP(email: string, code: string, ip?: string) {
+  async verifyLoginOTP(email: string, code: string, ip?: string, device?: string) {
     const user = await this.usersService.findOne(email);
     if (!user) throw new BadRequestException('User not found');
 
@@ -361,6 +363,8 @@ export class AuthService {
       userWithoutPassword.email,
       userWithoutPassword.role,
       userWithoutPassword.name || undefined,
+      ip,
+      device
     );
     return { ...tokens, user: userWithoutPassword };
   }
@@ -454,7 +458,7 @@ export class AuthService {
     return { message: '2FA enabled successfully!', enabled: true };
   }
 
-  async validate2FA(email: string, code: string, ip?: string) {
+  async validate2FA(email: string, code: string, ip?: string, device?: string) {
     const user = await this.usersService.findOne(email);
     if (!user) throw new BadRequestException('User not found');
     if (!user.twoFactorEnabled || !user.twoFactorSecret) {
@@ -499,6 +503,8 @@ export class AuthService {
       userWithoutPassword.email,
       userWithoutPassword.role,
       userWithoutPassword.name || undefined,
+      ip,
+      device
     );
     return { ...tokens, user: userWithoutPassword };
   }
@@ -557,12 +563,13 @@ export class AuthService {
 
   // ========== TOKEN GENERATION ==========
 
-  private async generateTokens(userId: string, email: string, role: string, name?: string) {
+  private async generateTokens(userId: string, email: string, role: string, name?: string, sessionId?: string) {
     const payload = {
       sub: userId,
       email: email,
       role: role,
       name: name,
+      sid: sessionId,
     };
 
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
@@ -594,56 +601,62 @@ export class AuthService {
     };
   }
 
-  async updateRefreshToken(userId: string, refreshToken: string) {
-    const hash = await bcrypt.hash(refreshToken, 10);
-    await this.prisma.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        hashedRefreshToken: hash,
-      },
-    });
-  }
+  async getTokens(userId: string, email: string, role: string, name?: string, ip?: string, device?: string) {
+    const sessionId = require('crypto').randomUUID();
+    const tokens = await this.generateTokens(userId, email, role, name, sessionId);
+    const hash = await bcrypt.hash(tokens.refresh_token, 10);
 
-  async getTokens(userId: string, email: string, role: string, name?: string) {
-    const tokens = await this.generateTokens(userId, email, role, name);
-    await this.updateRefreshToken(userId, tokens.refresh_token);
+    await this.prisma.userSession.create({
+      data: {
+        id: sessionId,
+        userId: userId,
+        tokenHash: hash,
+        ipAddress: ip || 'Unknown',
+        device: device || 'Unknown Device',
+        lastActive: new Date()
+      }
+    });
+
     return tokens;
   }
 
-  async refreshTokens(userId: string, refreshToken: string) {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-    });
-    if (!user || !user.hashedRefreshToken)
-      throw new ForbiddenException('Access Denied');
+  async refreshTokens(userId: string, refreshToken: string, sessionId: string) {
+    if (!sessionId) throw new ForbiddenException('Invalid session');
 
-    const tokenMatches = await bcrypt.compare(
-      refreshToken,
-      user.hashedRefreshToken,
-    );
+    const session = await this.prisma.userSession.findUnique({
+      where: { id: sessionId },
+      include: { user: true }
+    });
+
+    if (!session || session.userId !== userId) throw new ForbiddenException('Access Denied');
+
+    const tokenMatches = await bcrypt.compare(refreshToken, session.tokenHash);
     if (!tokenMatches) throw new ForbiddenException('Access Denied');
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
-    await this.updateRefreshToken(user.id, tokens.refresh_token);
+    // Inactivity Timeout: 60 minutes
+    const sixtyMinsAgo = new Date(Date.now() - 60 * 60 * 1000);
+    if (session.lastActive < sixtyMinsAgo) {
+      await this.prisma.userSession.delete({ where: { id: sessionId } });
+      throw new UnauthorizedException('Session expired due to inactivity. Please log in again.');
+    }
+
+    const tokens = await this.generateTokens(session.userId, session.user.email, session.user.role, session.user.name || undefined, sessionId);
+    const hash = await bcrypt.hash(tokens.refresh_token, 10);
+
+    await this.prisma.userSession.update({
+      where: { id: sessionId },
+      data: { tokenHash: hash, lastActive: new Date() }
+    });
+
     return tokens;
   }
 
-  async logout(userId: string) {
-    await this.prisma.user.updateMany({
-      where: {
-        id: userId,
-        hashedRefreshToken: {
-          not: null,
-        },
-      },
-      data: {
-        hashedRefreshToken: null,
-      },
-    });
+  async logout(userId: string, sessionId?: string) {
+    if (sessionId) {
+      await this.prisma.userSession.deleteMany({
+        where: { id: sessionId, userId }
+      });
+    }
   }
 
   // ========== OAUTH ==========

@@ -23,6 +23,7 @@ export class SecurityService {
 
     // In-memory cache for fast lookups
     private bannedIpsCache: Set<string> = new Set();
+    private autoBanEnabledCache: boolean = true;
     private lastCacheUpdate = 0;
 
     constructor(
@@ -47,13 +48,16 @@ export class SecurityService {
 
     private async refreshBannedIpsCache() {
         try {
-            const bans = await this.prisma.bannedIp.findMany({
-                select: { ipAddress: true },
-            });
+            const [bans, config] = await Promise.all([
+                this.prisma.bannedIp.findMany({ select: { ipAddress: true } }),
+                this.prisma.systemConfig.findUnique({ where: { key: 'AUTO_BAN_ENABLED' } })
+            ]);
+
             this.bannedIpsCache = new Set(bans.map((b) => b.ipAddress));
+            this.autoBanEnabledCache = config ? config.value === 'true' : true; // Default true if not set
             this.lastCacheUpdate = Date.now();
         } catch (e) {
-            this.logger.error('Failed to refresh banned IPs cache', e);
+            this.logger.error('Failed to refresh security caches', e);
         }
     }
 
@@ -105,6 +109,7 @@ export class SecurityService {
      * AUTOPILOT LOGIC: Ban IP if too many offenses in the last 15 minutes.
      */
     private async evaluateAutopilotBan(ip: string) {
+        if (!this.autoBanEnabledCache) return; // Autopilot Disabled by Admin
         if (this.bannedIpsCache.has(ip)) return; // Already banned
 
         const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
