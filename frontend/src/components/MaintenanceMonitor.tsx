@@ -33,14 +33,15 @@ export function MaintenanceMonitor() {
     }, []);
 
     const handleStatusChange = (isMaintenanceMode: boolean) => {
+        // Only react if we definitely know their admin status or lack thereof
         if (isMaintenanceMode) {
-            // If maintenance turned ON and user is NOT an admin
+            // Maintenance ON - Kick non-admins
             if (!isAdmin && pathname !== "/maintenance") {
                 router.push("/maintenance");
             }
         } else {
-            // If maintenance turned OFF and user is ON maintenance page
-            if (pathname === "/maintenance") {
+            // Maintenance OFF - Only push regular users back home who are stuck on the maintenance page
+            if (!isAdmin && pathname === "/maintenance") {
                 router.push("/");
             }
         }

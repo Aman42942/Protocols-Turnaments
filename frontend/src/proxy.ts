@@ -16,7 +16,7 @@ export async function proxy(request: NextRequest) {
         const timeoutId = setTimeout(() => controller.abort(), 5000); // Increased to 5s for local reliability
 
         const res = await fetch(`${backendUrl}/maintenance`, {
-            next: { revalidate: 60 },
+            cache: 'no-store',
             signal: controller.signal
         });
 
