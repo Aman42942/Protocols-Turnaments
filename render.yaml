@@ -6,8 +6,8 @@ services:
     repo: https://github.com/Aman42942/Protocols-Turnaments
     region: singapore # Optional: closer to India
     rootDir: backend
-    buildCommand: npm install && npx prisma generate && npm run build
-    startCommand: npx prisma db push --accept-data-loss && npm run start:prod
+    buildCommand: npm install && npx prisma@5 generate && npm run build
+    startCommand: npx prisma@5 db push --accept-data-loss && npm run start:prod
     envVars:
       - key: DATABASE_URL
         sync: false
