@@ -20,16 +20,30 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle 401
+// Response Interceptor: Handle 401 & 403
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined') {
+            if (error.response?.status === 401) {
                 console.warn('Session expired. Clearing stale tokens.');
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 // We don't force redirect yet to allow user to save work if possible or just see the error
+            }
+
+            // Global Ban Interceptor
+            if (error.response?.status === 403 && error.response?.data?.banned) {
+                localStorage.setItem('banned_title', error.response.data.title || 'Access Denied');
+                localStorage.setItem('banned_message', error.response.data.message || 'Your access has been permanently restricted.');
+
+                // Instantly wipe tokens to prevent further unauthenticated requests
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+
+                if (window.location.pathname !== '/banned') {
+                    window.location.href = '/banned';
+                }
             }
         }
         return Promise.reject(error);
