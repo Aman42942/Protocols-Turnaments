@@ -5,9 +5,9 @@ import { SecurityService, SecurityEventType, SecuritySeverity } from './security
 export class GlobalSecurityGuard implements CanActivate {
     private readonly logger = new Logger(GlobalSecurityGuard.name);
 
-    // Advanced Regex for detecting SQL Injection (Relaxed to avoid OAuth false positives)
+    // Advanced Regex for detecting SQL Injection
     private readonly sqliRegex = new RegExp(
-        /(?:\b(?:UNION|SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|EXEC|EXECUTE|xp_cmdshell|sp_executesql)\b\s+)|(?:--\s)|(?:\/\*.*?\*\/)/i
+        /(?:'|"|`|;|--|\/\*|\*\/)|(?:\b(?:UNION|SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|EXEC|EXECUTE|xp_cmdshell|sp_executesql)\b)/i
     );
 
     // Advanced Regex for detecting Cross-Site Scripting (XSS)
@@ -25,6 +25,18 @@ export class GlobalSecurityGuard implements CanActivate {
         const isBanned = await this.securityService.isIpBanned(ip);
         if (isBanned) {
             throw new ForbiddenException('Your IP address has been permanently blocked due to suspicious activity.');
+        }
+
+        // --- WHITELIST ROUTES ---
+        // Certain routes (like OAuth callbacks or webhooks) carry complex payloads (tokens, signatures)
+        // that naturally trigger the strict WAF regex. We bypass deep inspection for these.
+        const whitelistedPrefixes = [
+            '/auth/google',
+            '/payments/webhook'
+        ];
+
+        if (whitelistedPrefixes.some(prefix => request.originalUrl.startsWith(prefix))) {
+            return true;
         }
 
         // 2. Deep Payload Inspection
@@ -47,8 +59,7 @@ export class GlobalSecurityGuard implements CanActivate {
 
         // Check SQLi
         // We only strictly check SQLi in query string or strictly defined params because JSON bodies often contain harmless characters like quotes/semicolons.
-        const strictPayloadStr = JSON.stringify({ query: request.query, params: request.params });
-        // Note: The above regex is quite aggressive. To avoid false positives on normal text inputs (like quotes in names), we apply SQLi regex primarily on the raw URL string or params.
+        // The regex is quite aggressive, so we apply it primarily on the raw URL string or params.
         if (this.sqliRegex.test(request.originalUrl)) {
             await this.securityService.logThreat({
                 type: SecurityEventType.SQLI,
