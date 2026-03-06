@@ -64,8 +64,7 @@ export class GlobalSecurityGuard implements CanActivate {
                 payload: payloadStr,
                 severity: SecuritySeverity.CRITICAL,
             });
-            // WAF Blocking disabled per user request to stop false-positives
-            this.logger.warn(`Potential XSS blocked logic disabled for ${ip}`);
+            throw new ForbiddenException('Malicious payload detected and blocked.');
         }
 
         // We only strictly check SQLi in query string or strictly defined params because JSON bodies often contain harmless characters like quotes/semicolons.
@@ -81,8 +80,7 @@ export class GlobalSecurityGuard implements CanActivate {
                 payload: decodedUrl,
                 severity: SecuritySeverity.CRITICAL,
             });
-            // WAF Blocking disabled per user request to stop false-positives
-            this.logger.warn(`Potential SQLi blocked logic disabled for ${ip}`);
+            throw new ForbiddenException('Malicious query format detected and blocked.');
         }
 
         return true;

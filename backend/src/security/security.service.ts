@@ -149,10 +149,9 @@ export class SecurityService {
 
         // Threshold is 5 points (e.g., 2 Highs + 1 Med, or 2 Criticals, etc.)
         if (score >= 5) {
-            // DISABLED AUTOPILOT BAN AS PER USER REQUEST. It was causing false positives on regular user interactions.
-            // We just log the threat instead of dropping an immediate IP Ban.
-            this.logger.warn(`AUTOPILOT: High Threat Score (${score}) detected for IP: ${ip}. Auto-ban is disabled.`);
+            // AUTOPILOT BAN DISABLED BY ADMIN REQUEST to prevent false positives.
             // await this.banIp(ip, 'AUTOPILOT: Repeated security violations detected.');
+            this.logger.warn(`AUTOPILOT BAN SKIPPED for ${ip} (Score: ${score}). Auto-ban is disabled.`);
         }
     }
 
