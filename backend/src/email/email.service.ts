@@ -15,6 +15,9 @@ export class EmailService {
         user: this.configService.get('SMTP_USER'),
         pass: this.configService.get('SMTP_PASS'),
       },
+      connectionTimeout: 5000, // Fail fast if SMTP is unreachable
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
     });
   }
 
@@ -23,7 +26,11 @@ export class EmailService {
       this.configService.get('SMTP_FROM') ||
       this.configService.get('SMTP_USER');
     try {
-      await this.transporter.sendMail({ from, to, subject, html });
+      // Use Promise.race to guarantee it never hangs indefinitely even if nodemailer fails to timeout
+      await Promise.race([
+        this.transporter.sendMail({ from, to, subject, html }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('SMTP Timeout Exceeded')), 6000))
+      ]);
     } catch (error) {
       console.error('Email send error:', error);
       // Don't throw - email failure shouldn't block auth flow
