@@ -58,8 +58,8 @@ export default function Home() {
 
       return (
         <>
-          <HeroSection />
           <AdSlider slides={slidesToUse} />
+          <HeroSection />
           <FeatureSection />
         </>
       );
