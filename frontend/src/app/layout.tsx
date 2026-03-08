@@ -4,7 +4,6 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ThemeProvider } from "@/components/theme-provider";
-import { BrandingProvider } from "@/context/ThemeContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { CmsEngineProvider } from "@/context/CmsContext";
 import { MaintenanceMonitor } from "@/components/MaintenanceMonitor";
@@ -118,17 +117,15 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <CmsEngineProvider>
-            <BrandingProvider>
-              <SocketProvider>
-                <MaintenanceMonitor />
-                <Navbar />
-                <main className="min-h-screen flex flex-col pb-20 md:pb-0">
-                  {children}
-                </main>
-                <MobileBottomNav />
-                <Footer />
-              </SocketProvider>
-            </BrandingProvider>
+            <SocketProvider>
+              <MaintenanceMonitor />
+              <Navbar />
+              <main className="min-h-screen flex flex-col pb-20 md:pb-0">
+                {children}
+              </main>
+              <MobileBottomNav />
+              <Footer />
+            </SocketProvider>
           </CmsEngineProvider>
         </ThemeProvider>
 
