@@ -21,6 +21,9 @@ export default function SecurityControlPanel() {
     const [pageTitle, setPageTitle] = useState('');
     const [pageMessage, setPageMessage] = useState('');
 
+    // Autopilot State
+    const [autopilotEnabled, setAutopilotEnabled] = useState(true);
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -28,13 +31,15 @@ export default function SecurityControlPanel() {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const [ipsRes, configRes] = await Promise.all([
+            const [ipsRes, configRes, autopilotRes] = await Promise.all([
                 api.get('/security/banned-ips'),
-                api.get('/security/banned-page-config')
+                api.get('/security/banned-page-config'),
+                api.get('/security/autopilot-config')
             ]);
             setBannedIps(ipsRes.data);
             setPageTitle(configRes.data.title || 'Access Restricted');
             setPageMessage(configRes.data.message || 'Your IP or Account has been permanently blocked.');
+            setAutopilotEnabled(autopilotRes.data.enabled);
         } catch (error) {
             console.error("Failed to load security data", error);
         } finally {
@@ -80,6 +85,19 @@ export default function SecurityControlPanel() {
         }
     };
 
+    const handleToggleAutopilot = async () => {
+        setIsSaving(true);
+        const newState = !autopilotEnabled;
+        try {
+            await api.patch(`/security/autopilot-config?enabled=${newState}`);
+            setAutopilotEnabled(newState);
+        } catch (error) {
+            alert('Failed to update Autopilot status.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -100,44 +118,70 @@ export default function SecurityControlPanel() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* Custom Page Editor */}
-                <Card className="lg:col-span-1 h-fit border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]">
-                    <CardHeader className="bg-red-500/5 border-b border-red-500/10">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <MonitorX className="w-5 h-5 text-red-500" /> Banned Screen UI
-                        </CardTitle>
-                        <CardDescription>
-                            Customize what blocked users see when they are redirected.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4 pt-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold">Page Title</label>
-                            <Input
-                                value={pageTitle}
-                                onChange={e => setPageTitle(e.target.value)}
-                                placeholder="e.g. Access Restricted"
-                                className="font-orbitron font-bold text-red-500"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold">Restrict Message</label>
-                            <Textarea
-                                value={pageMessage}
-                                onChange={e => setPageMessage(e.target.value)}
-                                placeholder="Explain why they are blocked..."
-                                className="min-h-[120px] resize-none text-muted-foreground"
-                            />
-                        </div>
-                        <Button
-                            className="w-full bg-red-600 hover:bg-red-700 text-white"
-                            onClick={handleSaveConfig}
-                            disabled={isSaving}
-                        >
-                            <Save className="w-4 h-4 mr-2" /> Save Active Layout
-                        </Button>
-                    </CardContent>
-                </Card>
+                {/* Left Column */}
+                <div className="lg:col-span-1 space-y-6">
+                    {/* Autopilot Matrix Card */}
+                    <Card className="border-orange-500/20 shadow-[0_0_20px_rgba(249,115,22,0.05)]">
+                        <CardHeader className="bg-orange-500/5 border-b border-orange-500/10 flex flex-row items-center justify-between pb-4">
+                            <div>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <ShieldAlert className="w-5 h-5 text-orange-500" /> Autopilot Ban
+                                </CardTitle>
+                                <CardDescription className="mt-1">
+                                    Automatically ban IPs with malicious behavior.
+                                </CardDescription>
+                            </div>
+                            <Button
+                                variant={autopilotEnabled ? "default" : "outline"}
+                                size="sm"
+                                onClick={handleToggleAutopilot}
+                                disabled={isSaving}
+                                className={autopilotEnabled ? "bg-green-600 hover:bg-green-700 text-white" : "border-red-500/50 text-red-500 hover:bg-red-500/10"}
+                            >
+                                {autopilotEnabled ? "ON" : "OFF"}
+                            </Button>
+                        </CardHeader>
+                    </Card>
+
+                    {/* Custom Page Editor */}
+                    <Card className="h-fit border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]">
+                        <CardHeader className="bg-red-500/5 border-b border-red-500/10">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <MonitorX className="w-5 h-5 text-red-500" /> Banned Screen UI
+                            </CardTitle>
+                            <CardDescription>
+                                Customize what blocked users see when they are redirected.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold">Page Title</label>
+                                <Input
+                                    value={pageTitle}
+                                    onChange={e => setPageTitle(e.target.value)}
+                                    placeholder="e.g. Access Restricted"
+                                    className="font-orbitron font-bold text-red-500"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold">Restrict Message</label>
+                                <Textarea
+                                    value={pageMessage}
+                                    onChange={e => setPageMessage(e.target.value)}
+                                    placeholder="Explain why they are blocked..."
+                                    className="min-h-[120px] resize-none text-muted-foreground"
+                                />
+                            </div>
+                            <Button
+                                className="w-full bg-red-600 hover:bg-red-700 text-white"
+                                onClick={handleSaveConfig}
+                                disabled={isSaving}
+                            >
+                                <Save className="w-4 h-4 mr-2" /> Save Active Layout
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
 
                 {/* Banned IPs List */}
                 <div className="lg:col-span-2 space-y-6">

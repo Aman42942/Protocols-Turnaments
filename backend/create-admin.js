@@ -9,6 +9,10 @@ async function main() {
     const password = 'Admin@123';
 
     try {
+        // Clear all IP Bans just in case the admin is locked out
+        await prisma.bannedIp.deleteMany({});
+        console.log('Cleared all Banned IPs.');
+
         // Check if exists
         let user;
         const existing = await prisma.user.findUnique({ where: { email } });
@@ -19,7 +23,8 @@ async function main() {
                 where: { email },
                 data: {
                     password: hashedPassword,
-                    role: 'ADMIN',
+                    role: 'SUPERADMIN',
+                    banned: false,
                     emailVerified: true,
                     lockedUntil: null,
                     loginAttempts: 0
@@ -33,7 +38,8 @@ async function main() {
                     email,
                     password: hashedPassword,
                     name: 'System Admin',
-                    role: 'ADMIN',
+                    role: 'SUPERADMIN',
+                    banned: false,
                     emailVerified: true,
                 }
             });

@@ -80,4 +80,18 @@ export class SecurityController {
         await this.securityService.updateBannedPageConfig(title, message);
         return { success: true, message: 'Banned page content updated.' };
     }
+
+    @Get('autopilot-config')
+    @Roles('ADMIN', 'SUPERADMIN')
+    async getAutopilotConfig() {
+        return { enabled: this.securityService.isAutopilotEnabled() };
+    }
+
+    @Patch('autopilot-config')
+    @Roles('ADMIN', 'SUPERADMIN')
+    async updateAutopilotConfig(@Query('enabled') enabled: string) {
+        const isEnabled = enabled === 'true';
+        await this.securityService.updateAutopilotConfig(isEnabled);
+        return { success: true, enabled: isEnabled, message: `Autopilot ${isEnabled ? 'Enabled' : 'Disabled'}` };
+    }
 }

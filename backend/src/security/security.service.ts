@@ -222,6 +222,25 @@ export class SecurityService {
     }
 
     /**
+     * Get Autopilot Status
+     */
+    isAutopilotEnabled(): boolean {
+        return this.autoBanEnabledCache;
+    }
+
+    /**
+     * Update Autopilot Status
+     */
+    async updateAutopilotConfig(enabled: boolean) {
+        await this.prisma.systemConfig.upsert({
+            where: { key: 'AUTO_BAN_ENABLED' },
+            update: { value: enabled.toString() },
+            create: { key: 'AUTO_BAN_ENABLED', value: enabled.toString() }
+        });
+        this.autoBanEnabledCache = enabled;
+    }
+
+    /**
      * Notify all Admins.
      * Finds all ADMIN users and sends a Notification record.
      */
