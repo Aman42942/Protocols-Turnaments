@@ -184,18 +184,6 @@ export function AdSlider({ slides }: AdSliderProps) {
                 </motion.div>
             </AnimatePresence>
 
-            {/* ── TOP PROGRESS BAR ──────────────────────────────────── */}
-            {!isPaused && activeSlides.length > 1 && (
-                <div className="absolute top-0 left-0 w-full h-[3px] bg-white/10 z-30">
-                    <motion.div
-                        key={currentIndex}
-                        initial={{ width: '0%' }}
-                        animate={{ width: '100%' }}
-                        transition={{ duration: 6, ease: 'linear' }}
-                        className="h-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.8)]"
-                    />
-                </div>
-            )}
 
             {/* ── NAV ARROWS ──────────────────────────────────────────── */}
             {activeSlides.length > 1 && (
