@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
@@ -18,6 +18,7 @@ export class TournamentsService {
     private usersService: UsersService,
     private emailService: EmailService,
     private walletService: WalletService,
+    @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
   ) { }
 
@@ -498,6 +499,7 @@ export class TournamentsService {
       amount,
       tournamentId,
       tournament.title,
+      participant.paymentId || undefined,
     );
 
     // 2. TRIGGER GATEWAY REFUND: If Cashfree paymentId exists
@@ -548,7 +550,10 @@ export class TournamentsService {
     if (!tournament) throw new BadRequestException('Tournament not found');
 
     const participants = await this.prisma.tournamentParticipant.findMany({
-      where: { tournamentId },
+      where: {
+        tournamentId,
+        status: { notIn: ['CANCELLED', 'REJECTED'] },
+      },
       include: {
         user: {
           select: { id: true, name: true, email: true, createdAt: true },

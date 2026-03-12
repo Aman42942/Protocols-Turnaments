@@ -135,7 +135,7 @@ export class WalletService {
     });
   }
 
-  async refundTournamentEntry(userId: string, amount: number, tournamentId: string, tournamentTitle: string) {
+  async refundTournamentEntry(userId: string, amount: number, tournamentId: string, tournamentTitle: string, reference?: string) {
     const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
     if (!wallet) throw new BadRequestException('User wallet not found');
 
@@ -169,8 +169,9 @@ export class WalletService {
           amount,
           type: 'REFUND',
           status: 'COMPLETED',
+          reference: reference,
           description: `Refund for tournament: ${tournamentTitle}`,
-          metadata: JSON.stringify({ tournamentId, userId, refundedAt: new Date().toISOString() }),
+          metadata: JSON.stringify({ tournamentId, userId, refundedAt: new Date().toISOString(), originalReference: reference }),
         },
       });
 

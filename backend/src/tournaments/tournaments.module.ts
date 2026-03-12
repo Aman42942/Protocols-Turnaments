@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TournamentsService } from './tournaments.service';
 import { TournamentsController } from './tournaments.controller';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -27,7 +27,7 @@ import { ResultLockService } from './result-lock.service';
     PrismaModule,
     WalletModule,
     NotificationsModule,
-    PaymentsModule,
+    forwardRef(() => PaymentsModule),
     ActivityLogModule,
     OrganizerModule,
     UsersModule,

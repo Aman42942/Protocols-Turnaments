@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, Param, RawBodyRequest } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, Param, RawBodyRequest, Inject, forwardRef } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { WalletService } from '../wallet/wallet.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -11,6 +11,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../auth/role.enum';
 import { BadRequestException, Logger } from '@nestjs/common';
+import { TournamentsService } from '../tournaments/tournaments.service';
 
 @Controller('payments')
 export class PaymentsController {
@@ -24,6 +25,8 @@ export class PaymentsController {
     private readonly cashfreePayoutsService: CashfreePayoutsService,
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => TournamentsService))
+    private readonly tournamentsService: TournamentsService,
   ) { }
 
   @UseGuards(JwtAuthGuard)
@@ -114,27 +117,57 @@ export class PaymentsController {
     @Body('userId') userId: string,
     @Body('tournamentId') tournamentId?: string,
     @Body('tournamentTitle') tournamentTitle?: string,
+    @Request() req?,
   ) {
-    // 1. VIRTUAL COIN REFUND (Tournament kicks)
-    if (tournamentId && tournamentTitle) {
-      await this.walletService.refundTournamentEntry(
-        userId,
-        amount,
-        tournamentId,
-        tournamentTitle,
-      );
-      return {
-        success: true,
-        message: 'Virtual Coins returned to wallet. No bank refund triggered.',
-      };
+    // 1. Auto-detect Tournament if not provided via Reference
+    if (!tournamentId && orderId) {
+      const originalTx = await this.prisma.transaction.findFirst({
+        where: { reference: orderId, type: 'DEPOSIT' },
+      });
+
+      if (originalTx?.metadata) {
+        try {
+          const meta = JSON.parse(originalTx.metadata);
+          tournamentId = meta.tournamentId;
+        } catch (e) { /* ignore */ }
+      }
     }
 
-    // 2. FIAT BANK REFUND (Cashfree order cancellations)
-    const refundResult = await this.paymentsService.createRefund(orderId, amount);
+    // 2. UNIFIED FLOW: If it's a tournament refund, handle exit + wallet + gateway
+    if (tournamentId) {
+      const participant = await this.prisma.tournamentParticipant.findFirst({
+        where: { tournamentId, userId, paymentStatus: 'PAID' },
+      });
 
+      if (participant) {
+        console.log(`[ADMIN REFUND] Unified flow triggered for User: ${userId}, Tournament: ${tournamentId}`);
+        const result = await this.tournamentsService.refundParticipant(
+          tournamentId,
+          participant.id,
+          req?.user?.userId || 'ADMIN',
+          req?.ip || '0.0.0.0'
+        );
+        return {
+          success: true,
+          message: `Refunded ₹${result.amount} and exited user from ${result.tournamentTitle}.`,
+          participant: result.updatedParticipant,
+        };
+      }
+    }
+
+    // 3. FALLBACK: Direct Bank/Wallet Refund (if no tournament link found)
+    console.log(`[ADMIN REFUND] Direct flow triggered for Order: ${orderId}`);
+    
+    // If it's just a wallet adjustment refund (no gateway orderId)
+    if (!orderId || !orderId.startsWith('ORD')) {
+        await this.walletService.refundTournamentEntry(userId, amount, 'N/A', tournamentTitle || 'Manual Refund', orderId);
+        return { success: true, message: 'Wallet balance adjusted successfully.' };
+    }
+
+    const refundResult = await this.paymentsService.createRefund(orderId, amount);
     return {
       success: true,
-      message: 'Fiat refund processed successfully. Bank account credited.',
+      message: 'Fiat refund processed successfully via Gateway.',
       cashfree: refundResult,
     };
   }
