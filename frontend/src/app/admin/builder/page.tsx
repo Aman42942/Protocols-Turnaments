@@ -35,7 +35,16 @@ export default function SiteBuilderPage() {
     });
 
     // Content State
-    const [contentForm, setContentForm] = useState<Record<string, string>>({});
+    const [contentForm, setContentForm] = useState<Record<string, string>>({
+        HERO_TITLE: '',
+        HERO_SUBTITLE: '',
+        LOGO_URL: '',
+        SEO_META_TITLE: '',
+        SEO_META_DESCRIPTION: '',
+        SEO_META_KEYWORDS: '',
+        SEO_OG_IMAGE: '',
+        SEO_FAVICON_URL: '',
+    });
 
     useEffect(() => {
         if (config?.theme) {
