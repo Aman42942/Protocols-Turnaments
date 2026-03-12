@@ -39,8 +39,8 @@ export function SmokeBackground({ color = '#3b82f6', opacity = 0.5 }: SmokeBackg
             life: number;
 
             constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
+                this.x = Math.random() * canvas!.width;
+                this.y = Math.random() * canvas!.height;
                 this.vx = (Math.random() - 0.5) * 0.5;
                 this.vy = (Math.random() - 0.5) * 0.5;
                 this.size = Math.random() * 200 + 100;
@@ -61,15 +61,15 @@ export function SmokeBackground({ color = '#3b82f6', opacity = 0.5 }: SmokeBackg
                 }
 
                 if (this.life >= this.maxLife ||
-                    this.x < -this.size || this.x > canvas.width + this.size ||
-                    this.y < -this.size || this.y > canvas.height + this.size) {
+                    this.x < -this.size || this.x > canvas!.width + this.size ||
+                    this.y < -this.size || this.y > canvas!.height + this.size) {
                     this.reset();
                 }
             }
 
             reset() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
+                this.x = Math.random() * canvas!.width;
+                this.y = Math.random() * canvas!.height;
                 this.vx = (Math.random() - 0.5) * 0.5;
                 this.vy = (Math.random() - 0.5) * 0.5;
                 this.size = Math.random() * 200 + 100;
