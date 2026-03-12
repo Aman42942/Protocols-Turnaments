@@ -14,6 +14,9 @@ export default function SiteBuilderPage() {
 
     // Features State
     const [localFeatures, setLocalFeatures] = useState<any[]>([]);
+    const [presets, setPresets] = useState<any[]>([]);
+    const [showPresetModal, setShowPresetModal] = useState(false);
+    const [newPresetName, setNewPresetName] = useState('');
 
     // Layout State
     const [localLayouts, setLocalLayouts] = useState<any[]>([]);
@@ -82,6 +85,9 @@ export default function SiteBuilderPage() {
                 setLocalLayouts(sorted);
             }
         }
+        if (config?.presets) {
+            setPresets(config.presets);
+        }
     }, [config]);
 
     const handleAddFeature = async () => {
@@ -138,6 +144,65 @@ export default function SiteBuilderPage() {
             toast.success('Theme updated! Changes applied globally.');
         } catch (err) {
             toast.error('Failed to update theme.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleResetTheme = async () => {
+        if (!confirm('Revert all theme settings to the default "Blue Protocol" style?')) return;
+        try {
+            setSaving(true);
+            const res = await api.post('/cms/theme/reset');
+            setThemeForm(res.data.theme);
+            await refreshConfig();
+            toast.success('Restored default Blue theme!');
+        } catch (err) {
+            toast.error('Failed to reset theme.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSavePreset = async () => {
+        if (!newPresetName.trim()) return toast.error('Please enter a name for the preset.');
+        try {
+            setSaving(true);
+            await api.post('/cms/presets', { name: newPresetName, theme: themeForm });
+            await refreshConfig();
+            setShowPresetModal(false);
+            setNewPresetName('');
+            toast.success(`Preset "${newPresetName}" saved!`);
+        } catch (err) {
+            toast.error('Failed to save preset.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleApplyPreset = async (id: string, name: string) => {
+        try {
+            setSaving(true);
+            const res = await api.post(`/cms/presets/${id}/apply`);
+            setThemeForm(res.data.theme);
+            await refreshConfig();
+            toast.success(`Applied "${name}" theme!`);
+        } catch (err) {
+            toast.error('Failed to apply preset.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeletePreset = async (id: string) => {
+        if (!confirm('Permanently delete this theme preset?')) return;
+        try {
+            setSaving(true);
+            await api.delete(`/cms/presets/${id}`);
+            await refreshConfig();
+            toast.success('Preset deleted.');
+        } catch (err) {
+            toast.error('Failed to delete preset.');
         } finally {
             setSaving(false);
         }
@@ -394,7 +459,59 @@ export default function SiteBuilderPage() {
                                     </div>
                                 </div>
 
-                                <div className="pt-4 flex justify-end">
+                                <div className="pt-6 border-t border-border mt-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Saved Theme Presets</h3>
+                                        <button 
+                                            onClick={() => setShowPresetModal(true)}
+                                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                                        >
+                                            <Plus className="w-3 h-3" /> Save Current as Preset
+                                        </button>
+                                    </div>
+
+                                    {presets.length === 0 ? (
+                                        <div className="bg-muted/30 border border-dashed border-border rounded-2xl p-8 text-center">
+                                            <p className="text-sm text-muted-foreground">No custom presets saved yet.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                            {presets.map((preset) => (
+                                                <div key={preset.id} className="group relative bg-muted/50 border border-border rounded-xl p-3 hover:border-primary/50 transition-all">
+                                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                                        <span className="text-xs font-bold truncate">{preset.name}</span>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); handleDeletePreset(preset.id); }}
+                                                            className="opacity-0 group-hover:opacity-100 p-1 text-destructive hover:bg-destructive/10 rounded transition-all"
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex gap-1 mb-3">
+                                                        <div className="w-4 h-4 rounded-full border border-white/10" style={{ backgroundColor: preset.primaryColor }} />
+                                                        <div className="w-4 h-4 rounded-full border border-white/10" style={{ backgroundColor: preset.backgroundColor }} />
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => handleApplyPreset(preset.id, preset.name)}
+                                                        className="w-full py-1.5 bg-primary/10 text-primary hover:bg-primary text-[10px] font-black uppercase rounded-lg transition-all hover:text-primary-foreground"
+                                                    >
+                                                        Apply
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="pt-4 flex items-center justify-between">
+                                    <button
+                                        onClick={handleResetTheme}
+                                        disabled={saving}
+                                        className="flex items-center gap-2 text-muted-foreground hover:text-destructive px-4 py-2 rounded-xl text-sm font-bold transition-all"
+                                    >
+                                        <RefreshCw className="w-4 h-4" />
+                                        Reset to Default
+                                    </button>
                                     <button
                                         onClick={handleSaveTheme}
                                         disabled={saving}
@@ -735,6 +852,54 @@ export default function SiteBuilderPage() {
                 </div>
 
             </div >
-        </div >
+            {/* Preset Modal */}
+            {showPresetModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <motion.div 
+                        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                        className="bg-card border border-border w-full max-w-md rounded-3xl p-6 shadow-2xl"
+                    >
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-3 bg-primary/10 rounded-2xl">
+                                <Save className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold">Save Theme Preset</h3>
+                                <p className="text-xs text-muted-foreground">Give your design a name to reuse it later.</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Preset Name</label>
+                                <input 
+                                    type="text" 
+                                    value={newPresetName}
+                                    onChange={(e) => setNewPresetName(e.target.value)}
+                                    placeholder="e.g. Midnight Onyx"
+                                    className="w-full bg-muted px-4 py-3 rounded-xl border border-border focus:border-primary outline-none"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-4">
+                                <button 
+                                    onClick={() => setShowPresetModal(false)}
+                                    className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-muted text-muted-foreground hover:bg-muted/80 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={handleSavePreset}
+                                    disabled={saving}
+                                    className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-primary text-primary-foreground hover:brightness-110 transition-all"
+                                >
+                                    {saving ? 'Saving...' : 'Save Preset'}
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </div>
     );
 }

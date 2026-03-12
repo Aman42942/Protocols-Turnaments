@@ -8,30 +8,98 @@ export class CmsService {
     constructor(private prisma: PrismaService) { }
 
     // ==========================================
-    // GLOBAL THEME
+    // GLOBAL THEMES & PRESETS
     // ==========================================
+
+    private readonly DEFAULT_BLUE_THEME = {
+        mode: 'DARK',
+        primaryColor: '#3b82f6',
+        secondaryColor: '#1F1F1F',
+        backgroundColor: '#020617',
+        textColor: '#FFFFFF',
+        fontFamily: 'Inter',
+        borderRounding: '0.5rem',
+        animationSpeed: 'normal',
+        buttonStyle: 'solid',
+        glassmorphism: false,
+        backgroundStyle: 'solid',
+        smokeVisibility: 0.5,
+    };
 
     async getGlobalTheme() {
         let theme = await (this.prisma as any).globalTheme.findFirst();
         if (!theme) {
             theme = await (this.prisma as any).globalTheme.create({
-                data: {
-                    mode: 'DARK',
-                    primaryColor: '#FF5733',
-                    secondaryColor: '#1F1F1F',
-                    backgroundColor: '#000000',
-                    textColor: '#FFFFFF',
-                    fontFamily: 'Inter',
-                    borderRounding: '0.5rem',
-                    animationSpeed: 'normal',
-                    buttonStyle: 'solid',
-                    glassmorphism: false,
-                    backgroundStyle: 'solid',
-                    smokeVisibility: 0.5,
-                },
+                data: this.DEFAULT_BLUE_THEME,
             });
         }
         return theme;
+    }
+
+    async resetToDefaultTheme() {
+        const theme = await this.getGlobalTheme();
+        return (this.prisma as any).globalTheme.update({
+            where: { id: theme.id },
+            data: this.DEFAULT_BLUE_THEME,
+        });
+    }
+
+    async getAllPresets() {
+        return (this.prisma as any).themePreset.findMany({
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    async createPreset(name: string, themeData: any) {
+        return (this.prisma as any).themePreset.create({
+            data: {
+                name,
+                mode: themeData.mode,
+                primaryColor: themeData.primaryColor,
+                secondaryColor: themeData.secondaryColor,
+                backgroundColor: themeData.backgroundColor,
+                textColor: themeData.textColor || '#FFFFFF',
+                fontFamily: themeData.fontFamily || 'Inter',
+                borderRounding: themeData.borderRounding || '0.5rem',
+                animationSpeed: themeData.animationSpeed || 'normal',
+                buttonStyle: themeData.buttonStyle || 'solid',
+                glassmorphism: themeData.glassmorphism || false,
+                backgroundStyle: themeData.backgroundStyle || 'solid',
+                smokeVisibility: themeData.smokeVisibility || 0.5,
+            },
+        });
+    }
+
+    async applyPreset(presetId: string) {
+        const preset = await (this.prisma as any).themePreset.findUnique({
+            where: { id: presetId },
+        });
+        if (!preset) throw new Error('Preset not found');
+
+        const theme = await this.getGlobalTheme();
+        return (this.prisma as any).globalTheme.update({
+            where: { id: theme.id },
+            data: {
+                mode: preset.mode,
+                primaryColor: preset.primaryColor,
+                secondaryColor: preset.secondaryColor,
+                backgroundColor: preset.backgroundColor,
+                textColor: preset.textColor,
+                fontFamily: preset.fontFamily,
+                borderRounding: preset.borderRounding,
+                animationSpeed: preset.animationSpeed,
+                buttonStyle: preset.buttonStyle,
+                glassmorphism: preset.glassmorphism,
+                backgroundStyle: preset.backgroundStyle,
+                smokeVisibility: preset.smokeVisibility,
+            },
+        });
+    }
+
+    async deletePreset(presetId: string) {
+        return (this.prisma as any).themePreset.delete({
+            where: { id: presetId },
+        });
     }
 
     async updateGlobalTheme(data: any) {

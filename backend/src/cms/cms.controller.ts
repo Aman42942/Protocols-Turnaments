@@ -29,12 +29,13 @@ export class CmsController {
 
     @Get('config')
     async getGlobalConfig() {
-        const [theme, content, layout, features, slides] = await Promise.all([
+        const [theme, content, layout, features, slides, presets] = await Promise.all([
             this.cmsService.getGlobalTheme(),
             this.cmsService.getAllContent(),
             this.cmsService.getAllLayouts(),
             this.cmsService.getAllFeatures(true),
             this.cmsService.getAllAdSlides(true),
+            this.cmsService.getAllPresets(),
         ]);
 
         return {
@@ -43,6 +44,7 @@ export class CmsController {
             layout,
             features,
             slides,
+            presets,
         };
     }
 
@@ -68,6 +70,77 @@ export class CmsController {
             req.ip,
         );
         return { success: true, theme: updatedTheme };
+    }
+
+    @Post('theme/reset')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPERADMIN')
+    async resetTheme(@Request() req) {
+        const theme = await this.cmsService.resetToDefaultTheme();
+        await this.activityLogService.log(
+            req.user.userId,
+            'RESET_GLOBAL_THEME',
+            {},
+            undefined,
+            req.ip,
+        );
+        return { success: true, theme };
+    }
+
+    // ==========================================
+    // THEME PRESETS (SUPERADMIN ONLY)
+    // ==========================================
+
+    @Get('presets')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPERADMIN')
+    async getPresets() {
+        return this.cmsService.getAllPresets();
+    }
+
+    @Post('presets')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPERADMIN')
+    async createPreset(@Body() body: { name: string; theme: any }, @Request() req) {
+        const preset = await this.cmsService.createPreset(body.name, body.theme);
+        await this.activityLogService.log(
+            req.user.userId,
+            'CREATE_THEME_PRESET',
+            { name: body.name },
+            undefined,
+            req.ip,
+        );
+        return { success: true, preset };
+    }
+
+    @Post('presets/:id/apply')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPERADMIN')
+    async applyPreset(@Param('id') id: string, @Request() req) {
+        const theme = await this.cmsService.applyPreset(id);
+        await this.activityLogService.log(
+            req.user.userId,
+            'APPLY_THEME_PRESET',
+            { presetId: id },
+            undefined,
+            req.ip,
+        );
+        return { success: true, theme };
+    }
+
+    @Delete('presets/:id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPERADMIN')
+    async deletePreset(@Param('id') id: string, @Request() req) {
+        await this.cmsService.deletePreset(id);
+        await this.activityLogService.log(
+            req.user.userId,
+            'DELETE_THEME_PRESET',
+            { presetId: id },
+            undefined,
+            req.ip,
+        );
+        return { success: true };
     }
 
     @Put('content')

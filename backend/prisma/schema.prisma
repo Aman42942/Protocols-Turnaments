@@ -382,20 +382,39 @@ model ComplianceAuditLog {
 }
 
 model GlobalTheme {
-  id                 String   @id @default(uuid())
-  mode               String   @default("DARK") // DARK, LIGHT, NEON, MINIMAL
-  primaryColor       String   @default("#FF5733")
-  secondaryColor     String   @default("#1F1F1F")
-  backgroundColor    String   @default("#000000")
-  textColor          String   @default("#FFFFFF")
-  fontFamily         String   @default("Inter")
-  borderRounding     String   @default("0.5rem") // 0px, 0.5rem, 9999px
-  animationSpeed     String   @default("normal") // slow, normal, fast
-  buttonStyle        String   @default("solid")  // solid, outline, ghost
-  glassmorphism      Boolean  @default(false)
-  backgroundStyle    String   @default("solid")  // solid, gradient, mesh
-  smokeVisibility    Float    @default(0.5)
-  updatedAt          DateTime @updatedAt
+  id              String   @id @default(uuid())
+  mode            String   @default("DARK")
+  primaryColor    String   @default("#3b82f6") // Default to Blue
+  secondaryColor  String   @default("#1F1F1F")
+  backgroundColor String   @default("#020617") // Default to Slate-950
+  textColor       String   @default("#FFFFFF")
+  fontFamily      String   @default("Inter")
+  borderRounding  String   @default("0.5rem")
+  animationSpeed  String   @default("normal")
+  buttonStyle     String   @default("solid")
+  glassmorphism   Boolean  @default(false)
+  backgroundStyle String   @default("solid")
+  smokeVisibility Float    @default(0.5)
+  updatedAt       DateTime @updatedAt
+}
+
+model ThemePreset {
+  id              String   @id @default(uuid())
+  name            String
+  isSystem        Boolean  @default(false)
+  mode            String   @default("DARK")
+  primaryColor    String
+  secondaryColor  String
+  backgroundColor String
+  textColor       String   @default("#FFFFFF")
+  fontFamily      String   @default("Inter")
+  borderRounding  String   @default("0.5rem")
+  animationSpeed  String   @default("normal")
+  buttonStyle     String   @default("solid")
+  glassmorphism   Boolean  @default(false)
+  backgroundStyle String   @default("solid")
+  smokeVisibility Float    @default(0.5)
+  createdAt       DateTime @default(now())
 }
 
 model SiteContent {
