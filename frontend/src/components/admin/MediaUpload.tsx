@@ -128,7 +128,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
                 </div>
             ) : (
                 <div className="relative rounded-xl overflow-hidden border aspect-video bg-black/50">
-                    {currentUrl?.match(/\.(mp4|webm|mov)$/) ? (
+                    {currentUrl?.match(/\.(mp4|webm|mov|ogg|m4v)$|(\/video\/upload\/)/i) ? (
                         <video 
                             src={currentUrl} 
                             controls 

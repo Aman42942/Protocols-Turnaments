@@ -1,26 +1,36 @@
-# Quick Fix: Get the Project Running
+# Implement Persistent Media Upload System
 
-## Why This Fix?
-- ✅ Automates dependency installation
-- ✅ Handles database syncing
-- ✅ Clears ports and starts both servers
-- ⏱️ Takes 2 minutes
+The current local storage system on Render is ephemeral (files are deleted on restart) and has protocol issues (HTTP vs HTTPS). This update switches to Cloudinary for permanent storage and fixes production display issues.
 
-## Step-by-Step Instructions
+## User Review Required
 
-### 1. Ensure Node.js is installed
-Download from [nodejs.org](https://nodejs.org/) (LTS version recommended).
+> [!IMPORTANT]
+> This change will move media storage from the server's disk to **Cloudinary**. Existing locally uploaded files (if any remained) will not be accessible after this change, but your `.env` already contains the necessary Cloudinary credentials.
 
-### 2. Run Setup
-Double-click `setup.bat` in the root folder. This will:
-- Install backend and frontend dependencies.
-- Update the database schema.
+## Proposed Changes
 
-### 3. Run Project
-Double-click `run-project.bat` in the root folder. This will:
-- Clear ports 3000 and 4000.
-- Start the Backend and Frontend servers.
-- Automatically open the browser to `localhost:3000`.
+### Backend (NestJS)
 
-## Done!
-If you still encounter issues, check your `.env` file in the `backend` folder and ensure your `DATABASE_URL` is correct.
+#### [MODIFY] [media.controller.ts](file:///c:/Users/amanh/OneDrive/Documents/Protocal%20Turnamant/backend/src/cms/media.controller.ts)
+- Integrate `cloudinary` for file uploads.
+- Remove `multer.diskStorage` and use `multer.memoryStorage`.
+- Upload received bitstream directly to Cloudinary and return the secure HTTPS URL.
+
+#### [MODIFY] [main.ts](file:///c:/Users/amanh/OneDrive/Documents/Protocal%20Turnamant/backend/src/main.ts)
+- Update Content Security Policy (CSP) to allow `https:` and `res.cloudinary.com`.
+- Ensure `imgSrc` and `mediaSrc` are permissive enough for production.
+
+### Frontend (Next.js)
+
+#### [MODIFY] [MediaUpload.tsx](file:///c:/Users/amanh/OneDrive/Documents/Protocal%20Turnamant/frontend/src/components/admin/MediaUpload.tsx)
+- Ensure the preview handles the production URLs correctly.
+
+## Verification Plan
+
+### Automated Tests
+- Upload an image via the Slide Creator and verify it renders in the preview.
+- Upload a video and verify it renders in the preview.
+
+### Manual Verification
+- Check the "OR PASTE DIRECT URL" field after upload to ensure it starts with `https://res.cloudinary.com`.
+- Verify the homepage shows the new Cloudinary-hosted media.

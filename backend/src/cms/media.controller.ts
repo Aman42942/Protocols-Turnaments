@@ -11,29 +11,31 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { diskStorage } from 'multer';
-import { v4 as uuidv4 } from 'uuid';
-import path = require('path');
+import { memoryStorage } from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+import * as streamifier from 'streamifier';
 import { ActivityLogService } from '../activity-log/activity-log.service';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('cms/media')
 export class MediaController {
-  constructor(private readonly activityLogService: ActivityLogService) {}
+  constructor(
+    private readonly activityLogService: ActivityLogService,
+    private readonly configService: ConfigService,
+  ) {
+    cloudinary.config({
+      cloud_name: this.configService.get('CLOUDINARY_CLOUD_NAME'),
+      api_key: this.configService.get('CLOUDINARY_API_KEY'),
+      api_secret: this.configService.get('CLOUDINARY_API_SECRET'),
+    });
+  }
 
   @Post('upload')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPERADMIN')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const filename: string =
-            path.parse(file.originalname).name.replace(/\s/g, '') + uuidv4();
-          const extension: string = path.parse(file.originalname).ext;
-          cb(null, `${filename}${extension}`);
-        },
-      }),
+      storage: memoryStorage(),
       fileFilter: (req, file, cb) => {
         const allowedMimeTypes = [
           'image/jpeg',
@@ -46,7 +48,12 @@ export class MediaController {
         if (allowedMimeTypes.includes(file.mimetype)) {
           cb(null, true);
         } else {
-          cb(new BadRequestException('Invalid file type. Only images and videos are allowed.'), false);
+          cb(
+            new BadRequestException(
+              'Invalid file type. Only images and videos are allowed.',
+            ),
+            false,
+          );
         }
       },
       limits: {
@@ -54,28 +61,53 @@ export class MediaController {
       },
     }),
   )
-  async uploadFile(@UploadedFile() file: any, @Request() req) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File, @Request() req) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
 
-    const host = req.get('host');
-    const protocol = req.protocol;
-    const fileUrl = `${protocol}://${host}/uploads/${file.filename}`;
+    try {
+      const isVideo = file.mimetype.startsWith('video/');
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'protocol_cms',
+            resource_type: isVideo ? 'video' : 'image',
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          },
+        );
 
-    await this.activityLogService.log(
-      req.user.userId,
-      'UPLOAD_MEDIA',
-      { filename: file.filename, mimetype: file.mimetype, size: file.size },
-      undefined,
-      req.ip,
-    );
+        streamifier.createReadStream(file.buffer).pipe(uploadStream);
+      });
 
-    return {
-      success: true,
-      url: fileUrl,
-      filename: file.filename,
-      mimetype: file.mimetype,
-    };
+      await this.activityLogService.log(
+        req.user.userId,
+        'UPLOAD_MEDIA',
+        {
+          filename: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          cloudinaryId: uploadResult.public_id,
+        },
+        undefined,
+        req.ip,
+      );
+
+      return {
+        success: true,
+        url: uploadResult.secure_url,
+        filename: file.originalname,
+        mimetype: file.mimetype,
+        public_id: uploadResult.public_id,
+      };
+    } catch (error) {
+      console.error('Cloudinary Upload Error:', error);
+      throw new BadRequestException(
+        error.message || 'Failed to upload file to Cloudinary',
+      );
+    }
   }
 }
