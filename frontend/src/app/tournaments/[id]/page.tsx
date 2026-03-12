@@ -1107,23 +1107,24 @@ export default function TournamentDetailPage() {
                                     </div>
                                 </button>
 
-                                {/* PayPal USD - International */}
-                                {paypalClientId && paypalEnabled && (
-                                    <div className="group relative bg-card border border-border/50 hover:border-yellow-500/50 rounded-3xl p-5 transition-all flex flex-col justify-between h-40 overflow-hidden">
-                                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-600/5 blur-3xl group-hover:bg-yellow-600/10 transition-all" />
-                                        <div className="flex justify-between items-start">
-                                            <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 text-xl font-black">
-                                                $
+                                {/* PayPal Integration - Consolidated Provider to fix SDK conflicts */}
+                                {paypalClientId && paypalEnabled ? (
+                                    <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD" }}>
+                                        {/* PayPal USD - International */}
+                                        <div className="group relative bg-card border border-border/50 hover:border-yellow-500/50 rounded-3xl p-5 transition-all flex flex-col justify-between h-40 overflow-hidden">
+                                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-600/5 blur-3xl group-hover:bg-yellow-600/10 transition-all" />
+                                            <div className="flex justify-between items-start">
+                                                <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 text-xl font-black">
+                                                    $
+                                                </div>
+                                                <Badge className="bg-yellow-500/10 text-yellow-400 text-[9px] border-0 font-black">GLOBAL</Badge>
                                             </div>
-                                            <Badge className="bg-yellow-500/10 text-yellow-400 text-[9px] border-0 font-black">GLOBAL</Badge>
-                                        </div>
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <p className="font-black text-xs uppercase tracking-widest text-foreground/90">PayPal USD</p>
-                                                <span className="text-xs font-black text-yellow-500">${(tournament.entryFeePerPerson / exchangeRate).toFixed(2)}</span>
-                                            </div>
-                                            <div className="scale-90 origin-left -ml-2 -mb-2 h-[38px] overflow-hidden rounded-full bg-card">
-                                                <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD" }}>
+                                            <div className="space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="font-black text-xs uppercase tracking-widest text-foreground/90">PayPal USD</p>
+                                                    <span className="text-xs font-black text-yellow-500">${(tournament.entryFeePerPerson / exchangeRate).toFixed(2)}</span>
+                                                </div>
+                                                <div className="scale-90 origin-left -ml-2 -mb-2 h-[38px] overflow-hidden rounded-full bg-card">
                                                     <PayPalButtons
                                                         style={{
                                                             layout: "horizontal",
@@ -1141,29 +1142,26 @@ export default function TournamentDetailPage() {
                                                         }}
                                                         onApprove={async (data: any) => handlePaypalRegister(data.orderID)}
                                                     />
-                                                </PayPalScriptProvider>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* PayPal GBP - UK */}
-                                {paypalClientId && paypalEnabled && (
-                                    <div className="md:col-span-2 group relative bg-card border border-border/50 hover:border-purple-500/50 rounded-3xl p-5 px-6 transition-all flex items-center justify-between overflow-hidden">
-                                        <div className="absolute -top-20 -right-20 w-48 h-48 bg-purple-600/5 blur-[80px] group-hover:bg-purple-600/10 transition-all" />
-                                        <div className="flex items-center gap-5">
-                                            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 text-xl font-black">
-                                                £
-                                            </div>
-                                            <div>
-                                                <div className="font-black text-xs uppercase tracking-widest text-foreground/90 flex items-center gap-2">
-                                                    UK Region <Badge className="bg-purple-500/10 text-purple-400 text-[8px] border-0 h-4">GBP</Badge>
                                                 </div>
-                                                <p className="text-[10px] text-muted-foreground font-bold mt-0.5">Pay exactly £{(tournament.entryFeePerPerson / gbpExchangeRate).toFixed(2)} GBP</p>
                                             </div>
                                         </div>
-                                        <div className="w-44 scale-90 origin-right h-[38px] overflow-hidden rounded-full bg-card">
-                                            <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "GBP" }}>
+
+                                        {/* PayPal GBP - UK */}
+                                        <div className="md:col-span-2 group relative bg-card border border-border/50 hover:border-purple-500/50 rounded-3xl p-5 px-6 transition-all flex items-center justify-between overflow-hidden">
+                                            <div className="absolute -top-20 -right-20 w-48 h-48 bg-purple-600/5 blur-[80px] group-hover:bg-purple-600/10 transition-all" />
+                                            <div className="flex items-center gap-5">
+                                                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 text-xl font-black">
+                                                    £
+                                                </div>
+                                                <div>
+                                                    <div className="font-black text-xs uppercase tracking-widest text-foreground/90 flex items-center gap-2">
+                                                        UK Region <Badge className="bg-purple-500/10 text-purple-400 text-[8px] border-0 h-4">GBP</Badge>
+                                                    </div>
+                                                    <p className="text-[10px] text-muted-foreground font-bold mt-0.5">Pay exactly £{(tournament.entryFeePerPerson / gbpExchangeRate).toFixed(2)} GBP</p>
+                                                </div>
+                                            </div>
+                                            <div className="w-44 scale-90 origin-right h-[38px] overflow-hidden rounded-full bg-card">
+                                                {/* Note: In a consolidated provider, currency is set once. For GBP, we handle conversion in the createOrder call. */}
                                                 <PayPalButtons
                                                     style={{
                                                         layout: "horizontal",
@@ -1181,10 +1179,10 @@ export default function TournamentDetailPage() {
                                                     }}
                                                     onApprove={async (data: any) => handlePaypalRegister(data.orderID)}
                                                 />
-                                            </PayPalScriptProvider>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    </PayPalScriptProvider>
+                                ) : null}
                             </div>
                         </div>
 
