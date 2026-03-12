@@ -45,9 +45,14 @@ export class CmsService {
     }
 
     async getAllPresets() {
-        return (this.prisma as any).themePreset.findMany({
-            orderBy: { createdAt: 'desc' },
-        });
+        try {
+            return await (this.prisma as any).themePreset.findMany({
+                orderBy: { createdAt: 'desc' },
+            });
+        } catch (error) {
+            console.error('[CmsService] Failed to fetch theme presets. Table might be missing:', error.message);
+            return [];
+        }
     }
 
     async createPreset(name: string, themeData: any) {
