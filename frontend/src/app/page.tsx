@@ -20,6 +20,9 @@ const DEFAULT_SLIDES: AdSlide[] = [
     displayOrder: 1,
     startDate: null,
     endDate: null,
+    titleColor: '#FFFFFF',
+    descriptionColor: 'rgba(255,255,255,0.7)',
+    ctaColor: '#3b82f6',
   },
   {
     id: 'default-2',
@@ -34,6 +37,9 @@ const DEFAULT_SLIDES: AdSlide[] = [
     displayOrder: 2,
     startDate: null,
     endDate: null,
+    titleColor: '#FFFFFF',
+    descriptionColor: 'rgba(255,255,255,0.7)',
+    ctaColor: '#3b82f6',
   }
 ];
 
