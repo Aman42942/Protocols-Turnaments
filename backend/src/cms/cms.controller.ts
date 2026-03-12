@@ -46,6 +46,11 @@ export class CmsController {
         };
     }
 
+    @Get('content/:key')
+    async getContentByKey(@Param('key') key: string) {
+        return this.cmsService.getContentByKey(key);
+    }
+
     // ==========================================
     // SECURE ADMIN ENDPOINTS (Only SUPERADMIN)
     // ==========================================

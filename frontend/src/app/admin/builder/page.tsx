@@ -30,7 +30,8 @@ export default function SiteBuilderPage() {
         animationSpeed: 'normal',
         buttonStyle: 'solid',
         glassmorphism: false,
-        backgroundStyle: 'solid'
+        backgroundStyle: 'solid',
+        smokeVisibility: 0.5
     });
 
     // Content State
@@ -38,7 +39,10 @@ export default function SiteBuilderPage() {
 
     useEffect(() => {
         if (config?.theme) {
-            setThemeForm(config.theme);
+            setThemeForm(prev => ({
+                ...prev,
+                ...config.theme
+            }));
         }
         if (config?.content) {
             setContentForm({
@@ -265,31 +269,31 @@ export default function SiteBuilderPage() {
                                         <div>
                                             <label className="text-sm font-semibold mb-1.5 block">Primary Color</label>
                                             <div className="flex items-center gap-3">
-                                                <input type="color" value={themeForm.primaryColor} onChange={(e) => setThemeForm({ ...themeForm, primaryColor: e.target.value })} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
-                                                <input type="text" value={themeForm.primaryColor} onChange={(e) => setThemeForm({ ...themeForm, primaryColor: e.target.value })} className="flex-1 bg-muted px-3 py-2 rounded-xl text-sm font-mono border border-border focus:border-primary outline-none" />
+                                                <input type="color" value={themeForm.primaryColor || '#FF5733'} onChange={(e) => setThemeForm({ ...themeForm, primaryColor: e.target.value })} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
+                                                <input type="text" value={themeForm.primaryColor || '#FF5733'} onChange={(e) => setThemeForm({ ...themeForm, primaryColor: e.target.value })} className="flex-1 bg-muted px-3 py-2 rounded-xl text-sm font-mono border border-border focus:border-primary outline-none" />
                                             </div>
                                         </div>
 
                                         <div>
                                             <label className="text-sm font-semibold mb-1.5 block">Secondary Accent</label>
                                             <div className="flex items-center gap-3">
-                                                <input type="color" value={themeForm.secondaryColor} onChange={(e) => setThemeForm({ ...themeForm, secondaryColor: e.target.value })} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
-                                                <input type="text" value={themeForm.secondaryColor} onChange={(e) => setThemeForm({ ...themeForm, secondaryColor: e.target.value })} className="flex-1 bg-muted px-3 py-2 rounded-xl text-sm font-mono border border-border focus:border-primary outline-none" />
+                                                <input type="color" value={themeForm.secondaryColor || '#1F1F1F'} onChange={(e) => setThemeForm({ ...themeForm, secondaryColor: e.target.value })} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
+                                                <input type="text" value={themeForm.secondaryColor || '#1F1F1F'} onChange={(e) => setThemeForm({ ...themeForm, secondaryColor: e.target.value })} className="flex-1 bg-muted px-3 py-2 rounded-xl text-sm font-mono border border-border focus:border-primary outline-none" />
                                             </div>
                                         </div>
 
                                         <div>
                                             <label className="text-sm font-semibold mb-1.5 block">Global Background</label>
                                             <div className="flex items-center gap-3">
-                                                <input type="color" value={themeForm.backgroundColor} onChange={(e) => setThemeForm({ ...themeForm, backgroundColor: e.target.value })} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
-                                                <input type="text" value={themeForm.backgroundColor} onChange={(e) => setThemeForm({ ...themeForm, backgroundColor: e.target.value })} className="flex-1 bg-muted px-3 py-2 rounded-xl text-sm font-mono border border-border focus:border-primary outline-none" />
+                                                <input type="color" value={themeForm.backgroundColor || '#000000'} onChange={(e) => setThemeForm({ ...themeForm, backgroundColor: e.target.value })} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
+                                                <input type="text" value={themeForm.backgroundColor || '#000000'} onChange={(e) => setThemeForm({ ...themeForm, backgroundColor: e.target.value })} className="flex-1 bg-muted px-3 py-2 rounded-xl text-sm font-mono border border-border focus:border-primary outline-none" />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="text-sm font-semibold mb-1.5 block">Default Text Color</label>
                                             <div className="flex items-center gap-3">
-                                                <input type="color" value={themeForm.textColor} onChange={(e) => setThemeForm({ ...themeForm, textColor: e.target.value })} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
-                                                <input type="text" value={themeForm.textColor} onChange={(e) => setThemeForm({ ...themeForm, textColor: e.target.value })} className="flex-1 bg-muted px-3 py-2 rounded-xl text-sm font-mono border border-border focus:border-primary outline-none" />
+                                                <input type="color" value={themeForm.textColor || '#FFFFFF'} onChange={(e) => setThemeForm({ ...themeForm, textColor: e.target.value })} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
+                                                <input type="text" value={themeForm.textColor || '#FFFFFF'} onChange={(e) => setThemeForm({ ...themeForm, textColor: e.target.value })} className="flex-1 bg-muted px-3 py-2 rounded-xl text-sm font-mono border border-border focus:border-primary outline-none" />
                                             </div>
                                         </div>
                                     </div>
@@ -360,6 +364,23 @@ export default function SiteBuilderPage() {
                                             >
                                                 <div className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-all shadow-md ${themeForm.glassmorphism ? 'right-1' : 'left-1'}`} />
                                             </button>
+                                        </div>
+
+                                        <div className="space-y-3 pt-4">
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-sm font-bold block">Smoke Visibility</label>
+                                                <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded border border-border">{(themeForm.smokeVisibility * 100).toFixed(0)}%</span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="1"
+                                                step="0.05"
+                                                value={themeForm.smokeVisibility ?? 0.5}
+                                                onChange={(e) => setThemeForm({ ...themeForm, smokeVisibility: parseFloat(e.target.value) })}
+                                                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                                            />
+                                            <p className="text-[10px] text-muted-foreground italic">Controls the intensity of the animated smoke in the hero section.</p>
                                         </div>
                                     </div>
                                 </div>

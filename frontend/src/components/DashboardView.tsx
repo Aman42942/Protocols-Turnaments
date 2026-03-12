@@ -146,7 +146,7 @@ export function DashboardView() {
                     </div>
                     <div className="flex items-center gap-4 sm:gap-6">
                         {/* Circular Progress Bar */}
-                        <Link href="/dashboard/settings" className="group hidden sm:flex items-center gap-3 bg-card p-2 pr-4 rounded-full border border-border hover:border-primary/50 transition-colors">
+                        <Link href="/settings" className="group hidden sm:flex items-center gap-3 bg-card p-2 pr-4 rounded-full border border-border hover:border-primary/50 transition-colors">
                             <div className="relative h-10 w-10 flex items-center justify-center">
                                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                                     <path

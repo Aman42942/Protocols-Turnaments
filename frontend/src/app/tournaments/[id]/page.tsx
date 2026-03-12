@@ -132,8 +132,8 @@ export default function TournamentDetailPage() {
     const loadRates = async () => {
         try {
             const [rateRes, gbpRes, walletRes] = await Promise.allSettled([
-                api.get(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/PAYPAL_EXCHANGE_RATE`),
-                api.get(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/GBP_TO_COIN_RATE`),
+                api.get('/cms/content/PAYPAL_EXCHANGE_RATE'),
+                api.get('/cms/content/GBP_TO_COIN_RATE'),
                 api.get('/wallet'),
             ]);
             if (rateRes.status === 'fulfilled') {
@@ -149,7 +149,7 @@ export default function TournamentDetailPage() {
             }
             setPaypalClientId(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
 
-            const paypalEnabledRes = await api.get(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/PAYPAL_ENABLED`);
+            const paypalEnabledRes = await api.get('/cms/content/PAYPAL_ENABLED');
             if (paypalEnabledRes.data?.value !== undefined) {
                 setPaypalEnabled(paypalEnabledRes.data.value !== 'false');
             }

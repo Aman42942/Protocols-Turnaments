@@ -27,6 +27,7 @@ export class CmsService {
                     buttonStyle: 'solid',
                     glassmorphism: false,
                     backgroundStyle: 'solid',
+                    smokeVisibility: 0.5,
                 },
             });
         }
@@ -49,6 +50,7 @@ export class CmsService {
                 buttonStyle: data.buttonStyle,
                 glassmorphism: data.glassmorphism,
                 backgroundStyle: data.backgroundStyle,
+                smokeVisibility: data.smokeVisibility,
             },
         });
     }
@@ -64,6 +66,27 @@ export class CmsService {
             acc[curr.key] = curr.value;
             return acc;
         }, {});
+    }
+
+    async getContentByKey(key: string) {
+        const item = await (this.prisma as any).siteContent.findUnique({
+            where: { key },
+        });
+
+        if (!item) {
+            // Fallbacks for critical keys to prevent 404s breaking the UI
+            const defaults: Record<string, string> = {
+                'PAYPAL_EXCHANGE_RATE': '85',
+                'GBP_TO_COIN_RATE': '110',
+                'PAYPAL_ENABLED': 'true'
+            };
+
+            if (defaults[key]) {
+                return { key, value: defaults[key], type: 'TEXT' };
+            }
+        }
+
+        return item;
     }
 
     async setContent(key: string, value: string, type: string = 'TEXT') {

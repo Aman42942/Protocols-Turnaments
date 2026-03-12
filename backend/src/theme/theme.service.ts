@@ -9,13 +9,14 @@ const DEFAULT_THEME = {
   backgroundColor: '#020617',
   heroTitle: 'Compete. Win. Become a Legend.',
   heroSubtitle: 'The ultimate esports platform for competitive gamers.',
+  smokeVisibility: 0.5,
   isActive: true,
   id: null as string | null,
 };
 
 @Injectable()
 export class ThemeService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async getActiveTheme() {
     try {
@@ -36,6 +37,7 @@ export class ThemeService {
           backgroundColor: DEFAULT_THEME.backgroundColor,
           heroTitle: DEFAULT_THEME.heroTitle,
           heroSubtitle: DEFAULT_THEME.heroSubtitle,
+          smokeVisibility: DEFAULT_THEME.smokeVisibility,
         },
       });
     } catch {

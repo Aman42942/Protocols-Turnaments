@@ -6,9 +6,12 @@ import { Trophy, Gamepad2, Users, Rocket, Target, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useCms } from '@/context/CmsContext';
+import { SmokeBackground } from './SmokeBackground';
 
 export function HeroSection() {
-    const { getContent } = useCms();
+    const { getContent, config } = useCms();
+    const smokeVisibility = config?.theme?.smokeVisibility ?? 0.5;
+    const primaryColor = config?.theme?.primaryColor ?? '#3b82f6';
 
     const heroTitle = getContent('HERO_TITLE', 'COMPETE. WIN. Become a Legend.');
     const heroSubtitle = getContent('HERO_SUBTITLE', 'The ultimate esports platform for competitive gamers. Join tournaments, climb the leaderboards, and win real cash prizes across your favorite titles.');
@@ -20,9 +23,12 @@ export function HeroSection() {
         <section className="relative overflow-hidden pt-12 md:pt-16 pb-24 md:pb-48 bg-background">
             {/* Elite Background Mesh - Protocol Blue Theme */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 bg-background">
-                <div className="absolute top-[-10%] left-[-10%] w-[100%] h-[100%] bg-primary/5 rounded-full blur-[150px] animate-pulse" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[80%] h-[80%] bg-blue-600/5 rounded-full blur-[140px]" />
-                <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] opacity-40" />
+                {/* Smoke Animation */}
+                <SmokeBackground color={primaryColor} opacity={smokeVisibility} />
+
+                <div className="absolute top-[-10%] left-[-10%] w-[100%] h-[100%] bg-primary/10 dark:bg-primary/5 rounded-full blur-[150px] animate-pulse" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[80%] h-[80%] bg-primary/10 dark:bg-blue-600/5 rounded-full blur-[140px]" />
+                <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-primary/20 dark:bg-primary/10 rounded-full blur-[120px] opacity-40" />
             </div>
 
             <div className="container relative z-10 px-6">

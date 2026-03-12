@@ -31,19 +31,21 @@ export class PaymentsService {
   public getHttpsFrontendUrl(): string {
     const envUrl = this.configService.get<string>('FRONTEND_URL');
 
-    // If it's a production-like URL (not localhost), use it directly
-    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+    // Prioritize explicit https URLs from environment (e.g. ngrok or production domains)
+    if (envUrl && envUrl.startsWith('https://')) {
       return envUrl;
     }
 
     // Cashfree PRODUCTION mode strictly requires HTTPS for return URLs.
-    // If we are in Production mode, we MUST use the live domain (Vercel).
-    // If we are in Sandbox/Local mode, we can use localhost.
     if (this.isProduction) {
-      return 'https://protocols-turnaments.vercel.app';
+      if (envUrl && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
+        console.warn('[CASHFREE] Detected localhost in PRODUCTION mode. Forcing Vercel HTTPS return URL.');
+        return 'https://protocols-turnaments.vercel.app';
+      }
+      return envUrl || 'https://protocols-turnaments.vercel.app';
     }
 
-    return 'http://localhost:3000';
+    return envUrl || 'http://localhost:3000';
   }
 
   async createOrder(
@@ -69,6 +71,13 @@ export class PaymentsService {
     const orderId = `ORD${Date.now()}`;
     const safeCustomerId = userId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 50) || 'user001';
 
+    // Ensure return URL is HTTPS if in PRODUCTION
+    let finalReturnUrl = returnUrl || `${this.getHttpsFrontendUrl()}/dashboard/wallet?order_id={order_id}`;
+    if (this.isProduction && !finalReturnUrl.startsWith('https://')) {
+      console.warn(`[CASHFREE] Production mode requires HTTPS return URL. Converting ${finalReturnUrl} to https if possible.`);
+      finalReturnUrl = finalReturnUrl.replace('http://', 'https://');
+    }
+
     const body = {
       order_amount: amount,
       order_currency: 'INR',
@@ -80,7 +89,7 @@ export class PaymentsService {
         customer_email: userEmail || 'gamer@protocol.app',
       },
       order_meta: {
-        return_url: returnUrl || `${this.getHttpsFrontendUrl()}/dashboard/wallet?order_id={order_id}`,
+        return_url: finalReturnUrl,
       },
     };
 
@@ -102,7 +111,12 @@ export class PaymentsService {
     } catch (error: any) {
       const cfError = error.response?.data;
       console.error('[CASHFREE ERROR] Create Order Failed:', JSON.stringify(cfError || error.message));
-      const msg = cfError?.message || cfError?.error || error.message || 'Payment gateway error';
+
+      let msg = cfError?.message || cfError?.error || error.message || 'Payment gateway error';
+      if (cfError?.code === 'order_meta.return_url_invalid') {
+        msg = 'Cashfree Production requires an HTTPS return URL. For local testing, please use ngrok or switch to SANDBOX mode.';
+      }
+
       throw new BadRequestException(msg);
     }
   }

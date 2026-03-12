@@ -263,7 +263,7 @@ model ThemeSettings {
   heroTitle       String   @default("Dominate the Arena")
   heroSubtitle    String   @default("Join the ultimate esports tournaments and win big prizes.")
   heroImageUrl    String?
-  customCss       String?
+  smokeVisibility Float    @default(0.5)
   updatedAt       DateTime @updatedAt
 }
 
@@ -394,6 +394,7 @@ model GlobalTheme {
   buttonStyle        String   @default("solid")  // solid, outline, ghost
   glassmorphism      Boolean  @default(false)
   backgroundStyle    String   @default("solid")  // solid, gradient, mesh
+  smokeVisibility    Float    @default(0.5)
   updatedAt          DateTime @updatedAt
 }
 

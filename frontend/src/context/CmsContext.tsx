@@ -15,6 +15,7 @@ interface GlobalTheme {
     buttonStyle: string;
     glassmorphism: boolean;
     backgroundStyle: string;
+    smokeVisibility: number;
 }
 
 interface ComponentLayout {
