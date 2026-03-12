@@ -1,0 +1,71 @@
+import type { Metadata } from 'next';
+
+interface Props {
+  params: Promise<{ shareCode: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { shareCode } = await params;
+  const domain = "https://protocols-turnaments.vercel.app";
+  
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/tournaments/share/${shareCode}`, {
+      next: { revalidate: 60 }
+    });
+
+    if (!res.ok) throw new Error('Tournament share link not found');
+
+    const tournament = await res.json();
+    
+    const title = `${tournament.title} | Protocol Tournament`;
+    const description = `Join the battle! ${tournament.game} tournament with ${tournament.prizePool.toLocaleString('en-IN')} Coins prize pool. Use this invite link to join Protocol.`;
+    
+    let ogImage = tournament.banner || `${domain}/logo-primary.png`;
+    if (ogImage.startsWith('/')) {
+      ogImage = `${domain}${ogImage}`;
+    }
+
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        type: 'website',
+        url: `${domain}/tournaments/share/${shareCode}`,
+        images: [
+          {
+            url: ogImage,
+            width: 1200,
+            height: 630,
+            alt: tournament.title,
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [ogImage],
+      },
+      robots: {
+        index: true,
+        follow: true,
+      }
+    };
+  } catch (error) {
+    console.error('Error generating share metadata:', error);
+    return {
+      title: 'Invite to Join Tournament | Protocol',
+      description: 'Join the ultimate esports platform. Compete, win, and build your legacy.',
+    };
+  }
+}
+
+export default function ShareLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <>{children}</>;
+}
