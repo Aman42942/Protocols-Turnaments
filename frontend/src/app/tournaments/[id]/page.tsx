@@ -302,8 +302,13 @@ export default function TournamentDetailPage() {
             });
 
         } catch (err: any) {
-            console.error('Cashfree Error:', err);
-            alert(err.response?.data?.message || 'Payment initiation failed');
+            console.error('Cashfree Error Details:', {
+                message: err.message,
+                response: err.response?.data,
+                status: err.response?.status
+            });
+            const errorMsg = err.response?.data?.message || err.message || 'Payment initiation failed';
+            toast.error(errorMsg);
             setRegistering(false);
         }
     };
@@ -1081,12 +1086,13 @@ export default function TournamentDetailPage() {
                                 {/* Cashfree - India */}
                                 <button
                                     onClick={() => {
-                                        if (!billingPhone || billingPhone.length < 10) {
-                                            toast.error('Please enter a valid phone number for Cashfree checkout');
+                                        if (!billingPhone || billingPhone.trim().length < 10) {
+                                            toast.error('Please enter a valid 10-digit phone number');
                                             return;
                                         }
                                         handleCashfreeRegister();
                                     }}
+                                    disabled={registering}
                                     className="group relative bg-card border border-border/50 hover:border-blue-500/50 rounded-3xl p-5 transition-all text-left flex flex-col justify-between h-40 overflow-hidden"
                                 >
                                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-600/5 blur-3xl group-hover:bg-blue-600/10 transition-all" />
@@ -1100,9 +1106,18 @@ export default function TournamentDetailPage() {
                                         <p className="font-black text-xs uppercase tracking-widest text-foreground/90">Domestic Gateway</p>
                                         <p className="text-[10px] text-muted-foreground font-bold mt-1">UPI, Cards, NetBanking</p>
                                         <div className="mt-3 flex items-center gap-2">
-                                            <span className="text-sm font-black text-blue-400">₹{tournament.entryFeePerPerson}</span>
-                                            <div className="h-1 w-1 rounded-full bg-foreground/20" />
-                                            <span className="text-[9px] font-bold text-muted-foreground uppercase">Instant</span>
+                                            {registering ? (
+                                                <div className="flex items-center gap-2 text-blue-400">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    <span className="text-[10px] font-black uppercase">Processing...</span>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <span className="text-sm font-black text-blue-400">₹{tournament.entryFeePerPerson}</span>
+                                                    <div className="h-1 w-1 rounded-full bg-foreground/20" />
+                                                    <span className="text-[9px] font-bold text-muted-foreground uppercase">Instant</span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </button>
