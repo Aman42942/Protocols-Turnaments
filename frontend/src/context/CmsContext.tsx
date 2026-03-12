@@ -56,6 +56,7 @@ interface CmsConfig {
     layout: ComponentLayout[];
     features: CustomFeature[];
     slides: AdSlide[];
+    presets?: any[];
 }
 
 interface CmsContextType {
