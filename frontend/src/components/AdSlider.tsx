@@ -108,11 +108,6 @@ export function AdSlider({ slides }: AdSliderProps) {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent pointer-events-none" />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent pointer-events-none hidden md:block" />
 
-                    {/* ── GAMING SCANLINE EFFECT ────────────────────── */}
-                    <div
-                        className="absolute inset-0 pointer-events-none opacity-[0.03]"
-                        style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.5) 2px, rgba(255,255,255,0.5) 4px)' }}
-                    />
 
                     {/* ── CORNER HUD DECORATIONS ────────────────────── */}
                     <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-primary/60 z-10 hidden md:block" />
