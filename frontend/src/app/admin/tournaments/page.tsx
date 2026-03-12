@@ -244,7 +244,7 @@ export default function AdminTournamentsPage() {
                                     <th className="p-4">Entry Fee</th>
                                     <th className="p-4">Prize</th>
                                     <th className="p-4">Collected</th>
-                                    <th className="p-4">P/L Alert</th>
+                                    <th className="p-4">Payout Info</th>
                                     <th className="p-4">Participants</th>
                                     <th className="p-4">Status</th>
                                     <th className="p-4 text-right">Actions</th>
@@ -282,12 +282,12 @@ export default function AdminTournamentsPage() {
                                         </td>
                                         <td className="p-4">
                                             {((t.teams?.length || 0) * (t.entryFeePerPerson || 0)) < (t.prizePool || 0) ? (
-                                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20 flex items-center gap-1 w-fit">
-                                                    <AlertTriangle className="w-3 h-3" /> Loss
+                                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-1 w-fit">
+                                                    <Trophy className="w-3 h-3" /> Mega Prize
                                                 </span>
                                             ) : (
                                                 <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500/10 text-green-500 border border-green-500/20 flex items-center gap-1 w-fit">
-                                                    <TrendingUp className="w-3 h-3" /> Profit
+                                                    <TrendingUp className="w-3 h-3" /> Pool Ready
                                                 </span>
                                             )}
                                         </td>

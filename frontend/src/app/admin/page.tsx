@@ -98,7 +98,7 @@ export default function AdminDashboard() {
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [tournaments, setTournaments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [lossTournaments, setLossTournaments] = useState<any[]>([]);
+    const [prizeHighlights, setPrizeHighlights] = useState<any[]>([]);
 
     useEffect(() => {
         fetchData();
@@ -111,15 +111,15 @@ export default function AdminDashboard() {
             const [sRes, tRes] = await Promise.allSettled([api.get('/users/admin/stats'), api.get('/tournaments')]);
             if (sRes.status === 'fulfilled') setStats(sRes.value.data);
             if (tRes.status === 'fulfilled') {
-                const allT = tRes.value.data || [];
+                const allT = (tRes.value as any).data || [];
                 setTournaments(allT.slice(0, 5));
 
-                const lossItems = allT.filter((t: any) => {
+                const highlightItems = allT.filter((t: any) => {
                     if (t.status === 'COMPLETED' || t.status === 'CANCELLED') return false;
-                    const collected = (t.teams?.length || 0) * (t.entryFeePerPerson || 0);
-                    return collected < (t.prizePool || 0);
-                });
-                setLossTournaments(lossItems);
+                    // Highlight tournaments with significant prizes
+                    return (t.prizePool || 0) > 0;
+                }).sort((a: any, b: any) => (b.prizePool || 0) - (a.prizePool || 0)).slice(0, 3);
+                setPrizeHighlights(highlightItems);
             }
         } finally { setLoading(false); }
     };
@@ -209,32 +209,31 @@ export default function AdminDashboard() {
                 })}
             </div>
 
-            {/* ─── RISK ALERTS ─────────────────────────────────────── */}
-            {lossTournaments.length > 0 && (
+            {/* ─── PRIZE HIGHLIGHTS ─────────────────────────────────── */}
+            {prizeHighlights.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
                     <div className="flex items-center gap-2 mb-3">
-                        <AlertTriangle className="w-4 h-4 text-red-500 animate-pulse" />
-                        <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Active Risk Alerts ({lossTournaments.length})</p>
+                        <Trophy className="w-4 h-4 text-amber-500" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Tournament Prize Highlights ({prizeHighlights.length})</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {lossTournaments.map(t => {
+                        {prizeHighlights.map(t => {
                             const collected = (t.teams?.length || 0) * (t.entryFeePerPerson || 0);
-                            const loss = (t.prizePool || 0) - collected;
                             return (
                                 <Link key={t.id} href={`/admin/tournaments/${t.id}/participants`}>
-                                    <div className="flex items-center justify-between p-4 rounded-2xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/10 transition-colors cursor-pointer group">
+                                    <div className="flex items-center justify-between p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors cursor-pointer group">
                                         <div className="flex items-center gap-3 max-w-[65%]">
-                                            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
-                                                <AlertTriangle className="w-5 h-5 text-red-500 group-hover:scale-110 transition-transform" />
+                                            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                                                <Trophy className="w-5 h-5 text-amber-500 group-hover:scale-110 transition-transform" />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="text-sm font-bold text-foreground group-hover:text-red-500 transition-colors truncate">{t.title}</p>
-                                                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">Prize: {t.prizePool} | Collected: {collected}</p>
+                                                <p className="text-sm font-bold text-foreground group-hover:text-amber-500 transition-colors truncate">{t.title}</p>
+                                                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">Win Pool: {t.prizePool} | Pot: {collected}</p>
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className="text-red-500 font-black text-lg">-{loss}</p>
-                                            <p className="text-[9px] text-red-500/70 font-bold uppercase">Current Loss</p>
+                                            <p className="text-amber-500 font-black text-lg">{t.prizePool}</p>
+                                            <p className="text-[9px] text-amber-500/70 font-bold uppercase">Winning Prize</p>
                                         </div>
                                     </div>
                                 </Link>
