@@ -8,6 +8,7 @@ import { LeaderboardGateway } from './leaderboard.gateway';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { WalletService } from '../wallet/wallet.service';
+import { PaymentsService } from '../payments/payments.service';
 
 @Injectable()
 export class TournamentsService {
@@ -17,6 +18,7 @@ export class TournamentsService {
     private usersService: UsersService,
     private emailService: EmailService,
     private walletService: WalletService,
+    private paymentsService: PaymentsService,
   ) { }
 
   private generateShareCode(): string {
@@ -87,9 +89,13 @@ export class TournamentsService {
     return this.prisma.tournament.findMany({
       orderBy: { startDate: 'asc' },
       include: {
-        _count: { select: { teams: true } },
+        _count: {
+          select: {
+            teams: { where: { status: { notIn: ['CANCELLED', 'REJECTED'] } } },
+          },
+        },
         teams: {
-          where: { paymentStatus: 'PAID' },
+          where: { paymentStatus: 'PAID', status: { notIn: ['CANCELLED', 'REJECTED'] } },
           select: { id: true },
         },
       },
@@ -101,12 +107,17 @@ export class TournamentsService {
       where: { id },
       include: {
         teams: {
+          where: { status: { notIn: ['CANCELLED', 'REJECTED'] } },
           include: {
             user: { select: { id: true, name: true, email: true } },
             team: { select: { name: true } },
           },
         },
-        _count: { select: { teams: true } },
+        _count: {
+          select: {
+            teams: { where: { status: { notIn: ['CANCELLED', 'REJECTED'] } } },
+          },
+        },
       },
     });
     if (tournament) {
@@ -122,9 +133,14 @@ export class TournamentsService {
       where: { shareCode },
       include: {
         teams: {
+          where: { status: { notIn: ['CANCELLED', 'REJECTED'] } },
           include: { user: { select: { id: true, name: true, email: true } } },
         },
-        _count: { select: { teams: true } },
+        _count: {
+          select: {
+            teams: { where: { status: { notIn: ['CANCELLED', 'REJECTED'] } } },
+          },
+        },
       },
     });
     if (tournament) {
@@ -476,7 +492,7 @@ export class TournamentsService {
     const amount = tournament.entryFeePerPerson || 0;
     if (amount <= 0) throw new BadRequestException('No entry fee to refund');
 
-    // 1. Perform refund in wallet
+    // 1. Perform refund in wallet (Balance Adjustment)
     await this.walletService.refundTournamentEntry(
       participant.userId,
       amount,
@@ -484,7 +500,19 @@ export class TournamentsService {
       tournament.title,
     );
 
-    // 2. Update participant status
+    // 2. TRIGGER GATEWAY REFUND: If Cashfree paymentId exists
+    if (participant.paymentId && participant.paymentId.startsWith('ORD')) {
+      try {
+        console.log(`[REFUND] Triggering Cashfree Gateway Refund for Order: ${participant.paymentId}`);
+        await this.paymentsService.createRefund(participant.paymentId, amount);
+      } catch (err: any) {
+        console.error('[REFUND ERROR] Gateway refund failed, but wallet adjustment was done:', err.message);
+        // We don't throw here to ensure balance adjustment stays intact, 
+        // but admin should know gateway refund might need manual retry if it crashed.
+      }
+    }
+
+    // 3. Update participant status to exit them
     const updated = await this.prisma.tournamentParticipant.update({
       where: { id: participantId },
       data: {
