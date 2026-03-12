@@ -11,11 +11,12 @@ import {
     ArrowLeft, Save, Loader2, Play, Image as ImageIcon,
     Globe, Link2, Calendar, Zap, Trophy, Target, Swords,
     Eye, EyeOff, Monitor, Smartphone, Maximize2, Wand2,
-    Star, Flame, Shield, Users, Award
+    Star, Flame, Shield, Users, Award, Palette
 } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useCms } from '@/context/CmsContext';
+import { MediaUpload } from '@/components/admin/MediaUpload';
 
 // ── Quick-fill templates ─────────────────────────────────────────────────────
 const TEMPLATES = [
@@ -47,10 +48,12 @@ const TEMPLATES = [
 
 // ── Live Preview Component ───────────────────────────────────────────────────
 function LivePreview({
-    title, description, ctaText, ctaLink, mediaUrl, mediaType, isMobile
+    title, description, ctaText, ctaLink, mediaUrl, mediaType, isMobile,
+    titleColor, descriptionColor, ctaColor
 }: {
     title: string; description: string; ctaText: string; ctaLink: string;
     mediaUrl: string; mediaType: string; isMobile: boolean;
+    titleColor?: string; descriptionColor?: string; ctaColor?: string;
 }) {
     return (
         <div className={`relative overflow-hidden bg-black rounded-2xl border border-border shadow-2xl transition-all duration-300 ${isMobile ? 'h-[220px]' : 'h-[280px]'}`}>
@@ -88,14 +91,25 @@ function LivePreview({
                         <span className="w-1 h-1 rounded-full bg-primary" />
                         Sponsored
                     </div>
-                    <h3 className={`font-black italic text-white leading-tight drop-shadow-lg ${isMobile ? 'text-lg' : 'text-2xl'}`}>
+                    <h3 
+                        className={`font-black italic leading-tight drop-shadow-lg ${isMobile ? 'text-lg' : 'text-2xl'}`}
+                        style={{ color: titleColor || '#FFFFFF' }}
+                    >
                         {title || 'SLIDE TITLE PREVIEW'}
                     </h3>
                     {description && !isMobile && (
-                        <p className="text-white/70 text-xs leading-relaxed line-clamp-2 max-w-xs">{description}</p>
+                        <p 
+                            className="text-xs leading-relaxed line-clamp-2 max-w-xs"
+                            style={{ color: descriptionColor || 'rgba(255,255,255,0.7)' }}
+                        >
+                            {description}
+                        </p>
                     )}
                     {ctaText && ctaLink && (
-                        <div className={`inline-flex items-center gap-1.5 bg-primary rounded-full font-black uppercase tracking-wider text-primary-foreground ${isMobile ? 'px-3 py-1 text-[9px]' : 'px-4 py-1.5 text-[10px]'}`}>
+                        <div 
+                            className={`inline-flex items-center gap-1.5 rounded-full font-black uppercase tracking-wider text-primary-foreground ${isMobile ? 'px-3 py-1 text-[9px]' : 'px-4 py-1.5 text-[10px]'}`}
+                            style={{ backgroundColor: ctaColor || 'var(--primary)' }}
+                        >
                             <Zap className="w-3 h-3 fill-current" />
                             {ctaText}
                         </div>
@@ -145,6 +159,9 @@ export default function NewSlidePage() {
         displayOrder: 0,
         startDate: '',
         endDate: '',
+        titleColor: '#FFFFFF',
+        descriptionColor: '#FFFFFF',
+        ctaColor: '#3b82f6',
     });
 
     const set = (key: string, val: any) => setFormData(prev => ({ ...prev, [key]: val }));
@@ -233,22 +250,44 @@ export default function NewSlidePage() {
                         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">📝 Slide Content</p>
                         <div className="space-y-2">
                             <Label>Title <span className="text-destructive">*</span></Label>
-                            <Input
-                                placeholder="e.g., WINTER CHAMPIONSHIP SERIES"
-                                className="font-black uppercase tracking-tight h-12 text-base"
-                                value={formData.title}
-                                onChange={(e) => set('title', e.target.value.toUpperCase())}
-                                required
-                            />
+                            <div className="flex gap-4">
+                                <Input
+                                    placeholder="e.g., WINTER CHAMPIONSHIP SERIES"
+                                    className="font-black uppercase tracking-tight h-12 text-base flex-1"
+                                    value={formData.title}
+                                    onChange={(e) => set('title', e.target.value.toUpperCase())}
+                                    required
+                                />
+                                <div className="flex flex-col items-center gap-1">
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Color</Label>
+                                    <input 
+                                        type="color" 
+                                        value={formData.titleColor || '#FFFFFF'} 
+                                        onChange={(e) => set('titleColor', e.target.value)}
+                                        className="w-12 h-10 rounded-xl cursor-pointer bg-transparent border-0"
+                                    />
+                                </div>
+                            </div>
                         </div>
                         <div className="space-y-2">
                             <Label>Description <span className="text-muted-foreground text-xs">(optional)</span></Label>
-                            <Textarea
-                                placeholder="Add a compelling description — keep it short and punchy!"
-                                className="h-20 resize-none"
-                                value={formData.description}
-                                onChange={(e) => set('description', e.target.value)}
-                            />
+                            <div className="flex gap-4">
+                                <Textarea
+                                    placeholder="Add a compelling description — keep it short and punchy!"
+                                    className="h-20 resize-none flex-1"
+                                    value={formData.description}
+                                    onChange={(e) => set('description', e.target.value)}
+                                />
+                                <div className="flex flex-col items-center gap-1">
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Color</Label>
+                                    <input 
+                                        type="color" 
+                                        value={formData.descriptionColor || '#FFFFFF'} 
+                                        onChange={(e) => set('descriptionColor', e.target.value)}
+                                        className="w-12 h-10 rounded-xl cursor-pointer bg-transparent border-0"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -271,20 +310,22 @@ export default function NewSlidePage() {
                                 <Play className="h-6 w-6" /> Video
                             </button>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Media URL <span className="text-destructive">*</span></Label>
-                            <Input
-                                placeholder={formData.mediaType === 'IMAGE' ? 'https://cdn.example.com/banner.jpg' : 'https://cdn.example.com/video.mp4'}
-                                value={formData.mediaUrl}
-                                onChange={(e) => set('mediaUrl', e.target.value)}
-                                required
+                        <div className="space-y-4">
+                            <MediaUpload 
+                                label="Upload Banner Media"
+                                type={formData.mediaType === 'VIDEO' ? 'video' : 'image'}
+                                currentUrl={formData.mediaUrl}
+                                onUploadSuccess={(url) => set('mediaUrl', url)}
                             />
-                            {formData.mediaUrl && formData.mediaType === 'IMAGE' && (
-                                <div className="rounded-xl overflow-hidden border border-border h-24 bg-black mt-2">
-                                    <img src={formData.mediaUrl} alt="check" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).alt = '⚠️ Could not load image — check the URL'; (e.target as HTMLImageElement).className = 'w-full h-full object-contain p-4 text-xs text-destructive'; }} />
-                                </div>
-                            )}
-                            <p className="text-[10px] text-muted-foreground">Best size: 1920×600px. Videos under 10MB for fast loading.</p>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Or Paste Direct URL</Label>
+                                <Input
+                                    placeholder={formData.mediaType === 'IMAGE' ? 'https://cdn.example.com/banner.jpg' : 'https://cdn.example.com/video.mp4'}
+                                    value={formData.mediaUrl}
+                                    onChange={(e) => set('mediaUrl', e.target.value)}
+                                />
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">Best size: 1920×600px. Videos under 20MB for fast loading.</p>
                         </div>
                     </div>
 
@@ -299,6 +340,20 @@ export default function NewSlidePage() {
                             <div className="space-y-2">
                                 <Label>Link URL</Label>
                                 <Input placeholder="/tournaments/my-tournament" value={formData.ctaLink} onChange={(e) => set('ctaLink', e.target.value)} />
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 bg-muted/20 p-4 rounded-2xl border border-border">
+                            <Label className="text-xs font-black uppercase text-muted-foreground flex items-center gap-2">
+                                <Palette className="w-3 h-3" /> Button Color
+                            </Label>
+                            <div className="flex items-center gap-4">
+                                <input 
+                                    type="color" 
+                                    value={formData.ctaColor || '#3b82f6'} 
+                                    onChange={(e) => set('ctaColor', e.target.value)}
+                                    className="w-full h-10 rounded-xl cursor-pointer bg-transparent border-0"
+                                />
+                                <span className="text-xs font-mono uppercase font-bold">{formData.ctaColor}</span>
                             </div>
                         </div>
                         <label className="flex items-center gap-3 cursor-pointer p-3 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all">
@@ -376,6 +431,9 @@ export default function NewSlidePage() {
                                 mediaUrl={formData.mediaUrl}
                                 mediaType={formData.mediaType}
                                 isMobile={previewDevice === 'mobile'}
+                                titleColor={formData.titleColor}
+                                descriptionColor={formData.descriptionColor}
+                                ctaColor={formData.ctaColor}
                             />
 
                             <p className="text-[10px] text-center text-muted-foreground">

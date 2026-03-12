@@ -135,12 +135,18 @@ export function AdSlider({ slides }: AdSliderProps) {
                                 </div>
 
                                 {/* Title */}
-                                <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter leading-[0.9] text-white italic drop-shadow-xl">
-                                    {currentSlide.title.toUpperCase()}
+                                <h2
+                                    className="text-4xl md:text-6xl font-black italic mb-4 leading-tight drop-shadow-2xl"
+                                    style={{ color: currentSlide.titleColor || '#FFFFFF' }}
+                                >
+                                    {currentSlide.title}
                                 </h2>
 
                                 {currentSlide.description && (
-                                    <p className="text-sm md:text-base text-white/75 max-w-md font-medium leading-relaxed line-clamp-2 md:line-clamp-3">
+                                    <p
+                                        className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl line-clamp-2"
+                                        style={{ color: currentSlide.descriptionColor || 'rgba(255,255,255,0.8)' }}
+                                    >
                                         {currentSlide.description}
                                     </p>
                                 )}
@@ -158,11 +164,12 @@ export function AdSlider({ slides }: AdSliderProps) {
                                                 whileTap={{ scale: 0.96 }}
                                             >
                                                 <Button
-                                                    size="lg"
-                                                    className="rounded-full px-7 h-11 font-black uppercase tracking-widest shadow-xl shadow-primary/30 text-sm"
+                                                    size="sm"
+                                                    className="h-10 px-6 rounded-full font-black uppercase tracking-widest group shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] transition-all"
+                                                    style={{ backgroundColor: currentSlide.ctaColor || 'var(--primary)' }}
                                                 >
-                                                    <Zap className="mr-2 h-4 w-4 fill-current" />
-                                                    {currentSlide.ctaText || 'LEARN MORE'}
+                                                    {currentSlide.ctaText || 'Learn More'}
+                                                    <Zap className="ml-2 h-4 w-4 fill-current group-hover:animate-pulse" />
                                                 </Button>
                                             </motion.div>
                                         </a>

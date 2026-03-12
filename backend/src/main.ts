@@ -16,11 +16,11 @@ async function bootstrap() {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "'unsafe-inline'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", "data:", "https:"],
+          imgSrc: ["'self'", "data:", "https:", "http://localhost:4000", "http://127.0.0.1:4000"],
           connectSrc: ["'self'", "http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:4000", "http://127.0.0.1:4000"],
           fontSrc: ["'self'", "https:", "data:"],
           objectSrc: ["'none'"],
-          mediaSrc: ["'self'"],
+          mediaSrc: ["'self'", "https:", "http://localhost:4000", "http://127.0.0.1:4000"],
           frameSrc: ["'none'"], // Prevents Clickjacking
         },
       },

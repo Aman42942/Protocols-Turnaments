@@ -458,6 +458,9 @@ model AdSlide {
   displayOrder Int       @default(0)
   startDate    DateTime?
   endDate      DateTime?
+  titleColor    String?   @default("#FFFFFF")
+  descriptionColor String? @default("#FFFFFF")
+  ctaColor      String?   @default("#3b82f6")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }

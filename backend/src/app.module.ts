@@ -29,12 +29,18 @@ import { CmsModule } from './cms/cms.module';
 import { SecurityModule } from './security/security.module';
 import { GlobalSecurityGuard } from './security/global-security.guard';
 import { SecurityThrottlerGuard } from './security/security-throttler.guard';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     ScheduleModule.forRoot(),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
     EmailModule,
     AuthModule,
     PrismaModule,

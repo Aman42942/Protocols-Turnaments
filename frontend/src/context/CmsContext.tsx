@@ -48,6 +48,9 @@ export interface AdSlide {
     displayOrder: number;
     startDate: string | null;
     endDate: string | null;
+    titleColor: string | null;
+    descriptionColor: string | null;
+    ctaColor: string | null;
 }
 
 interface CmsConfig {
