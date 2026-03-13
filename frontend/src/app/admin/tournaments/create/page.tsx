@@ -381,13 +381,13 @@ export default function CreateTournamentPage() {
                                 </Button>
                             </div>
                             <div className="flex gap-2">
-                                <a href={`https://wa.me/?text=${encodeURIComponent(`🏆 Join our tournament!\n${shareLink}`)}`} target="_blank" className="flex-1">
+                                <a href={`https://wa.me/?text=${encodeURIComponent(`Join our tournament!\n\n${formData.title.toUpperCase()}\nEntry: ${formData.entryFeePerPerson ? `${formData.entryFeePerPerson} Coins` : 'FREE'}\n\nJoin the battle on Protocol: ${shareLink}`)}`} target="_blank" className="flex-1">
                                     <Button variant="outline" className="w-full text-xs">
                                         <MessageCircle className="h-3 w-3 mr-1 text-green-500" /> WhatsApp
                                     </Button>
                                 </a>
                                 <Button variant="outline" className="flex-1 text-xs" onClick={() => {
-                                    navigator.clipboard.writeText(`🏆 Join our tournament!\n🎮 ${formData.title}\n💰 Entry: ${formData.entryFeePerPerson ? `${formData.entryFeePerPerson} Coins` : 'FREE'}\n🔗 ${shareLink}`);
+                                    navigator.clipboard.writeText(`Join our tournament!\n\n${formData.title.toUpperCase()}\nGame: ${formData.game}\nEntry: ${formData.entryFeePerPerson ? `${formData.entryFeePerPerson} Coins` : 'FREE'}\n\nJoin the battle on Protocol: ${shareLink}`);
                                     alert('Copied to clipboard!');
                                 }}>
                                     <Copy className="h-3 w-3 mr-1" /> Copy Message

@@ -41,7 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const domain = "https://protocols-turnaments.vercel.app";
   const title = content.SEO_META_TITLE || "Protocol Tournaments | Professional Esports Platform";
-  const description = content.SEO_META_DESCRIPTION || "🏆 Join the world's leading esports platform! Compete in Valorant, PUBG, BGMI, and Free Fire. 🎮 Win cash prizes and build your gaming legacy. 💰";
+  const description = content.SEO_META_DESCRIPTION || "Join the world's leading esports platform! Compete in Valorant, PUBG, BGMI, and Free Fire. Win cash prizes and build your gaming legacy.";
   const keywords = content.SEO_META_KEYWORDS ? content.SEO_META_KEYWORDS.split(',').map(k => k.trim()) : ["esports", "tournament", "gaming", "pubg", "valorant", "bgmi", "free fire", "competitive gaming"];
 
   // Ensure OG image is an absolute URL

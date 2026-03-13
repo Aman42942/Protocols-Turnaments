@@ -47,6 +47,7 @@ interface Tournament {
     rules?: string;
     prizeDistribution?: string;
     banner?: string;
+    currency?: string;
     _count?: { teams: number };
     teams?: any[];
 }
@@ -917,7 +918,7 @@ export default function TournamentDetailPage() {
                                             <Copy className="h-3 w-3 ml-auto" />
                                         </Button>
                                         <a
-                                            href={`https://wa.me/?text=${encodeURIComponent(`🏆 Join this tournament!\n🎮 ${tournament.title}\n💰 Entry: ${tournament.entryFeePerPerson ? tournament.entryFeePerPerson + ' Coins' : 'FREE'}\n🔗 ${typeof window !== 'undefined' ? window.location.origin : ''}/tournaments/share/${tournament.shareCode}`)}`}
+                                            href={`https://wa.me/?text=${encodeURIComponent(`Join this tournament!\n\n${tournament.title.toUpperCase()}\nGame: ${tournament.game}\nEntry: ${tournament.entryFeePerPerson ? tournament.entryFeePerPerson + ' ' + (tournament.currency === 'INR' ? '₹' : 'Coins') : 'FREE'}\n\nJoin the battle on Protocol: ${typeof window !== 'undefined' ? window.location.origin : ''}/tournaments/share/${tournament.shareCode}`)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                         >
