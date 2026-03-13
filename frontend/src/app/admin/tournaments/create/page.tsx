@@ -383,13 +383,13 @@ export default function CreateTournamentPage() {
                                 </Button>
                             </div>
                             <div className="flex gap-2">
-                                <a href={`https://wa.me/?text=${encodeURIComponent(`*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${formData.title.toUpperCase()}\n\n* Game:* ${formData.game}\n* Prize Pool:* Coins ${parseFloat(formData.prizePool).toLocaleString('en-IN')}\n* Entry Fee:* ${formData.entryFeePerPerson ? `Coins ${parseFloat(formData.entryFeePerPerson).toLocaleString('en-IN')}` : 'FREE'}\n\n*REGISTER NOW:* ${shareLink}\n\n*--- Build your legacy. Win big. ---*`)}`} target="_blank" className="flex-1">
+                                <a href={`https://wa.me/?text=${encodeURIComponent(`${shareLink}\n\n*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${formData.title.toUpperCase()}\n\n* Game:* ${formData.game}\n* Prize Pool:* Coins ${parseFloat(formData.prizePool).toLocaleString('en-IN')}\n* Entry Fee:* ${formData.entryFeePerPerson ? `Coins ${parseFloat(formData.entryFeePerPerson).toLocaleString('en-IN')}` : 'FREE'}\n\n*--- Build your legacy. Win big. ---*`)}`} target="_blank" className="flex-1">
                                     <Button variant="outline" className="w-full text-xs">
                                         <MessageCircle className="h-3 w-3 mr-1 text-green-500" /> WhatsApp
                                     </Button>
                                 </a>
                                 <Button variant="outline" className="flex-1 text-xs" onClick={() => {
-                                    navigator.clipboard.writeText(`*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${formData.title.toUpperCase()}\n\n* Game:* ${formData.game}\n* Prize Pool:* Coins ${parseFloat(formData.prizePool).toLocaleString('en-IN')}\n* Entry Fee:* ${formData.entryFeePerPerson ? `Coins ${parseFloat(formData.entryFeePerPerson).toLocaleString('en-IN')}` : 'FREE'}\n\n*REGISTER NOW:* ${shareLink}\n\n*--- Build your legacy. Win big. ---*`);
+                                    navigator.clipboard.writeText(`${shareLink}\n\n*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${formData.title.toUpperCase()}\n\n* Game:* ${formData.game}\n* Prize Pool:* Coins ${parseFloat(formData.prizePool).toLocaleString('en-IN')}\n* Entry Fee:* ${formData.entryFeePerPerson ? `Coins ${parseFloat(formData.entryFeePerPerson).toLocaleString('en-IN')}` : 'FREE'}\n\n*--- Build your legacy. Win big. ---*`);
                                     alert('Copied to clipboard!');
                                 }}>
                                     <Copy className="h-3 w-3 mr-1" /> Copy Message

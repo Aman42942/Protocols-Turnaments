@@ -955,7 +955,7 @@ export default function TournamentDetailPage() {
                                                     const prizeStr = `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.prizePool.toLocaleString('en-IN')}`;
                                                     const entryStr = tournament.entryFeePerPerson > 0 ? `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.entryFeePerPerson}` : 'FREE';
                                                     
-                                                    const defaultMsg = `*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${tournament.title.toUpperCase()}\n\n* Game:* ${tournament.game}\n* Prize Pool:* ${prizeStr}\n* Entry Fee:* ${entryStr}\n\n*REGISTER NOW:* ${link}\n\n*--- Build your legacy. Win big. ---*`;
+                                                    const defaultMsg = `${link}\n\n*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${tournament.title.toUpperCase()}\n\n* Game:* ${tournament.game}\n* Prize Pool:* ${prizeStr}\n* Entry Fee:* ${entryStr}\n\n*--- Build your legacy. Win big. ---*`;
                                                     
                                                     let finalMsg = tournament.shareMessage || defaultMsg;
                                                     
@@ -980,7 +980,7 @@ export default function TournamentDetailPage() {
                                                     const prizeStr = `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.prizePool.toLocaleString('en-IN')}`;
                                                     const entryStr = tournament.entryFeePerPerson > 0 ? `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.entryFeePerPerson}` : 'FREE';
                                                     
-                                                    const defaultMsg = `*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${tournament.title.toUpperCase()}\n\n* Game:* ${tournament.game}\n* Prize Pool:* ${prizeStr}\n* Entry Fee:* ${entryStr}\n\n*REGISTER NOW:* ${link}\n\n*--- Build your legacy. Win big. ---*`;
+                                                    const defaultMsg = `${link}\n\n*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${tournament.title.toUpperCase()}\n\n* Game:* ${tournament.game}\n* Prize Pool:* ${prizeStr}\n* Entry Fee:* ${entryStr}\n\n*--- Build your legacy. Win big. ---*`;
                                                     
                                                     let finalMsg = tournament.shareMessage || defaultMsg;
                                                     
