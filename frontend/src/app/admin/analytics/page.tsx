@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Coins, DollarSign, IndianRupee, ShieldAlert, ShieldCheck,
     Activity, Save, Loader2, Banknote, Globe, ArrowRight,
-    CheckCircle2, XCircle, Search, Calendar, User, Mail, Repeat, Percent, ToggleLeft, ToggleRight
+    CheckCircle2, XCircle, Search, Calendar, User, Mail, Repeat, Percent, ToggleLeft, ToggleRight, QrCode
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -31,19 +31,23 @@ export default function EconomyDashboard() {
     // PayPal toggle
     const [paypalEnabled, setPaypalEnabled] = useState(true);
     const [savingPaypalToggle, setSavingPaypalToggle] = useState(false);
+    // Direct UPI toggle
+    const [directUpiEnabled, setDirectUpiEnabled] = useState(true);
+    const [savingDirectUpiToggle, setSavingDirectUpiToggle] = useState(false);
 
     const fetchEconomyData = async () => {
         try {
             const statsRes = await api.get('/analytics/economy');
             setStats(statsRes.data);
 
-            const [rateRes, gbpRes, feeInrRes, feeUsdRes, feeGbpRes, paypalEnabledRes] = await Promise.allSettled([
+            const [rateRes, gbpRes, feeInrRes, feeUsdRes, feeGbpRes, paypalEnabledRes, directUpiEnabledRes] = await Promise.allSettled([
                 api.get('/cms/content/PAYPAL_EXCHANGE_RATE'),
                 api.get('/cms/content/GBP_TO_COIN_RATE'),
                 api.get('/cms/content/WITHDRAWAL_FEE_INR'),
                 api.get('/cms/content/WITHDRAWAL_FEE_USD'),
                 api.get('/cms/content/WITHDRAWAL_FEE_GBP'),
                 api.get('/cms/content/PAYPAL_ENABLED'),
+                api.get('/cms/content/DIRECT_UPI_ENABLED'),
             ]);
 
             if (rateRes.status === 'fulfilled' && rateRes.value.data?.value) setExchangeRate(rateRes.value.data.value);
@@ -54,6 +58,9 @@ export default function EconomyDashboard() {
             
             if (paypalEnabledRes.status === 'fulfilled') {
                 setPaypalEnabled(paypalEnabledRes.value.data?.value !== 'false');
+            }
+            if (directUpiEnabledRes.status === 'fulfilled') {
+                setDirectUpiEnabled(directUpiEnabledRes.value.data?.value !== 'false');
             }
         } catch (error) {
             console.error('Economy load error:', error);
@@ -139,6 +146,22 @@ export default function EconomyDashboard() {
             toast.error('Failed to update PayPal toggle');
         } finally {
             setSavingPaypalToggle(false);
+        }
+    };
+
+    const saveDirectUpiToggle = async (enabled: boolean) => {
+        setSavingDirectUpiToggle(true);
+        try {
+            await api.put('/cms/content', {
+                items: [{ key: 'DIRECT_UPI_ENABLED', value: enabled ? 'true' : 'false' }]
+            });
+            setDirectUpiEnabled(enabled);
+            toast.success(`Direct UPI ${enabled ? 'Enabled ✅' : 'Disabled 🔴'}`);
+        } catch (err) {
+            console.error('Direct UPI toggle error:', err);
+            toast.error('Failed to update Direct UPI toggle');
+        } finally {
+            setSavingDirectUpiToggle(false);
         }
     };
 
@@ -379,6 +402,67 @@ export default function EconomyDashboard() {
                             <><ToggleRight className="w-5 h-5" /> Disable PayPal</>
                         ) : (
                             <><ToggleLeft className="w-5 h-5" /> Enable PayPal</>
+                        )}
+                    </motion.button>
+                </div>
+            </motion.div>
+
+            {/* ── DIRECT UPI PAYMENT METHOD TOGGLE ─────────────────────── */}
+            <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.18 }}
+                className="rounded-3xl border border-border bg-card shadow-xl overflow-hidden"
+            >
+                <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
+                    <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${directUpiEnabled ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-destructive/10 border border-destructive/20'}`}>
+                            <QrCode className={`w-5 h-5 ${directUpiEnabled ? 'text-orange-400' : 'text-destructive'}`} />
+                        </div>
+                        <div>
+                            <p className="text-sm font-black uppercase tracking-widest">Direct UPI Payment (Fallback)</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Controls manual QR-based UPI backup payments across entire platform</p>
+                        </div>
+                    </div>
+                    {/* Live status badge */}
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-black uppercase tracking-wider ${directUpiEnabled ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-destructive/10 border-destructive/30 text-destructive'}`}>
+                        <motion.span
+                            animate={{ opacity: [1, 0.3, 1] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                            className={`w-1.5 h-1.5 rounded-full ${directUpiEnabled ? 'bg-green-400' : 'bg-destructive'}`}
+                        />
+                        {directUpiEnabled ? 'ENABLED' : 'DISABLED'}
+                    </div>
+                </div>
+
+                <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                        <p className="font-semibold text-sm">
+                            {directUpiEnabled
+                                ? '✅ Direct UPI is currently active — users can use the fallback QR method.'
+                                : '🔴 Direct UPI is currently disabled — only Domestic Gateway (Cashfree) is available for INR.'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            Affects: Tournament Entry Payments (Fallback Option)
+                        </p>
+                    </div>
+                    {/* Toggle button */}
+                    <motion.button
+                        whileTap={{ scale: 0.93 }}
+                        whileHover={{ scale: 1.04 }}
+                        disabled={savingDirectUpiToggle}
+                        onClick={() => saveDirectUpiToggle(!directUpiEnabled)}
+                        className={`flex items-center gap-3 px-5 py-3 rounded-2xl border font-black text-sm transition-all min-w-[160px] justify-center ${directUpiEnabled
+                            ? 'bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive hover:text-white'
+                            : 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500 hover:text-white'
+                            }`}
+                    >
+                        {savingDirectUpiToggle ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : directUpiEnabled ? (
+                            <><ToggleRight className="w-5 h-5" /> Disable Backup</>
+                        ) : (
+                            <><ToggleLeft className="w-5 h-5" /> Enable Backup</>
                         )}
                     </motion.button>
                 </div>

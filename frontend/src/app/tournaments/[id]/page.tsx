@@ -132,14 +132,16 @@ export default function TournamentDetailPage() {
     const [walletBalance, setWalletBalance] = useState(0);
     const [billingPhone, setBillingPhone] = useState('');
     const [paypalEnabled, setPaypalEnabled] = useState(false);
+    const [directUpiEnabled, setDirectUpiEnabled] = useState(false);
 
     const loadRates = async () => {
         try {
-            const [rateRes, gbpRes, walletRes, paypalEnabledRes] = await Promise.allSettled([
+            const [rateRes, gbpRes, walletRes, paypalEnabledRes, directUpiEnabledRes] = await Promise.allSettled([
                 api.get('/cms/content/PAYPAL_EXCHANGE_RATE'),
                 api.get('/cms/content/GBP_TO_COIN_RATE'),
                 api.get('/wallet'),
                 api.get('/cms/content/PAYPAL_ENABLED'),
+                api.get('/cms/content/DIRECT_UPI_ENABLED'),
             ]);
 
             if (rateRes.status === 'fulfilled' && rateRes.value.data?.value) {
@@ -158,6 +160,12 @@ export default function TournamentDetailPage() {
                 setPaypalEnabled(paypalEnabledRes.value.data?.value !== 'false');
             } else {
                 setPaypalEnabled(false);
+            }
+
+            if (directUpiEnabledRes.status === 'fulfilled') {
+                setDirectUpiEnabled(directUpiEnabledRes.value.data?.value !== 'false');
+            } else {
+                setDirectUpiEnabled(false);
             }
 
             setPaypalClientId(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
@@ -1186,10 +1194,12 @@ export default function TournamentDetailPage() {
                                     <div>
                                         <p className="font-black text-xs uppercase tracking-widest text-foreground/90">Domestic Gateway</p>
                                         <p className="text-[10px] text-muted-foreground font-bold mt-1 leading-tight">UPI, Cards, NetBanking</p>
-                                        <div className="mt-2 text-[9px] font-bold text-orange-500/80 flex items-center gap-1">
-                                            <AlertCircle className="w-3 h-3" />
-                                            <span>Bank outages? Use Direct UPI</span>
-                                        </div>
+                                        {directUpiEnabled && (
+                                            <div className="mt-2 text-[9px] font-bold text-orange-500/80 flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3" />
+                                                <span>Bank outages? Use Direct UPI</span>
+                                            </div>
+                                        )}
                                         <div className="mt-3 flex items-center gap-2">
                                             {registering ? (
                                                 <div className="flex items-center gap-2 text-blue-400">
@@ -1207,31 +1217,32 @@ export default function TournamentDetailPage() {
                                     </div>
                                 </button>
 
-                                {/* Direct UPI Fallback - Hidden by default, shown as alternative */}
-                                <button
-                                    onClick={() => {
-                                        setShowPaymentModal(false);
-                                        setShowUpiFallback(true);
-                                    }}
-                                    className="group relative bg-orange-500/5 border border-orange-500/20 hover:border-orange-500/50 rounded-3xl p-5 transition-all text-left flex flex-col justify-between h-40 overflow-hidden"
-                                >
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-600/5 blur-3xl group-hover:bg-orange-600/10 transition-all" />
-                                    <div className="flex justify-between items-start">
-                                        <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-500 shadow-lg shadow-orange-500/10">
-                                            <QrCode className="w-6 h-6" />
+                                {directUpiEnabled && (
+                                    <button
+                                        onClick={() => {
+                                            setShowPaymentModal(false);
+                                            setShowUpiFallback(true);
+                                        }}
+                                        className="group relative bg-orange-500/5 border border-orange-500/20 hover:border-orange-500/50 rounded-3xl p-5 transition-all text-left flex flex-col justify-between h-40 overflow-hidden"
+                                    >
+                                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-600/5 blur-3xl group-hover:bg-orange-600/10 transition-all" />
+                                        <div className="flex justify-between items-start">
+                                            <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-500 shadow-lg shadow-orange-500/10">
+                                                <QrCode className="w-6 h-6" />
+                                            </div>
+                                            <div className="bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full tracking-widest">FAST</div>
                                         </div>
-                                        <div className="bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full tracking-widest">FAST</div>
-                                    </div>
-                                    <div>
-                                        <p className="font-black text-xs uppercase tracking-widest text-foreground/90">Direct UPI</p>
-                                        <p className="text-[10px] text-muted-foreground font-bold mt-1">Bypass bank outages</p>
-                                        <div className="mt-3 flex items-center gap-2">
-                                            <span className="text-sm font-black text-orange-500">₹{tournament.entryFeePerPerson}</span>
-                                            <div className="h-1 w-1 rounded-full bg-foreground/20" />
-                                            <span className="text-[9px] font-bold text-muted-foreground uppercase">1-Click Fast</span>
+                                        <div>
+                                            <p className="font-black text-xs uppercase tracking-widest text-foreground/90">Direct UPI</p>
+                                            <p className="text-[10px] text-muted-foreground font-bold mt-1">Bypass bank outages</p>
+                                            <div className="mt-3 flex items-center gap-2">
+                                                <span className="text-sm font-black text-orange-500">₹{tournament.entryFeePerPerson}</span>
+                                                <div className="h-1 w-1 rounded-full bg-foreground/20" />
+                                                <span className="text-[9px] font-bold text-muted-foreground uppercase">1-Click Fast</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                </button>
+                                    </button>
+                                )}
 
                                 {/* PayPal Integration - Consolidated Provider to fix SDK conflicts */}
                                 {paypalClientId && paypalEnabled ? (
