@@ -112,6 +112,10 @@ export class CreateTournamentDto {
 
   @IsString()
   @IsOptional()
+  shareMessage?: string;
+
+  @IsString()
+  @IsOptional()
   region?: string;
 
   @IsString()

@@ -36,6 +36,7 @@ interface Tournament {
     gameMode: string;
     format?: string;
     whatsappGroupLink?: string;
+    shareMessage?: string;
     shareCode?: string;
     roomId?: string;
     roomPassword?: string;
@@ -918,22 +919,52 @@ export default function TournamentDetailPage() {
                                             <Copy className="h-3 w-3 ml-auto" />
                                         </Button>
                                         <div className="flex gap-2">
-                                            <a
-                                                href={`https://wa.me/?text=${encodeURIComponent(`*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${tournament.title.toUpperCase()}\n\n* Game:* ${tournament.game}\n* Prize Pool:* ${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.prizePool.toLocaleString('en-IN')}\n* Entry Fee:* ${tournament.entryFeePerPerson > 0 ? `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.entryFeePerPerson}` : 'FREE'}\n\n*REGISTER NOW:* ${typeof window !== 'undefined' ? window.location.origin : ''}/tournaments/share/${tournament.shareCode}\n\n*--- Build your legacy. Win big. ---*`)}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex-1"
-                                            >
-                                                <Button variant="outline" className="w-full text-xs">
-                                                    <MessageCircle className="h-3 w-3 mr-1 text-green-500" /> WhatsApp
-                                                </Button>
-                                            </a>
                                             <Button
                                                 variant="outline"
                                                 className="flex-1 text-xs"
                                                 onClick={() => {
-                                                    const text = `*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${tournament.title.toUpperCase()}\n\n* Game:* ${tournament.game}\n* Prize Pool:* ${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.prizePool.toLocaleString('en-IN')}\n* Entry Fee:* ${tournament.entryFeePerPerson > 0 ? `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.entryFeePerPerson}` : 'FREE'}\n\n*REGISTER NOW:* ${typeof window !== 'undefined' ? window.location.origin : ''}/tournaments/share/${tournament.shareCode}\n\n*--- Build your legacy. Win big. ---*`;
-                                                    navigator.clipboard.writeText(text);
+                                                    const link = `${window.location.origin}/tournaments/share/${tournament.shareCode}`;
+                                                    const prizeStr = `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.prizePool.toLocaleString('en-IN')}`;
+                                                    const entryStr = tournament.entryFeePerPerson > 0 ? `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.entryFeePerPerson}` : 'FREE';
+                                                    
+                                                    const defaultMsg = `*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${tournament.title.toUpperCase()}\n\n* Game:* ${tournament.game}\n* Prize Pool:* ${prizeStr}\n* Entry Fee:* ${entryStr}\n\n*REGISTER NOW:* ${link}\n\n*--- Build your legacy. Win big. ---*`;
+                                                    
+                                                    let finalMsg = tournament.shareMessage || defaultMsg;
+                                                    
+                                                    // Substitute variables
+                                                    finalMsg = finalMsg
+                                                        .replace(/{title}/gi, tournament.title)
+                                                        .replace(/{game}/gi, tournament.game)
+                                                        .replace(/{prize}/gi, prizeStr)
+                                                        .replace(/{entry}/gi, entryStr)
+                                                        .replace(/{link}/gi, link);
+                                                        
+                                                    window.open(`https://wa.me/?text=${encodeURIComponent(finalMsg)}`, '_blank');
+                                                }}
+                                            >
+                                                <MessageCircle className="h-3 w-3 mr-1 text-green-500" /> WhatsApp
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                className="flex-1 text-xs"
+                                                onClick={() => {
+                                                    const link = `${window.location.origin}/tournaments/share/${tournament.shareCode}`;
+                                                    const prizeStr = `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.prizePool.toLocaleString('en-IN')}`;
+                                                    const entryStr = tournament.entryFeePerPerson > 0 ? `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.entryFeePerPerson}` : 'FREE';
+                                                    
+                                                    const defaultMsg = `*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${tournament.title.toUpperCase()}\n\n* Game:* ${tournament.game}\n* Prize Pool:* ${prizeStr}\n* Entry Fee:* ${entryStr}\n\n*REGISTER NOW:* ${link}\n\n*--- Build your legacy. Win big. ---*`;
+                                                    
+                                                    let finalMsg = tournament.shareMessage || defaultMsg;
+                                                    
+                                                    // Substitute variables
+                                                    finalMsg = finalMsg
+                                                        .replace(/{title}/gi, tournament.title)
+                                                        .replace(/{game}/gi, tournament.game)
+                                                        .replace(/{prize}/gi, prizeStr)
+                                                        .replace(/{entry}/gi, entryStr)
+                                                        .replace(/{link}/gi, link);
+                                                        
+                                                    navigator.clipboard.writeText(finalMsg);
                                                     toast.success('Message copied!');
                                                 }}
                                             >

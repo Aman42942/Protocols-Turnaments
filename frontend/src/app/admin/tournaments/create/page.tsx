@@ -233,6 +233,7 @@ export default function CreateTournamentPage() {
         roomId: '',
         roomPassword: '',
         banner: '',
+        shareMessage: '',
     });
 
     // Protect the page
@@ -335,6 +336,7 @@ export default function CreateTournamentPage() {
                 streamUrl: formData.streamUrl || undefined,
                 region: formData.region || undefined,
                 banner: formData.banner || undefined,
+                shareMessage: formData.shareMessage || undefined,
             };
 
             const res = await api.post('/tournaments', payload);
@@ -665,6 +667,37 @@ export default function CreateTournamentPage() {
                                     <div>
                                         <Label>Stream URL</Label>
                                         <Input name="streamUrl" value={formData.streamUrl} onChange={handleChange} placeholder="https://youtube.com/live/..." className="mt-1" />
+                                    </div>
+                                </div>
+
+                                {/* Custom Share Message */}
+                                <div className="space-y-4 pt-4 border-t">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 rounded-lg bg-green-500/10 text-green-600">
+                                            <MessageCircle className="h-4 w-4" />
+                                        </div>
+                                        <h4 className="font-bold text-sm">Custom Sharing Message</h4>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <Label>WhatsApp/Sharing Message Template</Label>
+                                        <Textarea
+                                            name="shareMessage"
+                                            value={formData.shareMessage}
+                                            onChange={handleChange}
+                                            placeholder="Join our {title} tournament for {game}! Prize pool: {prize}. Fee: {entry}. Register: {link}"
+                                            className="mt-1 font-mono text-sm h-32"
+                                        />
+                                        <div className="p-3 rounded-lg bg-muted/50 border space-y-2">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Available Variables</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {['{title}', '{game}', '{prize}', '{entry}', '{link}'].map(v => (
+                                                    <code key={v} className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">{v}</code>
+                                                ))}
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">
+                                                Variables will be automatically replaced with tournament data. Leave empty to use the default premium template.
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 

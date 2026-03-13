@@ -54,6 +54,7 @@ export class TournamentsService {
         whatsappGroupLink: createTournamentDto.whatsappGroupLink,
         discordChannelId: createTournamentDto.discordChannelId,
         streamUrl: createTournamentDto.streamUrl,
+        shareMessage: createTournamentDto.shareMessage,
         region: createTournamentDto.region,
         banner: createTournamentDto.banner,
       },
