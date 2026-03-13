@@ -47,12 +47,12 @@ function WalletContent() {
             const [walletRes, ledgerRes, rateRes, gbpRes, feeInrRes, feeUsdRes, feeGbpRes, paypalEnabledRes] = await Promise.allSettled([
                 api.get('/wallet'),
                 api.get('/analytics/user-ledger'),
-                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/PAYPAL_EXCHANGE_RATE`),
-                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/GBP_TO_COIN_RATE`),
-                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/WITHDRAWAL_FEE_INR`),
-                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/WITHDRAWAL_FEE_USD`),
-                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/WITHDRAWAL_FEE_GBP`),
-                api.get(`${process.env.NEXT_PUBLIC_API_URL || ''}/cms/content/PAYPAL_ENABLED`),
+                api.get('/cms/content/PAYPAL_EXCHANGE_RATE'),
+                api.get('/cms/content/GBP_TO_COIN_RATE'),
+                api.get('/cms/content/WITHDRAWAL_FEE_INR'),
+                api.get('/cms/content/WITHDRAWAL_FEE_USD'),
+                api.get('/cms/content/WITHDRAWAL_FEE_GBP'),
+                api.get('/cms/content/PAYPAL_ENABLED'),
             ]);
 
             if (walletRes.status === 'fulfilled') setWallet(walletRes.value.data);

@@ -8,6 +8,7 @@ import {
     CheckCircle2, XCircle, Search, Calendar, User, Mail, Repeat, Percent, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
@@ -33,44 +34,29 @@ export default function EconomyDashboard() {
 
     const fetchEconomyData = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const statsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/analytics/economy`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (statsRes.ok) {
-                const data = await statsRes.json();
-                setStats(data);
-            }
+            const statsRes = await api.get('/analytics/economy');
+            setStats(statsRes.data);
 
-            const configRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/PAYPAL_EXCHANGE_RATE`);
-            if (configRes.ok) {
-                const configData = await configRes.json();
-                if (configData?.value) setExchangeRate(configData.value);
-            }
-
-            const gbpRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/GBP_TO_COIN_RATE`);
-            if (gbpRes.ok) {
-                const gbpData = await gbpRes.json();
-                if (gbpData?.value) setGbpExchangeRate(gbpData.value);
-            }
-
-            // Load withdrawal fees
-            const [feeInrRes, feeUsdRes, feeGbpRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/WITHDRAWAL_FEE_INR`),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/WITHDRAWAL_FEE_USD`),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/WITHDRAWAL_FEE_GBP`),
+            const [rateRes, gbpRes, feeInrRes, feeUsdRes, feeGbpRes, paypalEnabledRes] = await Promise.allSettled([
+                api.get('/cms/content/PAYPAL_EXCHANGE_RATE'),
+                api.get('/cms/content/GBP_TO_COIN_RATE'),
+                api.get('/cms/content/WITHDRAWAL_FEE_INR'),
+                api.get('/cms/content/WITHDRAWAL_FEE_USD'),
+                api.get('/cms/content/WITHDRAWAL_FEE_GBP'),
+                api.get('/cms/content/PAYPAL_ENABLED'),
             ]);
-            if (feeInrRes.ok) { const d = await feeInrRes.json(); if (d?.value !== undefined) setFeeInr(d.value); }
-            if (feeUsdRes.ok) { const d = await feeUsdRes.json(); if (d?.value !== undefined) setFeeUsd(d.value); }
-            if (feeGbpRes.ok) { const d = await feeGbpRes.json(); if (d?.value !== undefined) setFeeGbp(d.value); }
 
-            // Load PayPal enabled toggle
-            const paypalEnabledRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content/PAYPAL_ENABLED`);
-            if (paypalEnabledRes.ok) {
-                const d = await paypalEnabledRes.json();
-                setPaypalEnabled(d?.value !== 'false');
+            if (rateRes.status === 'fulfilled' && rateRes.value.data?.value) setExchangeRate(rateRes.value.data.value);
+            if (gbpRes.status === 'fulfilled' && gbpRes.value.data?.value) setGbpExchangeRate(gbpRes.value.data.value);
+            if (feeInrRes.status === 'fulfilled' && feeInrRes.value.data?.value !== undefined) setFeeInr(feeInrRes.value.data.value);
+            if (feeUsdRes.status === 'fulfilled' && feeUsdRes.value.data?.value !== undefined) setFeeUsd(feeUsdRes.value.data.value);
+            if (feeGbpRes.status === 'fulfilled' && feeGbpRes.value.data?.value !== undefined) setFeeGbp(feeGbpRes.value.data.value);
+            
+            if (paypalEnabledRes.status === 'fulfilled') {
+                setPaypalEnabled(paypalEnabledRes.value.data?.value !== 'false');
             }
         } catch (error) {
+            console.error('Economy load error:', error);
             toast.error('Failed to load economy data');
         } finally {
             setLoading(false);
@@ -88,15 +74,12 @@ export default function EconomyDashboard() {
         }
         setSavingUsd(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ items: [{ key: 'PAYPAL_EXCHANGE_RATE', value: exchangeRate }] })
+            await api.put('/cms/content', {
+                items: [{ key: 'PAYPAL_EXCHANGE_RATE', value: exchangeRate }]
             });
-            if (res.ok) toast.success('USD Rate Updated Successfully');
-            else throw new Error('Failed to save');
-        } catch {
+            toast.success('USD Rate Updated Successfully');
+        } catch (err) {
+            console.error('USD rate save error:', err);
             toast.error('Failed to update USD rate');
         } finally {
             setSavingUsd(false);
@@ -110,15 +93,12 @@ export default function EconomyDashboard() {
         }
         setSavingGbp(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ items: [{ key: 'GBP_TO_COIN_RATE', value: gbpExchangeRate }] })
+            await api.put('/cms/content', {
+                items: [{ key: 'GBP_TO_COIN_RATE', value: gbpExchangeRate }]
             });
-            if (res.ok) toast.success('GBP Rate Updated Successfully');
-            else throw new Error('Failed to save');
-        } catch {
+            toast.success('GBP Rate Updated Successfully');
+        } catch (err) {
+            console.error('GBP rate save error:', err);
             toast.error('Failed to update GBP rate');
         } finally {
             setSavingGbp(false);
@@ -128,26 +108,18 @@ export default function EconomyDashboard() {
     const saveWithdrawalFees = async () => {
         setSavingFees(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
-                    items: [
-                        { key: 'WITHDRAWAL_FEE_INR', value: feeInr },
-                        { key: 'WITHDRAWAL_FEE_USD', value: feeUsd },
-                        { key: 'WITHDRAWAL_FEE_GBP', value: feeGbp }
-                    ]
-                })
+            await api.put('/cms/content', {
+                items: [
+                    { key: 'WITHDRAWAL_FEE_INR', value: feeInr },
+                    { key: 'WITHDRAWAL_FEE_USD', value: feeUsd },
+                    { key: 'WITHDRAWAL_FEE_GBP', value: feeGbp }
+                ]
             });
-            if (res.ok) {
-                toast.success('Withdrawal Fees Saved!');
-                setFeesSaved(true);
-                setTimeout(() => setFeesSaved(false), 2500);
-            } else {
-                throw new Error('Failed to save');
-            }
-        } catch {
+            toast.success('Withdrawal Fees Saved!');
+            setFeesSaved(true);
+            setTimeout(() => setFeesSaved(false), 2500);
+        } catch (err) {
+            console.error('Fees save error:', err);
             toast.error('Failed to save fees');
         } finally {
             setSavingFees(false);
@@ -157,19 +129,13 @@ export default function EconomyDashboard() {
     const savePaypalToggle = async (enabled: boolean) => {
         setSavingPaypalToggle(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ items: [{ key: 'PAYPAL_ENABLED', value: enabled ? 'true' : 'false' }] })
+            await api.put('/cms/content', {
+                items: [{ key: 'PAYPAL_ENABLED', value: enabled ? 'true' : 'false' }]
             });
-            if (res.ok) {
-                setPaypalEnabled(enabled);
-                toast.success(`PayPal ${enabled ? 'Enabled ✅' : 'Disabled 🔴'}`);
-            } else {
-                throw new Error('Failed to save');
-            }
-        } catch {
+            setPaypalEnabled(enabled);
+            toast.success(`PayPal ${enabled ? 'Enabled ✅' : 'Disabled 🔴'}`);
+        } catch (err) {
+            console.error('PayPal toggle error:', err);
             toast.error('Failed to update PayPal toggle');
         } finally {
             setSavingPaypalToggle(false);
@@ -179,19 +145,13 @@ export default function EconomyDashboard() {
     const handleWithdrawalAction = async (id: string, action: 'approve' | 'reject') => {
         setProcessingId(id);
         try {
-            const token = localStorage.getItem('token');
             const endpoint = action === 'approve' ? 'approve-transaction' : 'reject-transaction';
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/wallet/${endpoint}/${id}`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            if (res.ok) {
-                toast.success(`Withdrawal ${action === 'approve' ? 'approved' : 'rejected'}`);
-                fetchEconomyData();
-            } else {
-                toast.error(`Action failed`);
-            }
+            await api.post(`/wallet/${endpoint}/${id}`);
+            toast.success(`Withdrawal ${action === 'approve' ? 'approved' : 'rejected'}`);
+            fetchEconomyData();
+        } catch (err) {
+            console.error('Withdrawal action error:', err);
+            toast.error(`Action failed`);
         } finally {
             setProcessingId(null);
         }
