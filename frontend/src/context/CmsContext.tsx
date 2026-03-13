@@ -113,11 +113,29 @@ export function CmsEngineProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     const fetchConfig = async () => {
+        // Try to load from cache first for instant UI
+        const cached = typeof window !== 'undefined' ? localStorage.getItem('cms_cached_config') : null;
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                setConfig(parsed);
+                applyGlobalTheme(parsed.theme);
+                setLoading(false); // Immediate transition if we have cache
+            } catch (e) {
+                console.warn('Stale CMS cache');
+            }
+        }
+
         try {
             const res = await api.get('/cms/config');
             const data = res.data;
             setConfig(data);
             applyGlobalTheme(data.theme);
+            
+            // Background update cache
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('cms_cached_config', JSON.stringify(data));
+            }
         } catch (error) {
             console.error('Failed to load global CMS config:', error);
         } finally {

@@ -5,6 +5,7 @@ import { FeatureSection } from "@/components/FeatureSection";
 import { DashboardView } from "@/components/DashboardView";
 import { useCms, AdSlide } from "@/context/CmsContext";
 import { AdSlider } from "@/components/AdSlider";
+import { HomeSkeleton } from "@/components/HomeSkeleton";
 
 const DEFAULT_SLIDES: AdSlide[] = [
   {
@@ -54,7 +55,7 @@ export default function Home() {
     setIsLoading(false);
   }, []);
 
-  if (isLoading || cmsLoading) return null;
+  if (isLoading || cmsLoading) return <HomeSkeleton />;
 
   // Build the dynamic landing page Layout
   const renderDynamicLayout = () => {
