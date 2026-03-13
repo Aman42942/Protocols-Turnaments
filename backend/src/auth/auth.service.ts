@@ -782,7 +782,14 @@ export class AuthService {
       },
     });
 
-    // Send notification/email? (Optional)
+    // Send notification/email
+    await this.emailService.sendPasswordChangedEmail(user.email, user.name || '');
+    await this.notificationsService.create(
+      user.id,
+      '🔐 Password Changed',
+      'Your account password was successfully updated.',
+      'warning',
+    );
 
     return { message: 'Password reset successfully. You can now login.' };
   }
@@ -803,9 +810,17 @@ export class AuthService {
       data: { password: hashedPassword },
     });
 
-    return {
-      message:
-        'Password updated successfully. You can now login with email/password.',
-    };
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user) {
+      await this.emailService.sendPasswordChangedEmail(user.email, user.name || '');
+      await this.notificationsService.create(
+        user.id,
+        '🔐 Password Updated',
+        'Your profile password has been successfully updated.',
+        'warning',
+      );
+    }
+
+    return { message: 'Password set successfully.' };
   }
 }

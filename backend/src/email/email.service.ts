@@ -374,4 +374,30 @@ export class EmailService {
       this.baseTemplate('Welcome Back!', content),
     );
   }
+
+  async sendPasswordChangedEmail(email: string, name: string) {
+    const content = `
+      <p style="color:#94a3b8;font-size:16px;text-align:center;margin:0 0 30px 0;">
+        Hi <strong style="color:#e2e8f0;">${name || 'there'}</strong>,
+      </p>
+      <div style="text-align:center;margin:0 0 24px 0;">
+        <div style="display:inline-block;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);padding:12px 32px;border-radius:12px;">
+          <span style="color:#22c55e;font-size:18px;font-weight:bold;">🔐 Password Changed Successfully</span>
+        </div>
+      </div>
+      <p style="color:#94a3b8;font-size:14px;text-align:center;margin:0 0 24px 0;">
+        This is a confirmation that your account password has been successfully updated.
+      </p>
+      <div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:12px;margin-top:20px;">
+        <p style="color:#ef4444;font-size:12px;text-align:center;margin:0;">
+          🚨 If you did not make this change, please contact our support team or try to reset your password immediately to secure your account.
+        </p>
+      </div>`;
+
+    await this.sendMail(
+      email,
+      '🔐 Security Alert: Password Changed - Protocol Tournament',
+      this.baseTemplate('Password Updated', content),
+    );
+  }
 }
