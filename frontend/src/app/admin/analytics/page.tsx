@@ -90,11 +90,14 @@ export default function EconomyDashboard() {
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
-                method: 'POST',
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ key: 'PAYPAL_EXCHANGE_RATE', value: exchangeRate })
+                body: JSON.stringify({ items: [{ key: 'PAYPAL_EXCHANGE_RATE', value: exchangeRate }] })
             });
             if (res.ok) toast.success('USD Rate Updated Successfully');
+            else throw new Error('Failed to save');
+        } catch {
+            toast.error('Failed to update USD rate');
         } finally {
             setSavingUsd(false);
         }
@@ -109,11 +112,14 @@ export default function EconomyDashboard() {
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
-                method: 'POST',
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ key: 'GBP_TO_COIN_RATE', value: gbpExchangeRate })
+                body: JSON.stringify({ items: [{ key: 'GBP_TO_COIN_RATE', value: gbpExchangeRate }] })
             });
             if (res.ok) toast.success('GBP Rate Updated Successfully');
+            else throw new Error('Failed to save');
+        } catch {
+            toast.error('Failed to update GBP rate');
         } finally {
             setSavingGbp(false);
         }
@@ -123,26 +129,24 @@ export default function EconomyDashboard() {
         setSavingFees(true);
         try {
             const token = localStorage.getItem('token');
-            await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ key: 'WITHDRAWAL_FEE_INR', value: feeInr })
-                }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ key: 'WITHDRAWAL_FEE_USD', value: feeUsd })
-                }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ key: 'WITHDRAWAL_FEE_GBP', value: feeGbp })
-                }),
-            ]);
-            toast.success('Withdrawal Fees Saved!');
-            setFeesSaved(true);
-            setTimeout(() => setFeesSaved(false), 2500);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                    items: [
+                        { key: 'WITHDRAWAL_FEE_INR', value: feeInr },
+                        { key: 'WITHDRAWAL_FEE_USD', value: feeUsd },
+                        { key: 'WITHDRAWAL_FEE_GBP', value: feeGbp }
+                    ]
+                })
+            });
+            if (res.ok) {
+                toast.success('Withdrawal Fees Saved!');
+                setFeesSaved(true);
+                setTimeout(() => setFeesSaved(false), 2500);
+            } else {
+                throw new Error('Failed to save');
+            }
         } catch {
             toast.error('Failed to save fees');
         } finally {
@@ -154,13 +158,17 @@ export default function EconomyDashboard() {
         setSavingPaypalToggle(true);
         try {
             const token = localStorage.getItem('token');
-            await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
-                method: 'POST',
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/content`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ key: 'PAYPAL_ENABLED', value: enabled ? 'true' : 'false' })
+                body: JSON.stringify({ items: [{ key: 'PAYPAL_ENABLED', value: enabled ? 'true' : 'false' }] })
             });
-            setPaypalEnabled(enabled);
-            toast.success(`PayPal ${enabled ? 'Enabled ✅' : 'Disabled 🔴'}`);
+            if (res.ok) {
+                setPaypalEnabled(enabled);
+                toast.success(`PayPal ${enabled ? 'Enabled ✅' : 'Disabled 🔴'}`);
+            } else {
+                throw new Error('Failed to save');
+            }
         } catch {
             toast.error('Failed to update PayPal toggle');
         } finally {
