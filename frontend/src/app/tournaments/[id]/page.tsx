@@ -133,32 +133,34 @@ export default function TournamentDetailPage() {
 
     const loadRates = async () => {
         try {
-            const [rateRes, gbpRes, walletRes] = await Promise.allSettled([
+            const [rateRes, gbpRes, walletRes, paypalEnabledRes] = await Promise.allSettled([
                 api.get('/cms/content/PAYPAL_EXCHANGE_RATE'),
                 api.get('/cms/content/GBP_TO_COIN_RATE'),
                 api.get('/wallet'),
+                api.get('/cms/content/PAYPAL_ENABLED'),
             ]);
-            if (rateRes.status === 'fulfilled') {
-                const rate = Number(rateRes.value.data?.value);
+
+            if (rateRes.status === 'fulfilled' && rateRes.value.data?.value) {
+                const rate = Number(rateRes.value.data.value);
                 if (!isNaN(rate) && rate > 0) setExchangeRate(rate);
             }
-            if (gbpRes.status === 'fulfilled') {
-                const rate = Number(gbpRes.value.data?.value);
+            if (gbpRes.status === 'fulfilled' && gbpRes.value.data?.value) {
+                const rate = Number(gbpRes.value.data.value);
                 if (!isNaN(rate) && rate > 0) setGbpExchangeRate(rate);
             }
             if (walletRes.status === 'fulfilled') {
                 setWalletBalance(walletRes.value.data?.balance || 0);
             }
-            setPaypalClientId(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
-
-            const paypalEnabledRes = await api.get('/cms/content/PAYPAL_ENABLED');
-            if (paypalEnabledRes.status === 200) {
-                setPaypalEnabled(paypalEnabledRes.data?.value === 'true');
+            
+            if (paypalEnabledRes.status === 'fulfilled') {
+                setPaypalEnabled(paypalEnabledRes.value.data?.value !== 'false');
             } else {
                 setPaypalEnabled(false);
             }
+
+            setPaypalClientId(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
         } catch (err) {
-            console.error('Failed to load rates/wallet:', err);
+            console.error('Failed to load platform settings:', err);
             setPaypalEnabled(false);
         }
     };
@@ -1203,20 +1205,23 @@ export default function TournamentDetailPage() {
                                 {paypalClientId && paypalEnabled ? (
                                     <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD" }}>
                                         {/* PayPal USD - International */}
-                                        <div className="group relative bg-card border border-border/50 hover:border-yellow-500/50 rounded-3xl p-5 transition-all flex flex-col justify-between h-40 overflow-hidden">
-                                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-600/5 blur-3xl group-hover:bg-yellow-600/10 transition-all" />
-                                            <div className="flex justify-between items-start">
+                                        <div 
+                                            onClick={() => toast('Please click the yellow PayPal button to continue', { icon: '👆', id: 'paypal-hint-usd' })}
+                                            className="group relative bg-card cursor-pointer border border-border/50 hover:border-yellow-500/50 hover:bg-yellow-500/[0.02] active:scale-[0.98] rounded-3xl p-5 transition-all flex flex-col justify-between h-44 overflow-hidden"
+                                        >
+                                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-600/5 blur-3xl group-hover:bg-yellow-600/10 transition-all pointer-events-none" />
+                                            <div className="flex justify-between items-start pointer-events-none">
                                                 <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 text-xl font-black">
                                                     $
                                                 </div>
                                                 <Badge className="bg-yellow-500/10 text-yellow-400 text-[9px] border-0 font-black">GLOBAL</Badge>
                                             </div>
                                             <div className="space-y-3">
-                                                <div className="flex items-center justify-between">
+                                                <div className="flex items-center justify-between pointer-events-none">
                                                     <p className="font-black text-xs uppercase tracking-widest text-foreground/90">PayPal USD</p>
                                                     <span className="text-xs font-black text-yellow-500">${(tournament.entryFeePerPerson / exchangeRate).toFixed(2)}</span>
                                                 </div>
-                                                <div className="scale-90 origin-left -ml-2 -mb-2 h-[38px] overflow-hidden rounded-full bg-card">
+                                                <div className="scale-100 origin-left h-[45px] overflow-hidden rounded-2xl bg-black/20 p-1 border border-white/5">
                                                     <PayPalButtons
                                                         style={{
                                                             layout: "horizontal",
@@ -1239,21 +1244,23 @@ export default function TournamentDetailPage() {
                                         </div>
 
                                         {/* PayPal GBP - UK */}
-                                        <div className="md:col-span-2 group relative bg-card border border-border/50 hover:border-purple-500/50 rounded-3xl p-5 px-6 transition-all flex items-center justify-between overflow-hidden">
-                                            <div className="absolute -top-20 -right-20 w-48 h-48 bg-purple-600/5 blur-[80px] group-hover:bg-purple-600/10 transition-all" />
-                                            <div className="flex items-center gap-5">
-                                                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 text-xl font-black">
+                                        <div 
+                                            onClick={() => toast('Please click the blue PayPal button to continue', { icon: '👆', id: 'paypal-hint-gbp' })}
+                                            className="md:col-span-2 group relative bg-card cursor-pointer border border-border/50 hover:border-blue-500/50 hover:bg-blue-500/[0.02] active:scale-[0.99] rounded-3xl p-5 px-6 transition-all flex items-center justify-between overflow-hidden"
+                                        >
+                                            <div className="absolute -top-20 -right-20 w-48 h-48 bg-blue-600/5 blur-[80px] group-hover:bg-blue-600/10 transition-all pointer-events-none" />
+                                            <div className="flex items-center gap-5 pointer-events-none">
+                                                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 text-xl font-black">
                                                     £
                                                 </div>
                                                 <div>
                                                     <div className="font-black text-xs uppercase tracking-widest text-foreground/90 flex items-center gap-2">
-                                                        UK Region <Badge className="bg-purple-500/10 text-purple-400 text-[8px] border-0 h-4">GBP</Badge>
+                                                        UK Region <Badge className="bg-blue-500/10 text-blue-400 text-[8px] border-0 h-4">GBP</Badge>
                                                     </div>
                                                     <p className="text-[10px] text-muted-foreground font-bold mt-0.5">Pay exactly £{(tournament.entryFeePerPerson / gbpExchangeRate).toFixed(2)} GBP</p>
                                                 </div>
                                             </div>
-                                            <div className="w-44 scale-90 origin-right h-[38px] overflow-hidden rounded-full bg-card">
-                                                {/* Note: In a consolidated provider, currency is set once. For GBP, we handle conversion in the createOrder call. */}
+                                            <div className="w-48 scale-100 origin-right h-[45px] overflow-hidden rounded-2xl bg-black/20 p-1 border border-white/5">
                                                 <PayPalButtons
                                                     style={{
                                                         layout: "horizontal",
