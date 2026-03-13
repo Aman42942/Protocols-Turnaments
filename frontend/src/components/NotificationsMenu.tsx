@@ -152,7 +152,7 @@ export function NotificationsMenu() {
 
             {/* Dropdown Content */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="fixed inset-x-4 top-20 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-96 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* Header */}
                     <div className="flex items-center justify-between p-3 border-b border-border bg-card/50 backdrop-blur-sm">
                         <h3 className="font-semibold text-foreground">Notifications</h3>
