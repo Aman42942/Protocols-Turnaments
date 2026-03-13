@@ -4,8 +4,16 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class CmsService {
     private readonly logger = new Logger(CmsService.name);
+    private configCache: any = null;
+    private lastCacheTime: number = 0;
+    private readonly CACHE_TTL = 300000; // 5 minutes cache
 
     constructor(private prisma: PrismaService) { }
+
+    private invalidateCache() {
+        this.configCache = null;
+        this.lastCacheTime = 0;
+    }
 
     // ==========================================
     // GLOBAL THEMES & PRESETS
@@ -37,6 +45,7 @@ export class CmsService {
     }
 
     async resetToDefaultTheme() {
+        this.invalidateCache();
         const theme = await this.getGlobalTheme();
         return (this.prisma as any).globalTheme.update({
             where: { id: theme.id },
@@ -76,6 +85,7 @@ export class CmsService {
     }
 
     async applyPreset(presetId: string) {
+        this.invalidateCache();
         const preset = await (this.prisma as any).themePreset.findUnique({
             where: { id: presetId },
         });
@@ -108,6 +118,7 @@ export class CmsService {
     }
 
     async updateGlobalTheme(data: any) {
+        this.invalidateCache();
         const theme = await this.getGlobalTheme();
         return (this.prisma as any).globalTheme.update({
             where: { id: theme.id },
@@ -163,6 +174,7 @@ export class CmsService {
     }
 
     async setContent(key: string, value: string, type: string = 'TEXT') {
+        this.invalidateCache();
         return (this.prisma as any).siteContent.upsert({
             where: { key },
             update: { value, type },
@@ -171,18 +183,16 @@ export class CmsService {
     }
 
     async setMultipleContent(items: { key: string; value: string; type?: string }[]) {
-        // Upsert multiple
-        const results: any[] = [];
-        for (const item of items) {
-            results.push(
-                await (this.prisma as any).siteContent.upsert({
+        this.invalidateCache();
+        return (this.prisma as any).$transaction(
+            items.map(item =>
+                (this.prisma as any).siteContent.upsert({
                     where: { key: item.key },
                     update: { value: item.value, type: item.type || 'TEXT' },
                     create: { key: item.key, value: item.value, type: item.type || 'TEXT' },
                 })
-            );
-        }
-        return results;
+            )
+        );
     }
 
     // ==========================================
@@ -196,6 +206,7 @@ export class CmsService {
     }
 
     async setLayout(componentId: string, isVisible: boolean, displayOrder: number) {
+        this.invalidateCache();
         return (this.prisma as any).componentLayout.upsert({
             where: { componentId },
             update: { isVisible, displayOrder },
@@ -220,6 +231,7 @@ export class CmsService {
     }
 
     async createFeature(data: any) {
+        this.invalidateCache();
         return (this.prisma as any).customFeature.create({ data });
     }
 
@@ -231,6 +243,7 @@ export class CmsService {
     }
 
     async deleteFeature(id: string) {
+        this.invalidateCache();
         return (this.prisma as any).customFeature.delete({
             where: { id },
         });
@@ -260,10 +273,12 @@ export class CmsService {
     }
 
     async createAdSlide(data: any) {
+        this.invalidateCache();
         return (this.prisma as any).adSlide.create({ data });
     }
 
     async updateAdSlide(id: string, data: any) {
+        this.invalidateCache();
         return (this.prisma as any).adSlide.update({
             where: { id },
             data,
@@ -271,8 +286,29 @@ export class CmsService {
     }
 
     async deleteAdSlide(id: string) {
+        this.invalidateCache();
         return (this.prisma as any).adSlide.delete({
             where: { id },
         });
+    }
+
+    async getFullConfig() {
+        const now = Date.now();
+        if (this.configCache && (now - this.lastCacheTime < this.CACHE_TTL)) {
+            return this.configCache;
+        }
+
+        const [theme, content, layout, features, slides, presets] = await Promise.all([
+            this.getGlobalTheme(),
+            this.getAllContent(),
+            this.getAllLayouts(),
+            this.getAllFeatures(true),
+            this.getAllAdSlides(true),
+            this.getAllPresets(),
+        ]);
+
+        this.configCache = { theme, content, layout, features, slides, presets };
+        this.lastCacheTime = now;
+        return this.configCache;
     }
 }

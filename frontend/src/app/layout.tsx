@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/cms/config`, {
       next: { revalidate: 300 },
-      signal: AbortSignal.timeout(3000) // 3s timeout for faster TTFB
+      signal: AbortSignal.timeout(1000) // 1s timeout for immediate fallback
     });
 
     if (res.ok) {

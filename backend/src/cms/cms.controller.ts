@@ -29,23 +29,7 @@ export class CmsController {
 
     @Get('config')
     async getGlobalConfig() {
-        const [theme, content, layout, features, slides, presets] = await Promise.all([
-            this.cmsService.getGlobalTheme(),
-            this.cmsService.getAllContent(),
-            this.cmsService.getAllLayouts(),
-            this.cmsService.getAllFeatures(true),
-            this.cmsService.getAllAdSlides(true),
-            this.cmsService.getAllPresets(),
-        ]);
-
-        return {
-            theme,
-            content,
-            layout,
-            features,
-            slides,
-            presets,
-        };
+        return this.cmsService.getFullConfig();
     }
 
     @Get('content/:key')
