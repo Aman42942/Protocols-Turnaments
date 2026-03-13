@@ -23,4 +23,14 @@ export class NotificationsGateway implements OnGatewayInit {
         this.logger.log(`Broadcasting maintenance status: ${status.isMaintenanceMode}`);
         this.server.emit('maintenance-status', status);
     }
+
+    emitNotification(userId: string, data: any) {
+        this.logger.log(`Emitting notification to user ${userId}`);
+        this.server.to(`user-${userId}`).emit('new-notification', data);
+    }
+
+    broadcastNotification(data: any) {
+        this.logger.log(`Broadcasting notification to all users`);
+        this.server.emit('new-notification', data);
+    }
 }

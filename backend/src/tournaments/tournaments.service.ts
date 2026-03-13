@@ -9,6 +9,7 @@ import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { WalletService } from '../wallet/wallet.service';
 import { PaymentsService } from '../payments/payments.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class TournamentsService {
@@ -20,6 +21,7 @@ export class TournamentsService {
     private walletService: WalletService,
     @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
+    private notificationsService: NotificationsService,
   ) { }
 
   private generateShareCode(): string {
@@ -69,6 +71,15 @@ export class TournamentsService {
   }
 
   private async notifyAllUsers(tournament: any) {
+    // 1. In-app broadcast (Real-time + Persistence)
+    await this.notificationsService.broadcast(
+      'New Tournament Added 🏆',
+      `${tournament.title} is now open for registration! Prize pool: ₹${tournament.prizePool.toLocaleString()}.`,
+      'success',
+      `/tournaments/${tournament.id}`
+    );
+
+    // 2. Email notifications (External)
     const users = await this.usersService.findAll();
     const emailPromises = users.map(user =>
       this.emailService.sendTournamentCreatedNotification(

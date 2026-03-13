@@ -6,6 +6,8 @@ import { Bell, Check, Info, AlertTriangle, Trophy, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { useSocket } from "@/context/SocketContext";
+import { toast } from "react-hot-toast";
 
 interface Notification {
     id: string;
@@ -24,6 +26,7 @@ export function NotificationsMenu() {
     const [activeTab, setActiveTab] = useState<'all' | 'mentions'>('all');
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const socket = useSocket();
 
     const fetchNotifications = async () => {
         try {
@@ -38,10 +41,27 @@ export function NotificationsMenu() {
     // Fetch real notifications
     useEffect(() => {
         fetchNotifications();
-        // Poll every 30s for real-time feel
-        const interval = setInterval(fetchNotifications, 30000);
-        return () => clearInterval(interval);
     }, []);
+
+    // Socket.io for true real-time
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('new-notification', (notification: Notification) => {
+            setNotifications(prev => [notification, ...prev].slice(0, 10)); // Keep only recent
+            setUnreadCount(prev => prev + 1);
+            
+            // Optional: Show a toast for important notifications
+            toast.success(notification.title, {
+                icon: '🏆',
+                duration: 4000
+            });
+        });
+
+        return () => {
+            socket.off('new-notification');
+        };
+    }, [socket]);
 
     // Close menu when clicking outside
     useEffect(() => {
