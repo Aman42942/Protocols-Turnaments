@@ -191,7 +191,7 @@ function WalletContent() {
                             <p className="text-sm text-yellow-100 font-medium">Earn coins by winning tournaments. Redeem them for real-world rewards.</p>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-3 min-w-[280px]">
+                        <div className="flex flex-col items-center md:items-end gap-3 w-full md:w-auto">
                             <Button
                                 size="lg"
                                 variant="outline"
