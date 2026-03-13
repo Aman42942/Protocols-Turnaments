@@ -917,15 +917,29 @@ export default function TournamentDetailPage() {
                                             <Share2 className="h-4 w-4 mr-2" /> Share Tournament
                                             <Copy className="h-3 w-3 ml-auto" />
                                         </Button>
-                                        <a
-                                            href={`https://wa.me/?text=${encodeURIComponent(`--- *JOIN THE BATTLE ON PROTOCOL!* ---\n\n*Tournament:* ${tournament.title.toUpperCase()}\n> *Game:* ${tournament.game}\n> *Prize Pool:* ${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.prizePool.toLocaleString('en-IN')}\n> *Entry Fee:* ${tournament.entryFeePerPerson > 0 ? `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.entryFeePerPerson}` : 'FREE'}\n\n*Register Now:* ${typeof window !== 'undefined' ? window.location.origin : ''}/tournaments/share/${tournament.shareCode}\n\n_Build your legacy. Win big._`)}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                        >
-                                            <Button variant="outline" className="w-full text-xs">
-                                                <MessageCircle className="h-3 w-3 mr-1 text-green-500" /> Share via WhatsApp
+                                        <div className="flex gap-2">
+                                            <a
+                                                href={`https://wa.me/?text=${encodeURIComponent(`*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${tournament.title.toUpperCase()}\n\n* Game:* ${tournament.game}\n* Prize Pool:* ${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.prizePool.toLocaleString('en-IN')}\n* Entry Fee:* ${tournament.entryFeePerPerson > 0 ? `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.entryFeePerPerson}` : 'FREE'}\n\n*REGISTER NOW:* ${typeof window !== 'undefined' ? window.location.origin : ''}/tournaments/share/${tournament.shareCode}\n\n*--- Build your legacy. Win big. ---*`)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-1"
+                                            >
+                                                <Button variant="outline" className="w-full text-xs">
+                                                    <MessageCircle className="h-3 w-3 mr-1 text-green-500" /> WhatsApp
+                                                </Button>
+                                            </a>
+                                            <Button
+                                                variant="outline"
+                                                className="flex-1 text-xs"
+                                                onClick={() => {
+                                                    const text = `*=== JOIN THE BATTLE ON PROTOCOL! ===*\n\n*TOURNAMENT:* ${tournament.title.toUpperCase()}\n\n* Game:* ${tournament.game}\n* Prize Pool:* ${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.prizePool.toLocaleString('en-IN')}\n* Entry Fee:* ${tournament.entryFeePerPerson > 0 ? `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.entryFeePerPerson}` : 'FREE'}\n\n*REGISTER NOW:* ${typeof window !== 'undefined' ? window.location.origin : ''}/tournaments/share/${tournament.shareCode}\n\n*--- Build your legacy. Win big. ---*`;
+                                                    navigator.clipboard.writeText(text);
+                                                    toast.success('Message copied!');
+                                                }}
+                                            >
+                                                <Copy className="h-3 w-3 mr-1" /> Copy
                                             </Button>
-                                        </a>
+                                        </div>
                                     </div>
                                 )}
 
