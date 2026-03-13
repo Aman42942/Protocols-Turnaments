@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 import { useSocket } from "@/context/SocketContext";
 import { toast } from "react-hot-toast";
+import { cn } from "@/lib/utils";
 
 interface Notification {
     id: string;
@@ -87,19 +88,26 @@ export function NotificationsMenu() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Prevent body scroll when menu is open on mobile
+    // Improved Scroll Locking logic to prevent page jump
     useEffect(() => {
         if (isOpen && isMobile) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            if (typeof document !== 'undefined') {
-                document.body.style.overflow = 'unset';
+            const scrollY = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.width = '100%';
+        } else if (!isOpen && isMobile) {
+            const scrollY = document.body.style.top;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            if (scrollY) {
+                window.scrollTo(0, parseInt(scrollY || '0') * -1);
             }
         }
-        return () => { 
-            if (typeof document !== 'undefined') {
-                document.body.style.overflow = 'unset'; 
-            }
+        return () => {
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
         };
     }, [isOpen, isMobile]);
 
@@ -167,11 +175,12 @@ export function NotificationsMenu() {
     };
 
     return (
-        <div className="relative z-[100]" ref={menuRef}>
+        <div className="relative inline-block" ref={menuRef}>
             {/* Bell Trigger */}
             <button
                 onClick={toggleMenu}
-                className="relative p-2 rounded-full hover:bg-accent hover:text-accent-foreground transition-colors focus:outline-none"
+                className="relative p-2 rounded-full hover:bg-accent hover:text-accent-foreground transition-all active:scale-90 focus:outline-none"
+                aria-label="Notifications"
             >
                 <Bell className="w-5 h-5 text-muted-foreground" />
                 {unreadCount > 0 && (
@@ -182,109 +191,141 @@ export function NotificationsMenu() {
             <AnimatePresence>
                 {isOpen && mounted && (
                     <>
-                        {/* Backdrop - Mobile Only */}
+                        {/* Backdrop - Cleaner Blur - Fixed high Z-index */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsOpen(false)}
-                            className="fixed inset-0 bg-background/60 backdrop-blur-sm z-[90] sm:hidden"
+                            className="fixed inset-0 bg-background/60 backdrop-blur-[6px] z-[9999]"
                         />
 
-                        {/* Dropdown / Bottom Sheet Content */}
+                        {/* Dropdown / Responsive Drawer */}
                         <motion.div
                             initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 10 }}
                             animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
                             exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 10 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="fixed inset-x-0 bottom-0 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-full sm:w-96 bg-popover border-t sm:border border-border rounded-t-[2rem] sm:rounded-xl shadow-2xl overflow-hidden z-[100]"
+                            transition={{ 
+                                type: "spring", 
+                                damping: 30, 
+                                stiffness: 350,
+                                mass: 0.8
+                            }}
+                            className={cn(
+                                "z-[10000] bg-popover/98 border-border shadow-2xl overflow-hidden will-change-transform flex flex-col",
+                                // Native Mobile App Bottom Sheet Styles
+                                "fixed bottom-0 inset-x-0 h-[85vh] rounded-t-[3rem] border-t",
+                                // Desktop Styles
+                                "sm:absolute sm:bottom-auto sm:top-full sm:right-0 sm:inset-auto sm:h-auto sm:w-[400px] sm:max-h-[500px] sm:rounded-2xl sm:border"
+                            )}
                         >
-                            {/* Mobile Drag Handle */}
-                            <div className="w-full flex justify-center py-2 sm:hidden">
-                                <div className="w-12 h-1 bg-muted rounded-full opacity-50" />
+                            {/* Mobile Drag Handle - Top Bar */}
+                            <div className="w-full h-8 flex items-center justify-center sm:hidden shrink-0">
+                                <div className="w-12 h-1.5 bg-muted rounded-full opacity-30 group-hover:opacity-50 transition-opacity" />
                             </div>
 
-                            {/* Header */}
-                            <div className="flex items-center justify-between p-4 sm:p-3 border-b border-border bg-card/50 backdrop-blur-sm">
-                                <h3 className="font-bold sm:font-semibold text-foreground text-lg sm:text-base">Notifications</h3>
+                            {/* Header - Native Look */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 shrink-0">
+                                <div className="flex flex-col">
+                                    <h3 className="font-extrabold text-foreground text-xl tracking-tight leading-none mb-1">Activity</h3>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                        <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{unreadCount} New</span>
+                                    </div>
+                                </div>
                                 <div className="flex items-center gap-3">
-                                    <div className="flex gap-1 bg-muted/50 p-1 rounded-lg">
+                                    <div className="flex bg-muted/30 p-1.5 rounded-2xl sm:hidden">
                                         <button
                                             onClick={() => setActiveTab('all')}
-                                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${activeTab === 'all' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                            className={cn(
+                                                "px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all",
+                                                activeTab === 'all' ? "bg-background text-foreground shadow-lg scale-105" : "text-muted-foreground"
+                                            )}
                                         >
                                             All
                                         </button>
                                         <button
                                             onClick={() => setActiveTab('mentions')}
-                                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${activeTab === 'mentions' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                            className={cn(
+                                                "px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all",
+                                                activeTab === 'mentions' ? "bg-background text-foreground shadow-lg scale-105" : "text-muted-foreground"
+                                            )}
                                         >
-                                            Mentions
+                                            Feed
                                         </button>
                                     </div>
                                     <button
                                         onClick={markAllAsRead}
-                                        className="p-1.5 text-primary hover:bg-primary/10 rounded-full transition-colors"
-                                        title="Mark all as read"
+                                        className="p-2.5 text-primary hover:bg-primary/10 rounded-2xl transition-all active:scale-90"
                                     >
-                                        <Check className="w-4 h-4" />
+                                        <Check className="w-5 h-5" />
                                     </button>
                                     <button
                                         onClick={() => setIsOpen(false)}
-                                        className="p-1.5 text-muted-foreground hover:bg-muted rounded-full sm:hidden"
+                                        className="p-2.5 text-muted-foreground hover:bg-muted rounded-2xl"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Notification List */}
-                            <div className="max-h-[70vh] sm:max-h-[400px] overflow-y-auto pb-6 sm:pb-0">
+                            {/* List Content - Scroll Area */}
+                            <div className="flex-1 overflow-y-auto custom-scrollbar-hide overscroll-contain">
                                 {notifications.length === 0 ? (
-                                    <div className="p-12 text-center text-muted-foreground text-sm flex flex-col items-center gap-3">
-                                        <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center">
-                                            <Bell className="w-8 h-8 opacity-40" />
+                                    <div className="h-full flex flex-col items-center justify-center p-12 text-center">
+                                        <div className="w-24 h-24 rounded-[2.5rem] bg-muted/10 flex items-center justify-center mb-6">
+                                            <Bell className="w-10 h-10 opacity-20 text-primary" />
                                         </div>
-                                        <div className="space-y-1">
-                                            <p className="font-medium text-foreground">All caught up!</p>
-                                            <p className="text-xs">No new notifications for now.</p>
-                                        </div>
+                                        <h4 className="font-black text-foreground uppercase tracking-tight text-lg">Nothing New</h4>
+                                        <p className="text-[10px] uppercase font-bold tracking-widest opacity-40 mt-1 max-w-[200px]">
+                                            We'll let you know when something pops up
+                                        </p>
                                     </div>
                                 ) : (
-                                    <div className="divide-y divide-border/50">
+                                    <div className="divide-y divide-border/20 px-4 sm:px-0">
                                         {notifications.map((notification) => (
                                             <div
                                                 key={notification.id}
                                                 onClick={() => handleNotificationClick(notification)}
-                                                className={`relative group p-4 sm:p-3 flex gap-4 sm:gap-3 hover:bg-muted/50 transition-colors cursor-pointer ${!notification.read ? 'bg-primary/5' : ''}`}
+                                                className={cn(
+                                                    "relative group my-2 p-5 rounded-[1.5rem] flex gap-4 transition-all hover:bg-muted/30 cursor-pointer active:scale-[0.98]",
+                                                    !notification.read ? "bg-primary/[0.04] border border-primary/10" : "bg-card/50"
+                                                )}
                                             >
-                                                <div className="mt-0.5 w-10 h-10 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-card border border-border shrink-0 shadow-sm">
-                                                    {getIcon(notification.type)}
+                                                <div className="shrink-0">
+                                                    <div className="w-12 h-12 rounded-[1.25rem] bg-background border border-border/50 flex items-center justify-center shadow-inner group-hover:rotate-6 transition-transform">
+                                                        {getIcon(notification.type)}
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1 space-y-1">
-                                                    <div className="flex justify-between items-start">
-                                                        <p className={`text-sm font-semibold sm:font-medium leading-tight ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-start gap-2 mb-1">
+                                                        <h4 className={cn(
+                                                            "text-sm font-black truncate uppercase tracking-tight",
+                                                            notification.read ? "text-muted-foreground" : "text-foreground"
+                                                        )}>
                                                             {notification.title}
-                                                        </p>
-                                                        <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
+                                                        </h4>
+                                                        <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-tighter whitespace-nowrap pt-1">
                                                             {timeAgo(notification.createdAt)}
                                                         </span>
                                                     </div>
-                                                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                                                    <p className="text-xs text-muted-foreground/80 leading-snug line-clamp-2 font-medium">
                                                         {notification.message}
                                                     </p>
                                                 </div>
-                                                <div className="flex flex-col justify-center gap-2">
-                                                    {!notification.read && (
-                                                        <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                                                <div className="flex items-center pl-2">
+                                                    {!notification.read ? (
+                                                        <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.6)]" />
+                                                    ) : (
+                                                        <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
                                                     )}
-                                                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-30 group-hover:opacity-100 transition-opacity" />
                                                 </div>
+                                                
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); deleteNotification(notification.id); }}
-                                                    className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-1.5 bg-background border border-border rounded-full text-muted-foreground hover:text-destructive hover:border-destructive transition-all shadow-sm z-10"
+                                                    className="absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 p-2 bg-background border border-border rounded-xl text-muted-foreground hover:text-destructive transition-all shadow-xl z-10"
                                                 >
-                                                    <X className="w-3 h-3" />
+                                                    <X className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
                                         ))}
@@ -292,14 +333,15 @@ export function NotificationsMenu() {
                                 )}
                             </div>
 
-                            {/* Footer */}
-                            <div className="p-4 sm:p-2 border-t border-border bg-card/80 backdrop-blur-sm text-center">
-                                <Link 
-                                    href="/notifications" 
+                            {/* Footer Container - Fixed Bottom Sticky */}
+                            <div className="p-6 sm:p-4 border-t border-border/50 bg-card/80 backdrop-blur-xl shrink-0 pb-10 sm:pb-4">
+                                <Link
+                                    href="/notifications"
                                     onClick={() => setIsOpen(false)}
-                                    className="text-sm sm:text-xs text-primary hover:underline font-bold sm:font-medium block py-2 sm:py-1 rounded-lg hover:bg-primary/5 transition-colors"
+                                    className="w-full flex items-center justify-center gap-3 py-4 rounded-3xl bg-primary text-primary-foreground shadow-[0_10px_20px_rgba(59,130,246,0.2)] hover:shadow-[0_15px_30px_rgba(59,130,246,0.3)] hover:-translate-y-1 transition-all group active:scale-95"
                                 >
-                                    View Full History
+                                    <span className="text-[12px] font-black uppercase tracking-[0.15em]">Browse Full Inbox</span>
+                                    <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                                 </Link>
                             </div>
                         </motion.div>
