@@ -918,7 +918,7 @@ export default function TournamentDetailPage() {
                                             <Copy className="h-3 w-3 ml-auto" />
                                         </Button>
                                         <a
-                                            href={`https://wa.me/?text=${encodeURIComponent(`Join this tournament!\n\n${tournament.title.toUpperCase()}\nGame: ${tournament.game}\nEntry: ${tournament.entryFeePerPerson ? tournament.entryFeePerPerson + ' ' + (tournament.currency === 'INR' ? '₹' : 'Coins') : 'FREE'}\n\nJoin the battle on Protocol: ${typeof window !== 'undefined' ? window.location.origin : ''}/tournaments/share/${tournament.shareCode}`)}`}
+                                            href={`https://wa.me/?text=${encodeURIComponent(`*🏆 JOIN THE BATTLE ON PROTOCOL!* 🏆\n\n*Tournament:* ${tournament.title.toUpperCase()}\n*🎮 Game:* ${tournament.game}\n*💰 Prize Pool:* ${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.prizePool.toLocaleString('en-IN')}\n*🎟️ Entry Fee:* ${tournament.entryFeePerPerson > 0 ? `${tournament.currency === 'INR' ? '₹' : 'Coins'} ${tournament.entryFeePerPerson}` : 'FREE'}\n\n*🔥 Register Now:* ${typeof window !== 'undefined' ? window.location.origin : ''}/tournaments/share/${tournament.shareCode}\n\n_Build your legacy. Win big._`)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                         >
