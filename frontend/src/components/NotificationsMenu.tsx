@@ -197,44 +197,33 @@ export function NotificationsMenu() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsOpen(false)}
-                            className="fixed inset-0 bg-background/60 backdrop-blur-[6px] z-[9999]"
+                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999]"
                         />
 
                         {/* Dropdown / Responsive Drawer */}
                         <motion.div
-                            initial={isMobile ? { opacity: 0, scale: 0.9, y: -20 } : { opacity: 0, scale: 0.95, y: 10 }}
+                            initial={{ opacity: 0, scale: 0.95, y: isMobile ? -20 : 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={isMobile ? { opacity: 0, scale: 0.9, y: -20 } : { opacity: 0, scale: 0.95, y: 10 }}
-                            transition={{ 
-                                type: "spring", 
-                                damping: 25, 
-                                stiffness: 300,
-                                mass: 0.5
-                            }}
+                            exit={{ opacity: 0, scale: 0.95, y: isMobile ? -20 : 10 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
                             className={cn(
-                                "z-[10000] bg-popover/98 border border-border shadow-2xl overflow-hidden will-change-transform flex flex-col",
-                                // Polished Centered Modal for Mobile
-                                "fixed top-[15%] inset-x-4 max-h-[75vh] rounded-[2.5rem]",
-                                // Desktop Styles
-                                "sm:absolute sm:top-full sm:right-0 sm:inset-auto sm:max-h-[500px] sm:w-[400px] sm:rounded-2xl"
+                                "z-[10000] bg-popover/95 border border-border shadow-2xl rounded-2xl overflow-hidden will-change-transform",
+                                // Mobile styles
+                                "fixed top-[75px] right-4 left-4 max-h-[70vh] flex flex-col",
+                                // Desktop styles
+                                "sm:absolute sm:top-full sm:right-0 sm:left-auto sm:inset-auto sm:mt-3 sm:w-[400px] sm:max-h-[500px]"
                             )}
                         >
-                            {/* Header - Native Look */}
-                            <div className="flex items-center justify-between px-6 py-5 border-b border-border/50 shrink-0">
-                                <div className="flex flex-col">
-                                    <h3 className="font-extrabold text-foreground text-xl tracking-tight leading-none mb-1">Activity</h3>
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                                        <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{unreadCount} New</span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="flex bg-muted/30 p-1 rounded-2xl sm:hidden">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-4 border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
+                                <h3 className="font-bold text-foreground text-lg">Notifications</h3>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex bg-muted/50 p-1 rounded-xl">
                                         <button
                                             onClick={() => setActiveTab('all')}
                                             className={cn(
-                                                "px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all",
-                                                activeTab === 'all' ? "bg-background text-foreground shadow-sm scale-105" : "text-muted-foreground"
+                                                "px-3 py-1 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                                                activeTab === 'all' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
                                             )}
                                         >
                                             All
@@ -242,8 +231,8 @@ export function NotificationsMenu() {
                                         <button
                                             onClick={() => setActiveTab('mentions')}
                                             className={cn(
-                                                "px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all",
-                                                activeTab === 'mentions' ? "bg-background text-foreground shadow-sm scale-105" : "text-muted-foreground"
+                                                "px-3 py-1 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                                                activeTab === 'mentions' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
                                             )}
                                         >
                                             Feed
@@ -251,76 +240,74 @@ export function NotificationsMenu() {
                                     </div>
                                     <button
                                         onClick={markAllAsRead}
-                                        className="p-2.5 text-primary hover:bg-primary/10 rounded-2xl transition-all active:scale-90"
+                                        className="p-1.5 text-primary hover:bg-primary/10 rounded-full transition-colors"
+                                        title="Mark all as read"
                                     >
                                         <Check className="w-5 h-5" />
                                     </button>
                                     <button
                                         onClick={() => setIsOpen(false)}
-                                        className="p-2.5 text-muted-foreground hover:bg-muted rounded-2xl"
+                                        className="p-1.5 text-muted-foreground hover:bg-muted rounded-full sm:hidden"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
                             </div>
 
-                            {/* List Content - Scroll Area */}
-                            <div className="flex-1 overflow-y-auto custom-scrollbar-hide overscroll-contain">
+                            {/* List Content */}
+                            <div className="flex-1 overflow-y-auto custom-scrollbar">
                                 {notifications.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center p-12 text-center">
-                                        <div className="w-24 h-24 rounded-[2.5rem] bg-muted/10 flex items-center justify-center mb-6">
-                                            <Bell className="w-10 h-10 opacity-20 text-primary" />
+                                    <div className="py-16 text-center text-muted-foreground flex flex-col items-center gap-4">
+                                        <div className="w-20 h-20 rounded-full bg-muted/20 flex items-center justify-center">
+                                            <Bell className="w-8 h-8 opacity-20" />
                                         </div>
-                                        <h4 className="font-black text-foreground uppercase tracking-tight text-lg">Nothing New</h4>
-                                        <p className="text-[10px] uppercase font-bold tracking-widest opacity-40 mt-1 max-w-[200px]">
-                                            We'll let you know when something pops up
-                                        </p>
+                                        <div className="space-y-1">
+                                            <p className="font-bold text-foreground">Zero Activity</p>
+                                            <p className="text-[10px] uppercase font-bold tracking-widest opacity-50">Check back later</p>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="divide-y divide-border/20 px-4 sm:px-0">
+                                    <div className="divide-y divide-border/30">
                                         {notifications.map((notification) => (
                                             <div
                                                 key={notification.id}
                                                 onClick={() => handleNotificationClick(notification)}
                                                 className={cn(
-                                                    "relative group my-2 p-5 rounded-[1.5rem] flex gap-4 transition-all hover:bg-muted/30 cursor-pointer active:scale-[0.98]",
-                                                    !notification.read ? "bg-primary/[0.04] border border-primary/10" : "bg-card/50"
+                                                    "relative group p-4 flex gap-4 hover:bg-muted/30 transition-all cursor-pointer",
+                                                    !notification.read && "bg-primary/[0.03]"
                                                 )}
                                             >
-                                                <div className="shrink-0">
-                                                    <div className="w-12 h-12 rounded-[1.25rem] bg-background border border-border/50 flex items-center justify-center shadow-inner group-hover:rotate-6 transition-transform">
+                                                <div className="shrink-0 pt-1">
+                                                    <div className="w-10 h-10 rounded-2xl bg-card border border-border flex items-center justify-center shadow-sm">
                                                         {getIcon(notification.type)}
                                                     </div>
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex justify-between items-start gap-2 mb-1">
+                                                <div className="flex-1 min-w-0 space-y-1">
+                                                    <div className="flex justify-between items-start gap-2">
                                                         <h4 className={cn(
-                                                            "text-sm font-black truncate uppercase tracking-tight",
+                                                            "text-sm font-bold truncate leading-tight",
                                                             notification.read ? "text-muted-foreground" : "text-foreground"
                                                         )}>
                                                             {notification.title}
                                                         </h4>
-                                                        <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-tighter whitespace-nowrap pt-1">
+                                                        <span className="text-[10px] font-medium text-muted-foreground/60 whitespace-nowrap pt-0.5">
                                                             {timeAgo(notification.createdAt)}
                                                         </span>
                                                     </div>
-                                                    <p className="text-xs text-muted-foreground/80 leading-snug line-clamp-2 font-medium">
+                                                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                                                         {notification.message}
                                                     </p>
                                                 </div>
-                                                <div className="flex items-center pl-2">
-                                                    {!notification.read ? (
-                                                        <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_12px_rgba(59,130,246,0.6)]" />
-                                                    ) : (
-                                                        <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
+                                                <div className="flex items-center">
+                                                    {!notification.read && (
+                                                        <div className="w-2 h-2 rounded-full bg-primary" />
                                                     )}
                                                 </div>
-                                                
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); deleteNotification(notification.id); }}
-                                                    className="absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 p-2 bg-background border border-border rounded-xl text-muted-foreground hover:text-destructive transition-all shadow-xl z-10"
+                                                    className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-1.5 bg-background border border-border rounded-full text-muted-foreground hover:text-destructive transition-all shadow-sm z-10"
                                                 >
-                                                    <X className="w-3.5 h-3.5" />
+                                                    <X className="w-3 h-3" />
                                                 </button>
                                             </div>
                                         ))}
@@ -328,15 +315,14 @@ export function NotificationsMenu() {
                                 )}
                             </div>
 
-                            {/* Footer Container - Fixed Bottom Sticky */}
-                            <div className="p-6 sm:p-4 border-t border-border/50 bg-card/80 backdrop-blur-xl shrink-0 pb-6 sm:pb-4">
+                            {/* Footer Container */}
+                            <div className="p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm text-center shrink-0">
                                 <Link
                                     href="/notifications"
                                     onClick={() => setIsOpen(false)}
-                                    className="w-full flex items-center justify-center gap-3 py-4 rounded-[1.75rem] bg-primary text-primary-foreground shadow-[0_10px_20px_rgba(59,130,246,0.2)] hover:shadow-[0_15px_30px_rgba(59,130,246,0.3)] hover:-translate-y-1 transition-all group active:scale-95"
+                                    className="text-sm text-primary hover:underline font-bold block py-2 transition-colors"
                                 >
-                                    <span className="text-[12px] font-black uppercase tracking-[0.15em]">Full Activity Log</span>
-                                    <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                                    View Full History
                                 </Link>
                             </div>
                         </motion.div>

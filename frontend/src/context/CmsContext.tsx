@@ -62,6 +62,8 @@ interface CmsConfig {
     presets?: any[];
 }
 
+import { useTheme } from 'next-themes';
+
 interface CmsContextType {
     config: CmsConfig | null;
     loading: boolean;
@@ -111,6 +113,7 @@ const hexToHslString = (hex: string): string => {
 export function CmsEngineProvider({ children }: { children: React.ReactNode }) {
     const [config, setConfig] = useState<CmsConfig | null>(null);
     const [loading, setLoading] = useState(true);
+    const { setTheme: setSystemTheme, resolvedTheme } = useTheme();
 
     const fetchConfig = async () => {
         // Try to load from cache first for instant UI
@@ -119,8 +122,7 @@ export function CmsEngineProvider({ children }: { children: React.ReactNode }) {
             try {
                 const parsed = JSON.parse(cached);
                 setConfig(parsed);
-                applyGlobalTheme(parsed.theme);
-                setLoading(false); // Immediate transition if we have cache
+                // We'll apply theme in the useEffect below to handle resolvedTheme properly
             } catch (e) {
                 console.warn('Stale CMS cache');
             }
@@ -130,7 +132,6 @@ export function CmsEngineProvider({ children }: { children: React.ReactNode }) {
             const res = await api.get('/cms/config');
             const data = res.data;
             setConfig(data);
-            applyGlobalTheme(data.theme);
             
             // Background update cache
             if (typeof window !== 'undefined') {
@@ -145,66 +146,76 @@ export function CmsEngineProvider({ children }: { children: React.ReactNode }) {
 
     const applyGlobalTheme = (theme: GlobalTheme) => {
         if (!theme) return;
+
+        // ── Theme Mode Synchronization ──
+        // Only trigger system theme change on initial config load if specifically set
+        if (theme.mode === 'DARK' || theme.mode === 'LIGHT') {
+            const cmsMode = theme.mode.toLowerCase();
+            const hasUserThemePreference = typeof window !== 'undefined' && !!localStorage.getItem('theme');
+            if (!hasUserThemePreference) {
+                setSystemTheme(cmsMode);
+            }
+        }
+
+        // ── Dynamic Style Injection ──
+        // Instead of root.style.setProperty, we inject a style tag.
+        // This allows us to use CSS selectors like :root:not(.dark) and .dark
+        // to ensure overrides ONLY apply to the intended mode.
+        let styleTag = document.getElementById('cms-theme-overrides');
+        if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = 'cms-theme-overrides';
+            document.head.appendChild(styleTag);
+        }
+
+        const isDarkConfig = theme.mode === 'DARK';
+        const primaryHsl = theme.primaryColor ? hexToHslString(theme.primaryColor) : null;
+        const secondaryHsl = theme.secondaryColor ? hexToHslString(theme.secondaryColor) : null;
+        const bgHsl = theme.backgroundColor ? hexToHslString(theme.backgroundColor) : null;
+        const fgHsl = theme.textColor ? hexToHslString(theme.textColor) : null;
+
+        // Mode-specific selector logic
+        // If CMS says DARK, we only apply BG/FG to .dark
+        // If CMS says LIGHT, we only apply BG/FG to :root:not(.dark)
+        const targetSelector = isDarkConfig ? '.dark' : ':root:not(.dark)';
+
+        styleTag.innerHTML = `
+            :root {
+                ${primaryHsl ? `--primary: ${primaryHsl};` : ''}
+                ${secondaryHsl ? `--secondary: ${secondaryHsl};` : ''}
+                ${theme.borderRounding ? `--radius: ${theme.borderRounding};` : ''}
+                --animation-duration: ${theme.animationSpeed === 'slow' ? '500ms' : theme.animationSpeed === 'fast' ? '150ms' : '300ms'};
+                --button-style: ${theme.buttonStyle || 'solid'};
+                --background-style: ${theme.backgroundStyle || 'solid'};
+            }
+            ${targetSelector} {
+                ${bgHsl ? `--background: ${bgHsl};` : ''}
+                ${fgHsl ? `--foreground: ${fgHsl};` : ''}
+            }
+            ${theme.fontFamily ? `
+            :root {
+                --font-sans: "${theme.fontFamily}", ui-sans-serif, system-ui, sans-serif;
+            }` : ''}
+        `;
+
         const root = document.documentElement;
-
-        // Apply Tailwind HSL CSS Variables
-        if (theme.primaryColor) root.style.setProperty('--primary', hexToHslString(theme.primaryColor));
-        if (theme.secondaryColor) root.style.setProperty('--secondary', hexToHslString(theme.secondaryColor));
-
-        // Smart Color Overrides: 
-        // If mode is DARK and background is #000000, or mode is LIGHT and background is #FFFFFF, 
-        // we clear the override to let the system theme take over.
-        const isDark = theme.mode === 'DARK';
-        const isDefaultBg = isDark ? (theme.backgroundColor === '#000000') : (theme.backgroundColor === '#FFFFFF');
-        const isDefaultFg = isDark ? (theme.textColor === '#FFFFFF') : (theme.textColor === '#000000');
-
-        if (theme.backgroundColor && !isDefaultBg) {
-            root.style.setProperty('--background', hexToHslString(theme.backgroundColor));
-        } else {
-            root.style.removeProperty('--background');
-        }
-
-        if (theme.textColor && !isDefaultFg) {
-            root.style.setProperty('--foreground', hexToHslString(theme.textColor));
-        } else {
-            root.style.removeProperty('--foreground');
-        }
-
-        // Apply Structural / Design Variables
-        if (theme.borderRounding) root.style.setProperty('--radius', theme.borderRounding);
-
-        // Convert animation speed
-        let dur = '0ms';
-        if (theme.animationSpeed === 'slow') dur = '500ms';
-        if (theme.animationSpeed === 'normal') dur = '300ms';
-        if (theme.animationSpeed === 'fast') dur = '150ms';
-        root.style.setProperty('--animation-duration', dur);
-
-        // Advanced Visuals
-        root.style.setProperty('--button-style', theme.buttonStyle || 'solid');
-        root.style.setProperty('--background-style', theme.backgroundStyle || 'solid');
         if (theme.glassmorphism) {
             root.classList.add('glass-active');
         } else {
             root.classList.remove('glass-active');
-        }
-
-        // Swap fonts
-        if (theme.fontFamily) {
-            root.style.setProperty('--font-sans', `"${theme.fontFamily}", ui-sans-serif, system-ui, sans-serif`);
-        }
-
-        // Toggle Mode Class
-        if (isDark) {
-            root.classList.add('dark');
-        } else {
-            root.classList.remove('dark');
         }
     };
 
     useEffect(() => {
         fetchConfig();
     }, []);
+
+    // Re-apply theme whenever config changes
+    useEffect(() => {
+        if (config?.theme) {
+            applyGlobalTheme(config.theme);
+        }
+    }, [config]);
 
     const getContent = (key: string, fallback: string) => {
         if (!config || !config.content) return fallback;
