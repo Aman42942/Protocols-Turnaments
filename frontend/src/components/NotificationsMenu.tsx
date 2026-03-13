@@ -202,30 +202,25 @@ export function NotificationsMenu() {
 
                         {/* Dropdown / Responsive Drawer */}
                         <motion.div
-                            initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 10 }}
-                            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
-                            exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 10 }}
+                            initial={isMobile ? { opacity: 0, scale: 0.9, y: -20 } : { opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={isMobile ? { opacity: 0, scale: 0.9, y: -20 } : { opacity: 0, scale: 0.95, y: 10 }}
                             transition={{ 
                                 type: "spring", 
-                                damping: 30, 
-                                stiffness: 350,
-                                mass: 0.8
+                                damping: 25, 
+                                stiffness: 300,
+                                mass: 0.5
                             }}
                             className={cn(
-                                "z-[10000] bg-popover/98 border-border shadow-2xl overflow-hidden will-change-transform flex flex-col",
-                                // Native Mobile App Bottom Sheet Styles
-                                "fixed bottom-0 inset-x-0 h-[85vh] rounded-t-[3rem] border-t",
+                                "z-[10000] bg-popover/98 border border-border shadow-2xl overflow-hidden will-change-transform flex flex-col",
+                                // Polished Centered Modal for Mobile
+                                "fixed top-[15%] inset-x-4 max-h-[75vh] rounded-[2.5rem]",
                                 // Desktop Styles
-                                "sm:absolute sm:bottom-auto sm:top-full sm:right-0 sm:inset-auto sm:h-auto sm:w-[400px] sm:max-h-[500px] sm:rounded-2xl sm:border"
+                                "sm:absolute sm:top-full sm:right-0 sm:inset-auto sm:max-h-[500px] sm:w-[400px] sm:rounded-2xl"
                             )}
                         >
-                            {/* Mobile Drag Handle - Top Bar */}
-                            <div className="w-full h-8 flex items-center justify-center sm:hidden shrink-0">
-                                <div className="w-12 h-1.5 bg-muted rounded-full opacity-30 group-hover:opacity-50 transition-opacity" />
-                            </div>
-
                             {/* Header - Native Look */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 shrink-0">
+                            <div className="flex items-center justify-between px-6 py-5 border-b border-border/50 shrink-0">
                                 <div className="flex flex-col">
                                     <h3 className="font-extrabold text-foreground text-xl tracking-tight leading-none mb-1">Activity</h3>
                                     <div className="flex items-center gap-1.5">
@@ -234,12 +229,12 @@ export function NotificationsMenu() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className="flex bg-muted/30 p-1.5 rounded-2xl sm:hidden">
+                                    <div className="flex bg-muted/30 p-1 rounded-2xl sm:hidden">
                                         <button
                                             onClick={() => setActiveTab('all')}
                                             className={cn(
                                                 "px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all",
-                                                activeTab === 'all' ? "bg-background text-foreground shadow-lg scale-105" : "text-muted-foreground"
+                                                activeTab === 'all' ? "bg-background text-foreground shadow-sm scale-105" : "text-muted-foreground"
                                             )}
                                         >
                                             All
@@ -248,7 +243,7 @@ export function NotificationsMenu() {
                                             onClick={() => setActiveTab('mentions')}
                                             className={cn(
                                                 "px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all",
-                                                activeTab === 'mentions' ? "bg-background text-foreground shadow-lg scale-105" : "text-muted-foreground"
+                                                activeTab === 'mentions' ? "bg-background text-foreground shadow-sm scale-105" : "text-muted-foreground"
                                             )}
                                         >
                                             Feed
@@ -334,13 +329,13 @@ export function NotificationsMenu() {
                             </div>
 
                             {/* Footer Container - Fixed Bottom Sticky */}
-                            <div className="p-6 sm:p-4 border-t border-border/50 bg-card/80 backdrop-blur-xl shrink-0 pb-10 sm:pb-4">
+                            <div className="p-6 sm:p-4 border-t border-border/50 bg-card/80 backdrop-blur-xl shrink-0 pb-6 sm:pb-4">
                                 <Link
                                     href="/notifications"
                                     onClick={() => setIsOpen(false)}
-                                    className="w-full flex items-center justify-center gap-3 py-4 rounded-3xl bg-primary text-primary-foreground shadow-[0_10px_20px_rgba(59,130,246,0.2)] hover:shadow-[0_15px_30px_rgba(59,130,246,0.3)] hover:-translate-y-1 transition-all group active:scale-95"
+                                    className="w-full flex items-center justify-center gap-3 py-4 rounded-[1.75rem] bg-primary text-primary-foreground shadow-[0_10px_20px_rgba(59,130,246,0.2)] hover:shadow-[0_15px_30px_rgba(59,130,246,0.3)] hover:-translate-y-1 transition-all group active:scale-95"
                                 >
-                                    <span className="text-[12px] font-black uppercase tracking-[0.15em]">Browse Full Inbox</span>
+                                    <span className="text-[12px] font-black uppercase tracking-[0.15em]">Full Activity Log</span>
                                     <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                                 </Link>
                             </div>
