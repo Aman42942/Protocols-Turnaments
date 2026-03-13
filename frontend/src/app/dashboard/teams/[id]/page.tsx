@@ -191,10 +191,10 @@ export default function TeamDetailsPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 w-full lg:w-auto">
+                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
                         <Button
                             variant="outline"
-                            className="flex-1 lg:flex-none border-border bg-card text-foreground hover:bg-muted font-black uppercase text-[10px] tracking-widest h-12 px-8 rounded-xl"
+                            className="flex-1 lg:flex-none border-border bg-card text-foreground hover:bg-muted font-black uppercase text-[10px] tracking-widest h-12 px-4 lg:px-8 rounded-xl"
                             onClick={copyInviteLink}
                         >
                             {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
@@ -202,7 +202,7 @@ export default function TeamDetailsPage() {
                         </Button>
                         {(isLeader || isCoLeader) && (
                             <Button
-                                className="flex-1 lg:flex-none bg-primary text-primary-foreground hover:bg-primary/90 font-black uppercase text-[10px] tracking-widest h-12 px-8 rounded-xl shadow-lg shadow-primary/20"
+                                className="flex-1 lg:flex-none bg-primary text-primary-foreground hover:bg-primary/90 font-black uppercase text-[10px] tracking-widest h-12 px-4 lg:px-8 rounded-xl shadow-lg shadow-primary/20"
                                 onClick={() => setIsInviteModalOpen(true)}
                             >
                                 <UserPlus className="w-4 h-4 mr-2" /> Invite Player
@@ -211,20 +211,20 @@ export default function TeamDetailsPage() {
                         {isLeader && (
                             <Button
                                 variant="destructive"
-                                className="flex-1 lg:flex-none bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-destructive-foreground font-black uppercase text-[10px] tracking-widest h-12 px-8 rounded-xl"
+                                className="flex-1 lg:flex-none bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-destructive-foreground font-black uppercase text-[10px] tracking-widest h-12 px-4 lg:px-8 rounded-xl"
                                 onClick={() => {
-                                    if (confirm('Disband squad? This cannot be undone.')) {
+                                    if (confirm('Delete squad? This cannot be undone.')) {
                                         api.delete(`/teams/${team.id}`).then(() => router.push('/dashboard/teams'));
                                     }
                                 }}
                             >
-                                <Trash2 className="w-4 h-4 mr-2" /> Disband Squad
+                                <Trash2 className="w-4 h-4 mr-2" /> Delete Squad
                             </Button>
                         )}
                         {!isLeader && (
                             <Button
                                 variant="destructive"
-                                className="flex-1 lg:flex-none bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-destructive-foreground font-black uppercase text-[10px] tracking-widest h-12 px-8 rounded-xl"
+                                className="flex-1 lg:flex-none bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-destructive-foreground font-black uppercase text-[10px] tracking-widest h-12 px-4 lg:px-8 rounded-xl"
                                 onClick={handleLeaveTeam}
                             >
                                 <LogOut className="w-4 h-4 mr-2" /> Exit Squad
