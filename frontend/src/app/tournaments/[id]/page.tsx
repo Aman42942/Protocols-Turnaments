@@ -1148,12 +1148,26 @@ export default function TournamentDetailPage() {
                                 </button>
                             </div>
 
-                            {/* Domestic Gateway Section Title */}
-                            <div className="flex items-center gap-3 px-2 mb-2">
-                                <div className="h-px flex-1 bg-border/40" />
-                                <span className="text-[10px] font-black tracking-widest uppercase text-muted-foreground whitespace-nowrap">Domestic Gateway (India)</span>
-                                <div className="h-px flex-1 bg-border/40" />
-                            </div>
+                            {/* Payment Methods Section */}
+                            <div className="space-y-4">
+                                {/* Title and Advisory Info */}
+                                <div className="flex flex-col gap-2 mb-2 px-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-px flex-1 bg-border/40" />
+                                        <span className="text-[10px] font-black tracking-widest uppercase text-muted-foreground whitespace-nowrap">Domestic Gateway (India)</span>
+                                        <div className="h-px flex-1 bg-border/40" />
+                                    </div>
+                                    {!directUpiEnabled && (
+                                        <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-3 flex items-center gap-3 animate-in fade-in zoom-in duration-500">
+                                            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
+                                                <Zap className="w-4 h-4" />
+                                            </div>
+                                            <p className="text-[10px] font-bold text-blue-500/80 leading-snug">
+                                                Fast & Secure Domestic checkout via Cards, UPI, or NetBanking.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
 
                             {/* Billing Phone Input */}
                             <div className="relative group/input mb-4 animate-in fade-in slide-in-from-top-2 duration-500">
@@ -1171,7 +1185,11 @@ export default function TournamentDetailPage() {
                             </div>
 
                             {/* Direct Payment Methods Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className={`grid gap-4 ${
+                                (directUpiEnabled || (paypalClientId && paypalEnabled)) 
+                                ? 'grid-cols-1 md:grid-cols-2' 
+                                : 'grid-cols-1'
+                            }`}>
                                 {/* Cashfree - India */}
                                 <button
                                     onClick={() => {
@@ -1230,10 +1248,10 @@ export default function TournamentDetailPage() {
                                             <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-500 shadow-lg shadow-orange-500/10">
                                                 <QrCode className="w-6 h-6" />
                                             </div>
-                                            <div className="bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full tracking-widest">FAST</div>
+                                            <div className="bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full tracking-widest">BACKUP</div>
                                         </div>
                                         <div>
-                                            <p className="font-black text-xs uppercase tracking-widest text-foreground/90">Direct UPI</p>
+                                            <p className="font-black text-xs uppercase tracking-widest text-foreground/90">Direct UPI Alternative</p>
                                             <p className="text-[10px] text-muted-foreground font-bold mt-1">Bypass bank outages</p>
                                             <div className="mt-3 flex items-center gap-2">
                                                 <span className="text-sm font-black text-orange-500">₹{tournament.entryFeePerPerson}</span>
@@ -1243,6 +1261,8 @@ export default function TournamentDetailPage() {
                                         </div>
                                     </button>
                                 )}
+                            </div>
+                        </div>
 
                                 {/* PayPal Integration - Consolidated Provider to fix SDK conflicts */}
                                 {paypalClientId && paypalEnabled ? (
@@ -1325,9 +1345,6 @@ export default function TournamentDetailPage() {
                                         </div>
                                     </PayPalScriptProvider>
                                 ) : null}
-                            </div>
-                        </div>
-
                         <div className="mt-8 flex items-center justify-center gap-2 opacity-30 grayscale group-hover:grayscale-0 transition-all duration-700">
                             <Shield className="w-4 h-4" />
                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Secure Tier-1 Encrypted Checkout</span>
@@ -1336,7 +1353,7 @@ export default function TournamentDetailPage() {
                 </DialogContent>
             </Dialog>
             {/* Direct UPI Fallback Modal */}
-            {showUpiFallback && (
+            {showUpiFallback && tournament && (
                 <UpiPaymentFallback
                     amount={tournament.entryFeePerPerson}
                     tournamentName={tournament.title}
