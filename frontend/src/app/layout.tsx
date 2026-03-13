@@ -40,21 +40,22 @@ export async function generateMetadata(): Promise<Metadata> {
     console.error("Failed to fetch global SEO metadata - Backend might be down:", error instanceof Error ? error.message : error);
   }
 
-  const domain = "https://protocols-turnaments.vercel.app";
+  const domain = process.env.NEXT_PUBLIC_APP_URL || "https://protocols-turnaments.vercel.app";
   const title = content.SEO_META_TITLE || "Protocol Tournaments | Professional Esports Platform";
   const description = content.SEO_META_DESCRIPTION || "Join the world's leading esports platform! Compete in Valorant, PUBG, BGMI, and Free Fire. Win cash prizes and build your gaming legacy.";
   const keywords = content.SEO_META_KEYWORDS ? content.SEO_META_KEYWORDS.split(',').map(k => k.trim()) : ["esports", "tournament", "gaming", "pubg", "valorant", "bgmi", "free fire", "competitive gaming"];
 
-  // Ensure OG image is an absolute URL
-  let ogImage = content.SEO_OG_IMAGE || "/banners/landscape_esports.png";
-  if (ogImage.startsWith('/')) {
-    ogImage = `${domain}${ogImage}`;
-  }
+  // Ensure URLs are absolute for metadata
+  const getAbsoluteUrl = (path: string) => {
+    if (!path) return "";
+    if (path.startsWith('http')) return path;
+    const cleanDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${cleanDomain}${cleanPath}`;
+  };
 
-  let favicon = content.SEO_FAVICON_URL || "/favicon.ico";
-  if (favicon.startsWith('/')) {
-    favicon = `${domain}${favicon}`;
-  }
+  const ogImage = getAbsoluteUrl(content.SEO_OG_IMAGE || "/banners/landscape_esports.png");
+  const favicon = getAbsoluteUrl(content.SEO_FAVICON_URL || "/favicon.ico");
 
   return {
     title: {

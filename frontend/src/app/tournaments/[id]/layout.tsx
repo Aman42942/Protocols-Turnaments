@@ -6,7 +6,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const domain = "https://protocols-turnaments.vercel.app";
+  const domain = process.env.NEXT_PUBLIC_APP_URL || "https://protocols-turnaments.vercel.app";
   
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/tournaments/${id}`, {
@@ -23,8 +23,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const description = `🎮 Game: ${tournament.game} • 🎟️ Entry: ${currencyText} ${tournament.entryFeePerPerson} • 💰 Prize Pool: ${currencyText} ${tournament.prizePool.toLocaleString('en-IN')}. Join the battle on Protocol and win prizes!`;
     
     let ogImage = tournament.banner || `${domain}/banners/landscape_esports.png`;
-    if (ogImage.startsWith('/')) {
-      ogImage = `${domain}${ogImage}`;
+    if (!ogImage.startsWith('http')) {
+      const cleanDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
+      const cleanPath = ogImage.startsWith('/') ? ogImage : `/${ogImage}`;
+      ogImage = `${cleanDomain}${cleanPath}`;
     }
 
     return {
