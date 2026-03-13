@@ -45,7 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const keywords = content.SEO_META_KEYWORDS ? content.SEO_META_KEYWORDS.split(',').map(k => k.trim()) : ["esports", "tournament", "gaming", "pubg", "valorant", "bgmi", "free fire", "competitive gaming"];
 
   // Ensure OG image is an absolute URL
-  let ogImage = content.SEO_OG_IMAGE || "/logo-primary.png";
+  let ogImage = content.SEO_OG_IMAGE || "/banners/landscape_esports.png";
   if (ogImage.startsWith('/')) {
     ogImage = `${domain}${ogImage}`;
   }

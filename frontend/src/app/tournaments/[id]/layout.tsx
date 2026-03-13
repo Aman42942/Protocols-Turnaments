@@ -17,10 +17,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     const tournament = await res.json();
     
-    const title = `${tournament.title} | Protocol Tournament`;
-    const description = `${tournament.game} - ${tournament.prizePool.toLocaleString('en-IN')} Coins Prize Pool. Join the battle on Protocol!`;
+    const currencySymbol = tournament.currency === 'INR' ? '₹' : tournament.currency === 'COIN' ? '🪙' : tournament.currency;
     
-    let ogImage = tournament.banner || `${domain}/logo-primary.png`;
+    const title = `🏆 ${tournament.title.toUpperCase()} | Protocol Tournament`;
+    const description = `🎮 Game: ${tournament.game} | 💰 Entry: ${currencySymbol}${tournament.entryFeePerPerson} | 🏆 Prize: ${currencySymbol}${tournament.prizePool.toLocaleString('en-IN')}\n\nJoin the battle on Protocol! Compete with the best and win daily prizes.`;
+    
+    let ogImage = tournament.banner || `${domain}/banners/landscape_esports.png`;
     if (ogImage.startsWith('/')) {
       ogImage = `${domain}${ogImage}`;
     }
