@@ -74,15 +74,34 @@ export function NotificationsMenu() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const [mounted, setMounted] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 640);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     // Prevent body scroll when menu is open on mobile
     useEffect(() => {
-        if (isOpen && window.innerWidth < 640) {
+        if (isOpen && isMobile) {
             document.body.style.overflow = 'hidden';
         } else {
-            document.body.style.overflow = 'unset';
+            if (typeof document !== 'undefined') {
+                document.body.style.overflow = 'unset';
+            }
         }
-        return () => { document.body.style.overflow = 'unset'; };
-    }, [isOpen]);
+        return () => { 
+            if (typeof document !== 'undefined') {
+                document.body.style.overflow = 'unset'; 
+            }
+        };
+    }, [isOpen, isMobile]);
 
     const markAsRead = async (id: string) => {
         try {
@@ -161,7 +180,7 @@ export function NotificationsMenu() {
             </button>
 
             <AnimatePresence>
-                {isOpen && (
+                {isOpen && mounted && (
                     <>
                         {/* Backdrop - Mobile Only */}
                         <motion.div
@@ -174,9 +193,9 @@ export function NotificationsMenu() {
 
                         {/* Dropdown / Bottom Sheet Content */}
                         <motion.div
-                            initial={window.innerWidth < 640 ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 10 }}
-                            animate={window.innerWidth < 640 ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
-                            exit={window.innerWidth < 640 ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 10 }}
+                            initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 10 }}
+                            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+                            exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.95, y: 10 }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
                             className="fixed inset-x-0 bottom-0 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-full sm:w-96 bg-popover border-t sm:border border-border rounded-t-[2rem] sm:rounded-xl shadow-2xl overflow-hidden z-[100]"
                         >
