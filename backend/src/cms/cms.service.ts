@@ -236,6 +236,7 @@ export class CmsService {
     }
 
     async updateFeature(id: string, data: any) {
+        this.invalidateCache();
         return (this.prisma as any).customFeature.update({
             where: { id },
             data,
