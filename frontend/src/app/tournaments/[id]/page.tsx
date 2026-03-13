@@ -1157,16 +1157,6 @@ export default function TournamentDetailPage() {
                                         <span className="text-[10px] font-black tracking-widest uppercase text-muted-foreground whitespace-nowrap">Domestic Gateway (India)</span>
                                         <div className="h-px flex-1 bg-border/40" />
                                     </div>
-                                    {!directUpiEnabled && (
-                                        <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-3 flex items-center gap-3 animate-in fade-in zoom-in duration-500">
-                                            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
-                                                <Zap className="w-4 h-4" />
-                                            </div>
-                                            <p className="text-[10px] font-bold text-blue-500/80 leading-snug">
-                                                Fast & Secure Domestic checkout via Cards, UPI, or NetBanking.
-                                            </p>
-                                        </div>
-                                    )}
                                 </div>
 
                             {/* Billing Phone Input */}
