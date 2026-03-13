@@ -129,7 +129,7 @@ export default function TournamentDetailPage() {
     const [paypalClientId, setPaypalClientId] = useState('');
     const [walletBalance, setWalletBalance] = useState(0);
     const [billingPhone, setBillingPhone] = useState('');
-    const [paypalEnabled, setPaypalEnabled] = useState(true);
+    const [paypalEnabled, setPaypalEnabled] = useState(false);
 
     const loadRates = async () => {
         try {
@@ -152,11 +152,14 @@ export default function TournamentDetailPage() {
             setPaypalClientId(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
 
             const paypalEnabledRes = await api.get('/cms/content/PAYPAL_ENABLED');
-            if (paypalEnabledRes.data?.value !== undefined) {
-                setPaypalEnabled(paypalEnabledRes.data.value !== 'false');
+            if (paypalEnabledRes.status === 200) {
+                setPaypalEnabled(paypalEnabledRes.data?.value === 'true');
+            } else {
+                setPaypalEnabled(false);
             }
         } catch (err) {
             console.error('Failed to load rates/wallet:', err);
+            setPaypalEnabled(false);
         }
     };
 

@@ -29,7 +29,7 @@ function WalletContent() {
 
     // Per-currency withdrawal fees (%) fetched from CMS
     const [fees, setFees] = useState({ INR: 0, USD: 0, GBP: 0 });
-    const [paypalEnabled, setPaypalEnabled] = useState(true);
+    const [paypalEnabled, setPaypalEnabled] = useState(false);
 
 
     // Withdraw state
@@ -74,9 +74,12 @@ function WalletContent() {
                 GBP: feeGbpRes.status === 'fulfilled' ? Number(feeGbpRes.value.data?.value || 0) : 0,
             });
 
-            // Load PayPal enabled state
+            // Load PayPal enabled state - Default to false, only true if explicitly 'true'
             if (paypalEnabledRes.status === 'fulfilled') {
-                setPaypalEnabled(paypalEnabledRes.value.data?.value !== 'false');
+                const isEnabled = paypalEnabledRes.value.data?.value === 'true';
+                setPaypalEnabled(isEnabled);
+            } else {
+                setPaypalEnabled(false);
             }
 
         } catch (err) {
