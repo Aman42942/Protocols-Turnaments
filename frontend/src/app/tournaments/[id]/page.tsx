@@ -1350,8 +1350,9 @@ export default function TournamentDetailPage() {
                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Secure Tier-1 Encrypted Checkout</span>
                         </div>
                     </div>
-                </DialogContent>
-            </Dialog>
+                </div>
+            </DialogContent>
+        </Dialog>
             {/* Direct UPI Fallback Modal */}
             {showUpiFallback && tournament && (
                 <UpiPaymentFallback
