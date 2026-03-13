@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, Users, CreditCard, Settings,
-    LayoutDashboard, LogOut, X, Activity, ShieldCheck, Palette, PieChart, Globe, FileText, ShieldAlert
+    LayoutDashboard, LogOut, X, Activity, ShieldCheck, Palette, PieChart, Globe, FileText, ShieldAlert, Mail, Layout
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -13,13 +13,15 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 const NAV_ITEMS = [
     { name: 'Overview', href: '/admin', icon: LayoutDashboard, color: '#3b82f6', accent: 'before:bg-blue-500', glow: 'group-hover:shadow-blue-500/40' },
     { name: 'Security & Firewall', href: '/admin/security', icon: ShieldAlert, color: '#ef4444', accent: 'before:bg-red-500', glow: 'group-hover:shadow-red-500/40' },
+    { name: 'Monitoring Hub', href: '/admin/monitoring', icon: Activity, color: '#06b6d4', accent: 'before:bg-cyan-500', glow: 'group-hover:shadow-cyan-500/40' },
+    { name: 'Email Control', href: '/admin/email-templates', icon: Mail, color: '#6366f1', accent: 'before:bg-indigo-500', glow: 'group-hover:shadow-indigo-500/40' },
     { name: 'Tournaments', href: '/admin/tournaments', icon: Trophy, color: '#f97316', accent: 'before:bg-orange-500', glow: 'group-hover:shadow-orange-500/40' },
     { name: 'Users', href: '/admin/users', icon: Users, color: '#22c55e', accent: 'before:bg-green-500', glow: 'group-hover:shadow-green-500/40' },
     { name: 'Transactions', href: '/admin/transactions', icon: CreditCard, color: '#a855f7', accent: 'before:bg-purple-500', glow: 'group-hover:shadow-purple-500/40' },
     { name: 'Economy', href: '/admin/analytics', icon: PieChart, color: '#eab308', accent: 'before:bg-yellow-500', glow: 'group-hover:shadow-yellow-500/40' },
-    { name: 'Health', href: '/admin/health', icon: Activity, color: '#10b981', accent: 'before:bg-emerald-500', glow: 'group-hover:shadow-emerald-500/40' },
     { name: 'Site Builder', href: '/admin/builder', icon: Palette, color: '#ec4899', accent: 'before:bg-pink-500', glow: 'group-hover:shadow-pink-500/40' },
     { name: 'Website Manage', href: '/admin/website-manage', icon: Globe, color: '#0ea5e9', accent: 'before:bg-sky-500', glow: 'group-hover:shadow-sky-500/40' },
+    { name: 'Content', href: '/admin/cms', icon: Layout, color: '#eab308', accent: 'before:bg-yellow-500', glow: 'group-hover:shadow-yellow-500/40' },
     { name: 'Legal Pages', href: '/admin/legal', icon: FileText, color: '#14b8a6', accent: 'before:bg-teal-500', glow: 'group-hover:shadow-teal-500/40' },
     { name: 'Profile', href: '/admin/profile', icon: ShieldCheck, color: '#facc15', accent: 'before:bg-yellow-400', glow: 'group-hover:shadow-yellow-400/40' },
     { name: 'Settings', href: '/admin/settings', icon: Settings, color: '#94a3b8', accent: 'before:bg-slate-400', glow: 'group-hover:shadow-slate-400/30' },

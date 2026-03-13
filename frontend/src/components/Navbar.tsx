@@ -98,6 +98,7 @@ export function Navbar() {
     const navLinks = [
         { name: 'Home', href: '/', icon: Home },
         ...(user ? [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }] : []),
+        ...(user?.role === 'ADMIN' ? [{ name: 'Admin', href: '/admin', icon: ShieldCheck }] : []),
         { name: 'Tournaments', href: '/tournaments', icon: Trophy },
         ...(user ? [{ name: 'Wallet', href: '/dashboard/wallet', icon: CreditCard }] : []),
         { name: 'Leaderboard', href: '/leaderboard', icon: Users },

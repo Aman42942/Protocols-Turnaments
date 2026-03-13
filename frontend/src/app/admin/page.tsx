@@ -17,12 +17,11 @@ function GlitchCounter({ value, prefix = '' }: { value: number; prefix?: string 
     const started = useRef(false);
 
     useEffect(() => {
-        if (started.current) return;
         if (value === 0) { setDisplay(0); return; }
         started.current = true;
 
         let cur = 0;
-        const duration = 800;
+        const duration = 2000;
         const steps = 30;
         const inc = value / steps;
         const interval = duration / steps;

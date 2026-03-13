@@ -29,6 +29,10 @@ import { CmsModule } from './cms/cms.module';
 import { SecurityModule } from './security/security.module';
 import { GlobalSecurityGuard } from './security/global-security.guard';
 import { SecurityThrottlerGuard } from './security/security-throttler.guard';
+import { MonitoringModule } from './monitoring/monitoring.module';
+import { RequestLoggerMiddleware } from './monitoring/request-logger.middleware';
+import { AllExceptionsFilter } from './monitoring/all-exceptions.filter';
+import { EmailTemplatesModule } from './email-templates/email-templates.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -63,6 +67,8 @@ import { join } from 'path';
     OrganizerModule,
     CmsModule,
     SecurityModule,
+    MonitoringModule,
+    EmailTemplatesModule,
   ],
   controllers: [AppController],
   providers: [
@@ -75,6 +81,14 @@ import { join } from 'path';
       provide: APP_GUARD,
       useClass: GlobalSecurityGuard,
     },
+    {
+      provide: 'APP_FILTER',
+      useClass: AllExceptionsFilter,
+    },
   ],
 })
-export class AppModule { }
+export class AppModule {
+  configure(consumer: import('@nestjs/common').MiddlewareConsumer) {
+    consumer.apply(RequestLoggerMiddleware).forRoutes('*');
+  }
+}

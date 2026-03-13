@@ -59,6 +59,7 @@ model User {
   tournaments        TournamentParticipant[]
   wallet             Wallet?
   invitations        TeamInvitation[]
+  securityLogs       SecurityLog[]
 }
 
 model Tournament {
@@ -479,6 +480,7 @@ model SecurityLog {
   severity  String   // LOW, MEDIUM, HIGH, CRITICAL
   resolved  Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
 
   @@index([ipAddress])
   @@index([severity])
@@ -510,3 +512,13 @@ model UserSession {
   @@index([userId])
 }
 
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  key         String   @unique // e.g., "VERIFICATION_CODE", "WELCOME_EMAIL"
+  subject     String
+  body        String   @db.Text
+  description String?
+  variables   String?  // JSON string of available variables
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -230,7 +230,9 @@ export class UsersService {
         this.prisma.user.count(),
         this.prisma.tournament.count(),
         this.prisma.tournament.count({
-          where: { status: { in: ['UPCOMING', 'LIVE'] } },
+          where: { 
+            status: { in: ['UPCOMING', 'LIVE', 'upcoming', 'live'] } 
+          },
         }),
         this.prisma.team.count(),
       ]);
