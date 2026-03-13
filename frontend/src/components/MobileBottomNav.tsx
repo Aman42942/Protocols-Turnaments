@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import Link from 'next/link';
-import { Trophy, LayoutDashboard, Wallet, User, Home, Search, PlusCircle } from 'lucide-react';
+import { Trophy, LayoutDashboard, Wallet, User, Home, Search, PlusCircle, Users } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
