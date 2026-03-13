@@ -284,9 +284,6 @@ function WalletContent() {
                                                         </button>
                                                     ))}
                                             </div>
-                                            {!paypalEnabled && (
-                                                <p className="text-xs text-amber-500 mt-2 font-medium">⚠️ International payments (PayPal) are currently disabled by admin.</p>
-                                            )}
                                         </div>
 
 
