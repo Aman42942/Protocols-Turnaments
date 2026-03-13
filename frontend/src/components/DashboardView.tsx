@@ -366,7 +366,7 @@ export function DashboardView() {
                                 </Link>
                                 <Link href="/dashboard/teams">
                                     <Button className="w-full justify-between h-12 bg-muted/30 hover:bg-purple-500/10 hover:text-purple-500 border border-border transition-all group" variant="outline">
-                                        <span className="flex items-center"><Users className="mr-3 h-5 w-5 opacity-70" /> Squad HQ</span>
+                                        <span className="flex items-center"><Users className="mr-3 h-5 w-5 opacity-70" /> My Team</span>
                                         <ArrowUpRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" />
                                     </Button>
                                 </Link>

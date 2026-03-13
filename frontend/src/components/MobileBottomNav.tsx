@@ -12,6 +12,7 @@ export function MobileBottomNav() {
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
         { icon: Trophy, label: 'Arena', href: '/tournaments' },
+        { icon: Users, label: 'My Team', href: '/dashboard/teams' },
         { icon: Wallet, label: 'Wallet', href: '/dashboard/wallet' },
         { icon: User, label: 'Profile', href: '/profile' },
     ];

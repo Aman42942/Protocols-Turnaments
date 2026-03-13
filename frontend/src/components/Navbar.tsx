@@ -100,6 +100,7 @@ export function Navbar() {
         ...(user ? [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }] : []),
         ...(user?.role === 'ADMIN' ? [{ name: 'Admin', href: '/admin', icon: ShieldCheck }] : []),
         { name: 'Tournaments', href: '/tournaments', icon: Trophy },
+        ...(user ? [{ name: 'My Team', href: '/dashboard/teams', icon: Users }] : []),
         ...(user ? [{ name: 'Wallet', href: '/dashboard/wallet', icon: CreditCard }] : []),
         { name: 'Leaderboard', href: '/leaderboard', icon: Users },
         { name: 'About', href: '/about', icon: Settings },
@@ -246,7 +247,7 @@ export function Navbar() {
                                 <div className="space-y-1">
                                     <p className="px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-3">Competition</p>
                                     <SidebarLink href="/tournaments?type=solo" icon={User} label="Solo Matchups" active={false} onClick={() => setIsOpen(false)} />
-                                    <SidebarLink href="/dashboard/teams" icon={Users} label="My Teams" active={pathname === '/dashboard/teams'} onClick={() => setIsOpen(false)} />
+                                    <SidebarLink href="/dashboard/teams" icon={Users} label="My Team" active={pathname === '/dashboard/teams'} onClick={() => setIsOpen(false)} />
                                 </div>
 
                                 <div className="space-y-1">
