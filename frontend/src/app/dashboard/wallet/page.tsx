@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Wallet, ArrowUpRight, ArrowDownLeft, Loader2,
     CheckCircle, XCircle, Clock, CreditCard,
-    Shield, Target, MessageCircle, History,
+    Shield, Target, MessageCircle, History, RotateCcw,
     Star, Banknote, Coins, ArrowRightLeft, DollarSign, IndianRupee, PieChart, Info, Trophy, Globe, ShieldCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -146,6 +146,7 @@ function WalletContent() {
             case 'WITHDRAWAL': return <ArrowUpRight className="h-5 w-5 text-red-500" />;
             case 'ENTRY_FEE': return <CreditCard className="h-5 w-5 text-orange-500" />;
             case 'WINNINGS': return <Star className="h-5 w-5 text-yellow-500" />;
+            case 'REFUND': return <RotateCcw className="h-5 w-5 text-green-500" />;
             default: return <Wallet className="h-5 w-5 text-muted-foreground" />;
         }
     };
@@ -438,9 +439,9 @@ function WalletContent() {
                                             </div>
                                         </div>
                                         <div className="text-right whitespace-nowrap">
-                                            <div className={`font-black tracking-tight text-lg sm:text-xl flex flex-col items-end justify-center ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? 'text-green-500' : 'text-foreground'}`}>
+                                            <div className={`font-black tracking-tight text-lg sm:text-xl flex flex-col items-end justify-center ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? 'text-green-500' : 'text-foreground'}`}>
                                                 <div className="flex items-center gap-1">
-                                                    {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}
+                                                    {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? '+' : '-'}
                                                     {tx.amount.toLocaleString()} <Coins className="w-4 h-4" />
                                                 </div>
                                             </div>

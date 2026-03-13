@@ -505,25 +505,46 @@ export class TournamentsService {
     const amount = tournament.entryFeePerPerson || 0;
     if (amount <= 0) throw new BadRequestException('No entry fee to refund');
 
-    // 1. Perform refund in wallet (Balance Adjustment)
-    await this.walletService.refundTournamentEntry(
-      participant.userId,
-      amount,
-      tournamentId,
-      tournament.title,
-      participant.paymentId || undefined,
-    );
+    const isGatewayRefund = participant.paymentId && participant.paymentId.startsWith('ORD');
 
-    // 2. TRIGGER GATEWAY REFUND: If Cashfree paymentId exists
-    if (participant.paymentId && participant.paymentId.startsWith('ORD')) {
-      try {
-        console.log(`[REFUND] Triggering Cashfree Gateway Refund for Order: ${participant.paymentId}`);
-        await this.paymentsService.createRefund(participant.paymentId, amount);
-      } catch (err: any) {
-        console.error('[REFUND ERROR] Gateway refund failed, but wallet adjustment was done:', err.message);
-        // We don't throw here to ensure balance adjustment stays intact, 
-        // but admin should know gateway refund might need manual retry if it crashed.
-      }
+    // 1. PERFORM REFUND
+    if (isGatewayRefund) {
+        // TRIGGER GATEWAY REFUND FIRST
+        try {
+            console.log(`[REFUND] Triggering Cashfree Gateway Refund for Order: ${participant.paymentId}`);
+            await this.paymentsService.createRefund(participant.paymentId, amount);
+            
+            // Log in wallet history BUT SKIP balance increment (since user gets cash in bank)
+            await this.walletService.refundTournamentEntry(
+                participant.userId,
+                amount,
+                tournamentId,
+                tournament.title,
+                participant.paymentId!, // Non-null because of isGatewayRefund check
+                false // allowBalanceUpdate = false
+            );
+        } catch (err: any) {
+            console.error('[REFUND ERROR] Gateway refund failed! Falling back to Wallet Refund:', err.message);
+            // FALLBACK: If gateway fails, we MUST refund to wallet so user isn't cheated
+            await this.walletService.refundTournamentEntry(
+                participant.userId,
+                amount,
+                tournamentId,
+                tournament.title,
+                participant.paymentId ?? undefined,
+                true // allowBalanceUpdate = true
+            );
+        }
+    } else {
+        // Standard Wallet Refund (No gateway involved)
+        await this.walletService.refundTournamentEntry(
+            participant.userId,
+            amount,
+            tournamentId,
+            tournament.title,
+            participant.paymentId || undefined,
+            true // allowBalanceUpdate = true
+        );
     }
 
     // 3. Update participant status to exit them

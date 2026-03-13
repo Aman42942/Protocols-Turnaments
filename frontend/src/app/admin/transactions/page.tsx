@@ -197,13 +197,16 @@ export default function AdminTransactionsPage() {
                             <CardContent className="p-4 sm:p-6">
                                 <div className="flex flex-col sm:flex-row justify-between gap-4">
                                     <div className="flex gap-4">
-                                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${tx.type === 'DEPOSIT' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                                            {tx.type === 'DEPOSIT' ? <ArrowDownLeft className="h-6 w-6" /> : <ArrowUpRight className="h-6 w-6" />}
+                                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                            {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? <ArrowDownLeft className="h-6 w-6" /> : <ArrowUpRight className="h-6 w-6" />}
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <span className="font-bold text-lg">{tx.amount.toLocaleString('en-IN')} Coins</span>
-                                                <Badge variant="outline" className="text-[10px] uppercase">{tx.method || 'WALLET'}</Badge>
+                                                <span className={`font-bold text-lg ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? 'text-green-500' : 'text-red-500'}`}>
+                                                    {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? '+' : '-'}{tx.amount.toLocaleString('en-IN')} Coins
+                                                </span>
+                                                <Badge variant="outline" className="text-[10px] uppercase">{tx.type.replace('_', ' ')}</Badge>
+                                                <Badge variant="outline" className="text-[10px] uppercase bg-muted/50">{tx.method || 'WALLET'}</Badge>
                                                 {getStatusBadge(tx.status)}
                                             </div>
                                             <div className="flex items-center gap-2 mt-1">
@@ -264,8 +267,8 @@ export default function AdminTransactionsPage() {
                                                         INITIATE REFUND
                                                     </Button>
                                                 ) : (
-                                                    <Badge variant="outline" className="text-orange-500 bg-orange-500/10 border-orange-500/20 py-1 px-3">
-                                                        <RotateCcw className="w-3 h-3 mr-1" /> ALREADY REFUNDED
+                                                    <Badge variant="outline" className="text-green-500 bg-green-500/10 border-green-500/20 py-1 px-3">
+                                                        <RotateCcw className="w-3 h-3 mr-1" /> REFUNDED DONE
                                                     </Badge>
                                                 )}
                                             </>

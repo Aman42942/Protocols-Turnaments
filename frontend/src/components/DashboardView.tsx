@@ -139,9 +139,6 @@ export function DashboardView() {
             <div className="container px-4 sm:px-6 lg:px-8">
                 <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
                     <div>
-                        <h1 className="text-4xl font-bold tracking-tight text-foreground">
-                            Combat Center
-                        </h1>
                         <p className="text-muted-foreground mt-1 text-lg">Welcome back, <span className="text-primary font-semibold">{data.userName}</span></p>
                     </div>
                     <div className="flex items-center gap-4 sm:gap-6">

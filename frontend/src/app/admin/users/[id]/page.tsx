@@ -452,14 +452,14 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
                                     {transactions.map((tx) => (
                                         <tr key={tx.id} className="border-b border-border hover:bg-muted/20">
                                             <td className="px-4 py-3">
-                                                <span className={`inline-flex items-center gap-1 font-medium ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? 'text-green-500' : 'text-red-500'
+                                                <span className={`inline-flex items-center gap-1 font-medium ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? 'text-green-500' : 'text-red-500'
                                                     }`}>
-                                                    {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                                    {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                                                     {tx.type.replace('_', ' ')}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 font-bold">
-                                                {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Coins
+                                                {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? '+' : '-'}{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Coins
                                             </td>
                                             <td className="px-4 py-3">
                                                 <Badge variant={tx.status === 'COMPLETED' ? 'default' : tx.status === 'PENDING' ? 'outline' : 'destructive'} className="text-[10px]">

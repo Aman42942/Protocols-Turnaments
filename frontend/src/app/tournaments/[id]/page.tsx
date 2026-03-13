@@ -659,16 +659,47 @@ export default function TournamentDetailPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-3">
-                                            {[
-                                                { position: '🥇 1st Place', pct: 50, color: 'from-yellow-500/20 to-amber-500/5 border-yellow-500/30' },
-                                                { position: '🥈 2nd Place', pct: 30, color: 'from-gray-400/20 to-gray-400/5 border-gray-400/30' },
-                                                { position: '🥉 3rd Place', pct: 20, color: 'from-orange-600/20 to-orange-600/5 border-orange-600/30' },
-                                            ].map((prize, i) => (
-                                                <div key={i} className={`flex items-center justify-between p-4 rounded-xl bg-gradient-to-r ${prize.color} border`}>
-                                                    <span className="font-bold">{prize.position}</span>
-                                                    <span className="font-bold text-lg">{Math.round(tournament.prizePool * prize.pct / 100).toLocaleString('en-IN')} Coins</span>
-                                                </div>
-                                            ))}
+                                            {(() => {
+                                                let prizes = [];
+                                                try {
+                                                    prizes = tournament.prizeDistribution ? JSON.parse(tournament.prizeDistribution) : null;
+                                                } catch (e) {
+                                                    console.error('Failed to parse prize distribution:', e);
+                                                }
+
+                                                // Fallback to default if no valid data
+                                                if (!prizes || !Array.isArray(prizes) || prizes.length === 0) {
+                                                    prizes = [
+                                                        { place: '🥇 1st Place', percent: 50 },
+                                                        { place: '🥈 2nd Place', percent: 30 },
+                                                        { place: '🥉 3rd Place', percent: 20 },
+                                                    ];
+                                                }
+
+                                                const getPrizeColor = (index: number) => {
+                                                    switch (index) {
+                                                        case 0: return 'from-yellow-500/20 to-amber-500/5 border-yellow-500/30';
+                                                        case 1: return 'from-gray-400/20 to-gray-400/5 border-gray-400/30';
+                                                        case 2: return 'from-orange-600/20 to-orange-600/5 border-orange-600/30';
+                                                        default: return 'from-purple-500/20 to-blue-500/5 border-primary/30';
+                                                    }
+                                                };
+
+                                                return prizes.map((prize: any, i: number) => (
+                                                    <motion.div
+                                                        key={i}
+                                                        initial={{ opacity: 0, x: -10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ delay: 0.1 * i }}
+                                                        className={`flex items-center justify-between p-4 rounded-xl bg-gradient-to-r ${getPrizeColor(i)} border hover:scale-[1.01] transition-transform`}
+                                                    >
+                                                        <span className="font-bold">{prize.place}</span>
+                                                        <span className="font-bold text-lg">
+                                                            {Math.round(tournament.prizePool * (prize.percent || prize.pct || 0) / 100).toLocaleString('en-IN')} Coins
+                                                        </span>
+                                                    </motion.div>
+                                                ));
+                                            })()}
                                         </div>
                                     </CardContent>
                                 </Card>

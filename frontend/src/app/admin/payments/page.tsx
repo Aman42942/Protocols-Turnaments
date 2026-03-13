@@ -331,9 +331,9 @@ export default function AdminPaymentsPage() {
                                                         {tx.status}
                                                     </span>
                                                 </td>
-                                                <td className={`p-4 text-right font-medium ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? 'text-green-500' : ''
+                                                <td className={`p-4 text-right font-medium ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? 'text-green-500' : ''
                                                     }`}>
-                                                    {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' ? '+' : '-'}{tx.amount} Coins
+                                                    {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? '+' : '-'}{tx.amount} Coins
                                                 </td>
                                                 <td className="p-4 text-right text-muted-foreground text-xs">{formatDate(tx.createdAt)}</td>
                                                 <td className="p-4 text-right">
@@ -355,9 +355,9 @@ export default function AdminPaymentsPage() {
                                                                     )}
                                                                 </Button>
                                                             ) : (
-                                                                <span title="Already Refunded">
-                                                                    <RotateCcw className="h-4 w-4 text-orange-500 opacity-50" />
-                                                                </span>
+                                                            <span title="Refund Done">
+                                                                <RotateCcw className="h-4 w-4 text-green-500" />
+                                                            </span>
                                                             )}
                                                         </>
                                                     )}

@@ -135,7 +135,7 @@ export class WalletService {
     });
   }
 
-  async refundTournamentEntry(userId: string, amount: number, tournamentId: string, tournamentTitle: string, reference?: string) {
+  async refundTournamentEntry(userId: string, amount: number, tournamentId: string, tournamentTitle: string, reference?: string, allowBalanceUpdate: boolean = true) {
     const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
     if (!wallet) throw new BadRequestException('User wallet not found');
 
@@ -156,11 +156,13 @@ export class WalletService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // 2. Increment wallet balance
-      await tx.wallet.update({
-        where: { id: wallet.id },
-        data: { balance: { increment: amount } },
-      });
+      // 2. Increment wallet balance (ONLY if requested)
+      if (allowBalanceUpdate) {
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: { increment: amount } },
+        });
+      }
 
       // 3. Create REFUND transaction
       const transaction = await tx.transaction.create({
@@ -170,8 +172,16 @@ export class WalletService {
           type: 'REFUND',
           status: 'COMPLETED',
           reference: reference,
-          description: `Refund for tournament: ${tournamentTitle}`,
-          metadata: JSON.stringify({ tournamentId, userId, refundedAt: new Date().toISOString(), originalReference: reference }),
+          description: allowBalanceUpdate 
+            ? `Refund for tournament: ${tournamentTitle}`
+            : `Gateway Refund for tournament: ${tournamentTitle} (No Wallet Credit)`,
+          metadata: JSON.stringify({ 
+            tournamentId, 
+            userId, 
+            refundedAt: new Date().toISOString(), 
+            originalReference: reference,
+            isGatewayRefund: !allowBalanceUpdate
+          }),
         },
       });
 
