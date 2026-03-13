@@ -335,6 +335,11 @@ export default function AdminTournamentsPage() {
                                                         <Users className="h-4 w-4" />
                                                     </Button>
                                                 </Link>
+                                                <Link href={`/admin/tournaments/${t.id}/edit`}>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-500 hover:text-amber-600 hover:bg-amber-500/10" title="Edit Tournament">
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                </Link>
                                                 <Link href={`/tournaments/${t.id}`}>
                                                     <Button variant="ghost" size="icon" className="h-8 w-8" title="View">
                                                         <Eye className="h-4 w-4" />
