@@ -10,6 +10,7 @@ async function main() {
         { key: 'GBP_TO_COIN_RATE', value: '110', type: 'NUMBER' },
         { key: 'PAYPAL_ENABLED', value: 'true', type: 'BOOLEAN' },
         { key: 'DIRECT_UPI_ENABLED', value: 'true', type: 'BOOLEAN' },
+        { key: 'WALLET_TOPUP_ENABLED', value: 'true', type: 'BOOLEAN' },
     ];
 
     for (const item of defaults) {
