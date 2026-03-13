@@ -389,9 +389,14 @@ export function UpiPaymentFallback({
                     <div className="pt-4 border-t border-white/5 space-y-4">
                         <div className="flex items-center justify-center gap-3 p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-2xl">
                             <Zap className="w-5 h-5 text-yellow-500 shrink-0" />
-                            <p className="text-xs text-gray-400 leading-relaxed text-center">
-                                <span className="text-yellow-400 font-bold">Auto-confirm enabled.</span> After paying via app, your registration will be confirmed automatically.
-                            </p>
+                            <div className="text-center">
+                                <p className="text-xs text-gray-400 leading-relaxed">
+                                    <span className="text-yellow-400 font-bold">Auto-confirm enabled.</span> After paying via app, your registration will be confirmed automatically.
+                                </p>
+                                <p className="text-[9px] text-gray-500 font-medium mt-1 uppercase tracking-tighter">
+                                    Tip: Use Direct UPI if you face HDFC/SBI bank failures in other apps.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="flex items-center justify-center gap-6">

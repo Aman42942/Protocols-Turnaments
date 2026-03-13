@@ -8,8 +8,9 @@ import {
     Trophy, Calendar, Users, Wallet, AlertCircle, ArrowLeft, Loader2,
     CheckCircle, Clock, Gamepad2, Shield, Swords, Target, MapPin,
     Star, Zap, Timer, Crown, ChevronRight, ExternalLink, MessageCircle,
-    Share2, Copy, Hash, Eye, EyeOff, Link2, Globe, Settings2, Phone
+    Share2, Copy, Hash, Eye, EyeOff, Link2, Globe, Settings2, Phone, QrCode
 } from 'lucide-react';
+import { UpiPaymentFallback } from '@/components/payment/UpiPaymentFallback';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { load } from '@cashfreepayments/cashfree-js';
@@ -124,6 +125,7 @@ export default function TournamentDetailPage() {
     const [myParticipant, setMyParticipant] = useState<any>(null);
     const [teamMembers, setTeamMembers] = useState<any[]>([]);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showUpiFallback, setShowUpiFallback] = useState(false);
     const [exchangeRate, setExchangeRate] = useState(85);
     const [gbpExchangeRate, setGbpExchangeRate] = useState(110);
     const [paypalClientId, setPaypalClientId] = useState('');
@@ -1183,7 +1185,11 @@ export default function TournamentDetailPage() {
                                     </div>
                                     <div>
                                         <p className="font-black text-xs uppercase tracking-widest text-foreground/90">Domestic Gateway</p>
-                                        <p className="text-[10px] text-muted-foreground font-bold mt-1">UPI, Cards, NetBanking</p>
+                                        <p className="text-[10px] text-muted-foreground font-bold mt-1 leading-tight">UPI, Cards, NetBanking</p>
+                                        <div className="mt-2 text-[9px] font-bold text-orange-500/80 flex items-center gap-1">
+                                            <AlertCircle className="w-3 h-3" />
+                                            <span>Bank outages? Use Direct UPI</span>
+                                        </div>
                                         <div className="mt-3 flex items-center gap-2">
                                             {registering ? (
                                                 <div className="flex items-center gap-2 text-blue-400">
@@ -1197,6 +1203,32 @@ export default function TournamentDetailPage() {
                                                     <span className="text-[9px] font-bold text-muted-foreground uppercase">Instant</span>
                                                 </>
                                             )}
+                                        </div>
+                                    </div>
+                                </button>
+
+                                {/* Direct UPI Fallback - Hidden by default, shown as alternative */}
+                                <button
+                                    onClick={() => {
+                                        setShowPaymentModal(false);
+                                        setShowUpiFallback(true);
+                                    }}
+                                    className="group relative bg-orange-500/5 border border-orange-500/20 hover:border-orange-500/50 rounded-3xl p-5 transition-all text-left flex flex-col justify-between h-40 overflow-hidden"
+                                >
+                                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-600/5 blur-3xl group-hover:bg-orange-600/10 transition-all" />
+                                    <div className="flex justify-between items-start">
+                                        <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-500 shadow-lg shadow-orange-500/10">
+                                            <QrCode className="w-6 h-6" />
+                                        </div>
+                                        <div className="bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full tracking-widest">FAST</div>
+                                    </div>
+                                    <div>
+                                        <p className="font-black text-xs uppercase tracking-widest text-foreground/90">Direct UPI</p>
+                                        <p className="text-[10px] text-muted-foreground font-bold mt-1">Bypass bank outages</p>
+                                        <div className="mt-3 flex items-center gap-2">
+                                            <span className="text-sm font-black text-orange-500">₹{tournament.entryFeePerPerson}</span>
+                                            <div className="h-1 w-1 rounded-full bg-foreground/20" />
+                                            <span className="text-[9px] font-bold text-muted-foreground uppercase">1-Click Fast</span>
                                         </div>
                                     </div>
                                 </button>
@@ -1292,6 +1324,20 @@ export default function TournamentDetailPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+            {/* Direct UPI Fallback Modal */}
+            {showUpiFallback && (
+                <UpiPaymentFallback
+                    amount={tournament.entryFeePerPerson}
+                    tournamentName={tournament.title}
+                    tournamentId={tournament.id}
+                    onClose={() => setShowUpiFallback(false)}
+                    onConfirm={() => {
+                        setShowUpiFallback(false);
+                        setRegistered(true);
+                        fetchTournament();
+                    }}
+                />
+            )}
         </div>
     );
 }
