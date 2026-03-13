@@ -391,27 +391,27 @@ export default function TeamsPage() {
                                     </div>
 
                                     {/* Action Grid */}
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-3">
                                         <button
                                             onClick={() => copyLink(team)}
                                             className={cn(
-                                                "h-16 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all active:scale-95 border-2",
+                                                "h-14 rounded-2xl text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 border-2",
                                                 copiedId === team.id
                                                     ? 'bg-green-500/10 border-green-500 text-green-500'
                                                     : 'bg-card/40 border-border/40 text-foreground hover:bg-muted/50 hover:border-primary/40'
                                             )}
                                         >
                                             {copiedId === team.id ? (
-                                                <><Check className="w-4 h-4 stroke-[3]" /> Linked</>
+                                                <><Check className="w-3.5 h-3.5 stroke-[3]" /> Linked</>
                                             ) : (
-                                                <><LinkIcon className="w-4 h-4" /> Join Link</>
+                                                <><LinkIcon className="w-3.5 h-3.5" /> Join Link</>
                                             )}
                                         </button>
                                         <Link
                                             href={`/dashboard/teams/${team.id}`}
-                                            className="h-16 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-primary/10"
+                                            className="h-14 bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-primary/10 px-2 whitespace-nowrap"
                                         >
-                                            Manage Hub <ChevronRight className="w-4 h-4 stroke-[3]" />
+                                            Manage Hub <ChevronRight className="w-3.5 h-3.5 stroke-[3]" />
                                         </Link>
                                     </div>
                                 </div>
