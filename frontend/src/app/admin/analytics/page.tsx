@@ -43,7 +43,7 @@ export default function EconomyDashboard() {
             const statsRes = await api.get('/analytics/economy');
             setStats(statsRes.data);
 
-            const [rateRes, gbpRes, feeInrRes, feeUsdRes, feeGbpRes, paypalEnabledRes, directUpiEnabledRes] = await Promise.allSettled([
+            const [rateRes, gbpRes, feeInrRes, feeUsdRes, feeGbpRes, paypalEnabledRes, directUpiEnabledRes, walletTopupEnabledRes] = await Promise.allSettled([
                 api.get('/cms/content/PAYPAL_EXCHANGE_RATE'),
                 api.get('/cms/content/GBP_TO_COIN_RATE'),
                 api.get('/cms/content/WITHDRAWAL_FEE_INR'),
