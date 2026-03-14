@@ -157,8 +157,11 @@ export default function TournamentDetailPage() {
             }
             
             if (paypalEnabledRes.status === 'fulfilled') {
-                setPaypalEnabled(paypalEnabledRes.value.data?.value !== 'false');
+                const isEnabled = paypalEnabledRes.value.data?.value !== 'false';
+                console.log('[DEBUG] PayPal Enabled from CMS:', isEnabled);
+                setPaypalEnabled(isEnabled);
             } else {
+                console.error('[DEBUG] PayPal Enabled fetch failed');
                 setPaypalEnabled(false);
             }
 
@@ -168,9 +171,11 @@ export default function TournamentDetailPage() {
                 setDirectUpiEnabled(false);
             }
 
-            setPaypalClientId(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
+            const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';
+            console.log('[DEBUG] PayPal Client ID from Env:', clientId ? 'EXISTS (HIDDEN)' : 'MISSING');
+            setPaypalClientId(clientId);
         } catch (err) {
-            console.error('Failed to load platform settings:', err);
+            console.error('[DEBUG] Failed to load platform settings:', err);
             setPaypalEnabled(false);
         }
     };
