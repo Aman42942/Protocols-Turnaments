@@ -34,6 +34,9 @@ export default function EconomyDashboard() {
     // Direct UPI toggle
     const [directUpiEnabled, setDirectUpiEnabled] = useState(true);
     const [savingDirectUpiToggle, setSavingDirectUpiToggle] = useState(false);
+    // Wallet Add Coins toggle
+    const [walletTopupEnabled, setWalletTopupEnabled] = useState(true);
+    const [savingWalletTopupToggle, setSavingWalletTopupToggle] = useState(false);
 
     const fetchEconomyData = async () => {
         try {
@@ -48,6 +51,7 @@ export default function EconomyDashboard() {
                 api.get('/cms/content/WITHDRAWAL_FEE_GBP'),
                 api.get('/cms/content/PAYPAL_ENABLED'),
                 api.get('/cms/content/DIRECT_UPI_ENABLED'),
+                api.get('/cms/content/WALLET_TOPUP_ENABLED'),
             ]);
 
             if (rateRes.status === 'fulfilled' && rateRes.value.data?.value) setExchangeRate(rateRes.value.data.value);
@@ -61,6 +65,9 @@ export default function EconomyDashboard() {
             }
             if (directUpiEnabledRes.status === 'fulfilled') {
                 setDirectUpiEnabled(directUpiEnabledRes.value.data?.value !== 'false');
+            }
+            if (walletTopupEnabledRes.status === 'fulfilled') {
+                setWalletTopupEnabled(walletTopupEnabledRes.value.data?.value !== 'false');
             }
         } catch (error) {
             console.error('Economy load error:', error);
@@ -162,6 +169,22 @@ export default function EconomyDashboard() {
             toast.error('Failed to update Direct UPI toggle');
         } finally {
             setSavingDirectUpiToggle(false);
+        }
+    };
+
+    const saveWalletTopupToggle = async (enabled: boolean) => {
+        setSavingWalletTopupToggle(true);
+        try {
+            await api.put('/cms/content', {
+                items: [{ key: 'WALLET_TOPUP_ENABLED', value: enabled ? 'true' : 'false' }]
+            });
+            setWalletTopupEnabled(enabled);
+            toast.success(`Wallet Top-up ${enabled ? 'Enabled ✅' : 'Disabled 🔴'}`);
+        } catch (err) {
+            console.error('Wallet top-up toggle error:', err);
+            toast.error('Failed to update Wallet Top-up toggle');
+        } finally {
+            setSavingWalletTopupToggle(false);
         }
     };
 
@@ -346,125 +369,127 @@ export default function EconomyDashboard() {
                 </div>
             </div>
 
-            {/* ── PAYPAL PAYMENT METHOD TOGGLE ────────────────────────── */}
+            {/* ── PLATFORM PAYMENT ENABLE SETTINGS ───────────────────── */}
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
                 className="rounded-3xl border border-border bg-card shadow-xl overflow-hidden"
             >
-                <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
+                <div className="p-6 border-b border-border bg-muted/20">
                     <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${paypalEnabled ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-destructive/10 border border-destructive/20'}`}>
-                            <Globe className={`w-5 h-5 ${paypalEnabled ? 'text-blue-400' : 'text-destructive'}`} />
+                        <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                            <ShieldCheck className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                            <p className="text-sm font-black uppercase tracking-widest">PayPal Payment Method</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">Controls USD &amp; GBP payments via PayPal across entire platform</p>
+                            <p className="text-sm font-black uppercase tracking-widest">Payment Enable Mode</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Manage visibility and status of payment methods across the platform</p>
                         </div>
-                    </div>
-                    {/* Live status badge */}
-                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-black uppercase tracking-wider ${paypalEnabled ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-destructive/10 border-destructive/30 text-destructive'}`}>
-                        <motion.span
-                            animate={{ opacity: [1, 0.3, 1] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                            className={`w-1.5 h-1.5 rounded-full ${paypalEnabled ? 'bg-green-400' : 'bg-destructive'}`}
-                        />
-                        {paypalEnabled ? 'ENABLED' : 'DISABLED'}
                     </div>
                 </div>
 
-                <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                        <p className="font-semibold text-sm">
-                            {paypalEnabled
-                                ? '✅ PayPal is currently active — users can pay with USD & GBP via PayPal.'
-                                : '🔴 PayPal is currently disabled — only INR (UPI/Bank) payments are available.'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            Affects: Tournament Entry Payments • Wallet Deposits • Withdrawals (USD/GBP)
-                        </p>
-                    </div>
-                    {/* Toggle button */}
-                    <motion.button
-                        whileTap={{ scale: 0.93 }}
-                        whileHover={{ scale: 1.04 }}
-                        disabled={savingPaypalToggle}
-                        onClick={() => savePaypalToggle(!paypalEnabled)}
-                        className={`flex items-center gap-3 px-5 py-3 rounded-2xl border font-black text-sm transition-all min-w-[160px] justify-center ${paypalEnabled
-                            ? 'bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive hover:text-white'
-                            : 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500 hover:text-white'
-                            }`}
-                    >
-                        {savingPaypalToggle ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : paypalEnabled ? (
-                            <><ToggleRight className="w-5 h-5" /> Disable PayPal</>
-                        ) : (
-                            <><ToggleLeft className="w-5 h-5" /> Enable PayPal</>
-                        )}
-                    </motion.button>
-                </div>
-            </motion.div>
-
-            {/* ── DIRECT UPI PAYMENT METHOD TOGGLE ─────────────────────── */}
-            <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.18 }}
-                className="rounded-3xl border border-border bg-card shadow-xl overflow-hidden"
-            >
-                <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
-                    <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${directUpiEnabled ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-destructive/10 border border-destructive/20'}`}>
-                            <QrCode className={`w-5 h-5 ${directUpiEnabled ? 'text-orange-400' : 'text-destructive'}`} />
+                <div className="divide-y divide-border/50">
+                    {/* PAYPAL ROW */}
+                    <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 hover:bg-muted/5 transition-colors">
+                        <div className="flex items-start gap-4 flex-1">
+                            <div className={`w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center ${paypalEnabled ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-destructive/10 border border-destructive/20'}`}>
+                                <Globe className={`w-6 h-6 ${paypalEnabled ? 'text-blue-400' : 'text-destructive'}`} />
+                            </div>
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-3">
+                                    <p className="font-black text-sm uppercase tracking-wider">PayPal Global</p>
+                                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${paypalEnabled ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-destructive/10 border-destructive/30 text-destructive'}`}>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${paypalEnabled ? 'bg-green-400' : 'bg-destructive'} ${paypalEnabled && 'animate-pulse'}`} />
+                                        {paypalEnabled ? 'ACTIVE' : 'OFF'}
+                                    </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
+                                    {paypalEnabled
+                                        ? '✅ International payments (USD/GBP) are active via PayPal.'
+                                        : '🔴 International payments are currently hidden platform-wide.'}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-sm font-black uppercase tracking-widest">Direct UPI Payment (Fallback)</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">Controls manual QR-based UPI backup payments across entire platform</p>
-                        </div>
+                        <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            disabled={savingPaypalToggle}
+                            onClick={() => savePaypalToggle(!paypalEnabled)}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl border font-black text-xs transition-all w-full sm:w-auto justify-center ${paypalEnabled
+                                ? 'bg-destructive/5 border-destructive/20 text-destructive hover:bg-destructive hover:text-white'
+                                : 'bg-green-500/5 border-green-500/20 text-green-500 hover:bg-green-500 hover:text-white'
+                                }`}
+                        >
+                            {savingPaypalToggle ? <Loader2 className="w-4 h-4 animate-spin" /> : paypalEnabled ? 'Disable PayPal' : 'Enable PayPal'}
+                        </motion.button>
                     </div>
-                    {/* Live status badge */}
-                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-black uppercase tracking-wider ${directUpiEnabled ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-destructive/10 border-destructive/30 text-destructive'}`}>
-                        <motion.span
-                            animate={{ opacity: [1, 0.3, 1] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                            className={`w-1.5 h-1.5 rounded-full ${directUpiEnabled ? 'bg-green-400' : 'bg-destructive'}`}
-                        />
-                        {directUpiEnabled ? 'ENABLED' : 'DISABLED'}
-                    </div>
-                </div>
 
-                <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                        <p className="font-semibold text-sm">
-                            {directUpiEnabled
-                                ? '✅ Direct UPI is currently active — users can use the fallback QR method.'
-                                : '🔴 Direct UPI is currently disabled — only Domestic Gateway (Cashfree) is available for INR.'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            Affects: Tournament Entry Payments (Fallback Option)
-                        </p>
+                    {/* DIRECT UPI ROW */}
+                    <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 hover:bg-muted/5 transition-colors">
+                        <div className="flex items-start gap-4 flex-1">
+                            <div className={`w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center ${directUpiEnabled ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-destructive/10 border border-destructive/20'}`}>
+                                <QrCode className={`w-6 h-6 ${directUpiEnabled ? 'text-orange-400' : 'text-destructive'}`} />
+                            </div>
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-3">
+                                    <p className="font-black text-sm uppercase tracking-wider">Direct UPI Backup</p>
+                                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${directUpiEnabled ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-destructive/10 border-destructive/30 text-destructive'}`}>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${directUpiEnabled ? 'bg-green-400' : 'bg-destructive'} ${directUpiEnabled && 'animate-pulse'}`} />
+                                        {directUpiEnabled ? 'ACTIVE' : 'OFF'}
+                                    </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
+                                    {directUpiEnabled
+                                        ? '✅ Fallback QR method is visible for domestic bank outages.'
+                                        : '🔴 Backup QR is hidden — users must use the primary gateway.'}
+                                </p>
+                            </div>
+                        </div>
+                        <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            disabled={savingDirectUpiToggle}
+                            onClick={() => saveDirectUpiToggle(!directUpiEnabled)}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl border font-black text-xs transition-all w-full sm:w-auto justify-center ${directUpiEnabled
+                                ? 'bg-destructive/5 border-destructive/20 text-destructive hover:bg-destructive hover:text-white'
+                                : 'bg-green-500/5 border-green-500/20 text-green-500 hover:bg-green-500 hover:text-white'
+                                }`}
+                        >
+                            {savingDirectUpiToggle ? <Loader2 className="w-4 h-4 animate-spin" /> : directUpiEnabled ? 'Disable Backup' : 'Enable Backup'}
+                        </motion.button>
                     </div>
-                    {/* Toggle button */}
-                    <motion.button
-                        whileTap={{ scale: 0.93 }}
-                        whileHover={{ scale: 1.04 }}
-                        disabled={savingDirectUpiToggle}
-                        onClick={() => saveDirectUpiToggle(!directUpiEnabled)}
-                        className={`flex items-center gap-3 px-5 py-3 rounded-2xl border font-black text-sm transition-all min-w-[160px] justify-center ${directUpiEnabled
-                            ? 'bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive hover:text-white'
-                            : 'bg-green-500/10 border-green-500/30 text-green-500 hover:bg-green-500 hover:text-white'
-                            }`}
-                    >
-                        {savingDirectUpiToggle ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : directUpiEnabled ? (
-                            <><ToggleRight className="w-5 h-5" /> Disable Backup</>
-                        ) : (
-                            <><ToggleLeft className="w-5 h-5" /> Enable Backup</>
-                        )}
-                    </motion.button>
+
+                    {/* WALLET TOPUP ROW */}
+                    <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 hover:bg-muted/5 transition-colors">
+                        <div className="flex items-start gap-4 flex-1">
+                            <div className={`w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center ${walletTopupEnabled ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-destructive/10 border border-destructive/20'}`}>
+                                <Coins className={`w-6 h-6 ${walletTopupEnabled ? 'text-yellow-400' : 'text-destructive'}`} />
+                            </div>
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-3">
+                                    <p className="font-black text-sm uppercase tracking-wider">Wallet Top-up</p>
+                                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${walletTopupEnabled ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-destructive/10 border-destructive/30 text-destructive'}`}>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${walletTopupEnabled ? 'bg-green-400' : 'bg-destructive'} ${walletTopupEnabled && 'animate-pulse'}`} />
+                                        {walletTopupEnabled ? 'ACTIVE' : 'OFF'}
+                                    </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
+                                    {walletTopupEnabled
+                                        ? '✅ "Add Coins" button is visible in user wallets.'
+                                        : '🔴 Users cannot add coins via gateway top-ups.'}
+                                </p>
+                            </div>
+                        </div>
+                        <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            disabled={savingWalletTopupToggle}
+                            onClick={() => saveWalletTopupToggle(!walletTopupEnabled)}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl border font-black text-xs transition-all w-full sm:w-auto justify-center ${walletTopupEnabled
+                                ? 'bg-destructive/5 border-destructive/20 text-destructive hover:bg-destructive hover:text-white'
+                                : 'bg-green-500/5 border-green-500/20 text-green-500 hover:bg-green-500 hover:text-white'
+                                }`}
+                        >
+                            {savingWalletTopupToggle ? <Loader2 className="w-4 h-4 animate-spin" /> : walletTopupEnabled ? 'Disable Top-up' : 'Enable Top-up'}
+                        </motion.button>
+                    </div>
                 </div>
             </motion.div>
 

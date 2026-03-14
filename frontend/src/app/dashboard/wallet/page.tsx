@@ -30,7 +30,13 @@ function WalletContent() {
     // Per-currency withdrawal fees (%) fetched from CMS
     const [fees, setFees] = useState({ INR: 0, USD: 0, GBP: 0 });
     const [paypalEnabled, setPaypalEnabled] = useState(false);
-    const [walletTopupEnabled, setWalletTopupEnabled] = useState(false);
+    const [walletTopupEnabled, setWalletTopupEnabled] = useState(true);
+
+    // Add Coins state
+    const [showAddCoins, setShowAddCoins] = useState(false);
+    const [addAmount, setAddAmount] = useState('');
+    const [addingCoins, setAddingCoins] = useState(false);
+    const [addCurrency, setAddCurrency] = useState('INR');
 
 
     // Withdraw state
@@ -42,18 +48,10 @@ function WalletContent() {
     const [withdrawUpiId, setWithdrawUpiId] = useState('');
     const [rates, setRates] = useState({ USD: 85, GBP: 110 });
 
-    // Topup state
-    const [showTopup, setShowTopup] = useState(false);
-    const [topupAmount, setTopupAmount] = useState('');
-    const [topupStep, setTopupStep] = useState<'amount' | 'payment'>('amount');
-    const [utrNumber, setUtrNumber] = useState('');
-    const [submittingTopup, setSubmittingTopup] = useState(false);
-    const [upiDetails, setUpiDetails] = useState({ upiId: '', merchantName: '' });
-
 
     const loadData = async () => {
         try {
-            const [walletRes, ledgerRes, rateRes, gbpRes, feeInrRes, feeUsdRes, feeGbpRes, paypalEnabledRes, walletTopupEnabledRes, upiDetailsRes] = await Promise.allSettled([
+            const [walletRes, ledgerRes, rateRes, gbpRes, feeInrRes, feeUsdRes, feeGbpRes, paypalEnabledRes, walletTopupEnabledRes] = await Promise.allSettled([
                 api.get('/wallet'),
                 api.get('/analytics/user-ledger'),
                 api.get('/cms/content/PAYPAL_EXCHANGE_RATE'),
@@ -63,7 +61,6 @@ function WalletContent() {
                 api.get('/cms/content/WITHDRAWAL_FEE_GBP'),
                 api.get('/cms/content/PAYPAL_ENABLED'),
                 api.get('/cms/content/WALLET_TOPUP_ENABLED'),
-                api.get('/wallet/upi-details')
             ]);
 
             if (walletRes.status === 'fulfilled') setWallet(walletRes.value.data);
@@ -93,14 +90,8 @@ function WalletContent() {
                 setPaypalEnabled(false);
             }
 
-            // Load Wallet Topup enabled state
             if (walletTopupEnabledRes.status === 'fulfilled') {
-                setWalletTopupEnabled(walletTopupEnabledRes.value.data?.value === 'true');
-            }
-
-            // Set UPI Details
-            if (upiDetailsRes.status === 'fulfilled') {
-                setUpiDetails(upiDetailsRes.value.data);
+                setWalletTopupEnabled(walletTopupEnabledRes.value.data?.value !== 'false');
             }
 
         } catch (err) {
@@ -114,6 +105,57 @@ function WalletContent() {
         loadData();
     }, []);
 
+
+    const handleAddCoinsCashfree = async () => {
+        if (!addAmount || Number(addAmount) <= 0) {
+            toast.error('Enter valid amount');
+            return;
+        }
+        setAddingCoins(true);
+        try {
+            const res = await api.post('/payments/create-order', { amount: Number(addAmount) });
+            const mode = res.data.cf_env?.toLowerCase() === 'production' ? 'production' : 'sandbox';
+            const cashfree = await load({ mode: mode as "sandbox" | "production" });
+            
+            await cashfree.checkout({
+                paymentSessionId: res.data.payment_session_id,
+                returnUrl: `${window.location.origin}/dashboard/wallet?order_id={order_id}`,
+            });
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Payment initiation failed');
+        } finally {
+            setAddingCoins(false);
+        }
+    };
+
+    const handlePayPalCapture = async (orderId: string) => {
+        try {
+            const expectedCoins = Number(addAmount) * (addCurrency === 'GBP' ? rates.GBP : rates.USD);
+            await api.post('/payments/paypal/capture-order', { 
+                orderId, 
+                expectedCoins,
+                currency: addCurrency 
+            });
+            toast.success('Coins added successfully!');
+            setShowAddCoins(false);
+            setAddAmount('');
+            loadData();
+        } catch (error: any) {
+            toast.error('Payment verification failed');
+        }
+    };
+
+    useEffect(() => {
+        if (orderIdParam) {
+            api.post('/payments/verify', { order_id: orderIdParam }).then(() => {
+                toast.success('Payment verified! Coins added.');
+                loadData();
+                router.replace('/dashboard/wallet');
+            }).catch(() => {
+                toast.error('Payment verification failed');
+            });
+        }
+    }, [orderIdParam]);
 
     const handleWithdraw = async () => {
         if (!withdrawAmount || Number(withdrawAmount) <= 0) {
@@ -150,35 +192,6 @@ function WalletContent() {
             toast.error(error.response?.data?.message || 'Withdrawal failed');
         } finally {
             setWithdrawing(false);
-        }
-    };
-
-    const handleTopup = async () => {
-        if (!topupAmount || Number(topupAmount) <= 0) {
-            toast.error('Enter valid amount');
-            return;
-        }
-        if (!utrNumber) {
-            toast.error('Enter UTR Number');
-            return;
-        }
-
-        setSubmittingTopup(true);
-        try {
-            await api.post('/wallet/qr-deposit', {
-                amount: Number(topupAmount),
-                utrNumber: utrNumber
-            });
-            toast.success('Deposit request submitted! Awaiting admin approval.');
-            setShowTopup(false);
-            setTopupAmount('');
-            setUtrNumber('');
-            setTopupStep('amount');
-            loadData();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Deposit failed');
-        } finally {
-            setSubmittingTopup(false);
         }
     };
 
@@ -244,27 +257,35 @@ function WalletContent() {
                             <p className="text-sm text-yellow-100 font-medium">Earn coins by winning tournaments. Redeem them for real-world rewards.</p>
                         </div>
 
-                            <div className="flex flex-col items-center md:items-end gap-3 w-full md:w-auto">
-                                {walletTopupEnabled && (
-                                    <Button
-                                        size="lg"
-                                        className="bg-white text-orange-600 hover:bg-white/90 border-transparent font-black tracking-wide min-w-[200px] h-14 rounded-2xl items-center gap-3 shadow-xl shadow-white/10 transition-all scale-105 active:scale-95"
-                                        onClick={() => setShowTopup(true)}
-                                    >
-                                        <ArrowDownLeft className="h-6 w-6" />
-                                        TOP UP WALLET
-                                    </Button>
-                                )}
+                        <div className="flex flex-col md:flex-row items-center md:items-end gap-3 w-full md:w-auto">
+                            {walletTopupEnabled && (
                                 <Button
                                     size="lg"
-                                    variant="outline"
-                                    className="bg-white/10 hover:bg-white/20 border-white/30 text-white font-black tracking-wide min-w-[200px] h-14 rounded-2xl items-center gap-3 backdrop-blur-sm transition-all"
-                                    onClick={() => setShowWithdraw(true)}
+                                    className="bg-white text-yellow-600 hover:bg-yellow-50 font-black tracking-wide min-w-[160px] h-14 rounded-2xl items-center gap-3 shadow-xl transition-all"
+                                    onClick={() => {
+                                        setAddCurrency('INR');
+                                        setAddAmount('');
+                                        setShowAddCoins(true);
+                                    }}
                                 >
-                                    <ArrowUpRight className="h-6 w-6" />
-                                    WITHDRAW WINNINGS
+                                    <ArrowDownLeft className="h-6 w-6" />
+                                    ADD COINS
                                 </Button>
-                            </div>
+                            )}
+                            <Button
+                                size="lg"
+                                variant="outline"
+                                className="bg-white/10 hover:bg-white/20 border-white/30 text-white font-black tracking-wide min-w-[200px] h-14 rounded-2xl items-center gap-3 backdrop-blur-sm transition-all"
+                                onClick={() => {
+                                    setWithdrawCurrency('INR');
+                                    setWithdrawAmount('');
+                                    setShowWithdraw(true);
+                                }}
+                            >
+                                <ArrowUpRight className="h-6 w-6" />
+                                WITHDRAW WINNINGS
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -299,6 +320,109 @@ function WalletContent() {
                     </div>
                 </div>
 
+
+                {/* ===== ADD COINS MODAL ===== */}
+                <AnimatePresence>
+                    {showAddCoins && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="bg-card border border-border rounded-3xl overflow-hidden shadow-2xl relative z-0 mb-8"
+                        >
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500" />
+                            <CardHeader className="pb-4">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <CardTitle className="text-2xl font-black flex items-center gap-2">
+                                            <Coins className="h-6 w-6 text-green-500" />
+                                            Add Coins to Wallet
+                                        </CardTitle>
+                                        <CardDescription className="font-medium mt-1">Select your preferred payment method and amount.</CardDescription>
+                                    </div>
+                                    <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setShowAddCoins(false)}>✕</Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Payment Region</label>
+                                            <div className="flex gap-2">
+                                                {(['INR', 'USD', 'GBP'] as const)
+                                                    .filter(curr => curr === 'INR' || paypalEnabled)
+                                                    .map((curr) => (
+                                                        <button
+                                                            key={curr}
+                                                            onClick={() => setAddCurrency(curr)}
+                                                            className={`flex-1 flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all ${addCurrency === curr ? 'border-green-500 bg-green-500/10' : 'border-border bg-muted/30 hover:bg-muted'}`}
+                                                        >
+                                                            <span className={`font-black text-sm ${addCurrency === curr ? 'text-green-500' : 'text-muted-foreground'}`}>{curr}</span>
+                                                            <span className="text-[10px] text-muted-foreground mt-0.5">
+                                                                {curr === 'INR' ? 'Domestic' : 'International'}
+                                                            </span>
+                                                        </button>
+                                                    ))}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Amount to Pay ({addCurrency})</label>
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500">
+                                                    {addCurrency === 'INR' ? <IndianRupee className="w-5 h-5" /> : addCurrency === 'USD' ? <DollarSign className="w-5 h-5" /> : <span className="font-black text-lg">£</span>}
+                                                </span>
+                                                <Input
+                                                    type="number"
+                                                    placeholder="0.00"
+                                                    value={addAmount}
+                                                    onChange={(e) => setAddAmount(e.target.value)}
+                                                    className="text-2xl font-black pl-12 h-14 bg-muted/50 border-border/50"
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground mt-2 font-black uppercase tracking-widest">
+                                                You will receive ≈ {Math.floor(Number(addAmount) * (addCurrency === 'INR' ? 1 : addCurrency === 'USD' ? rates.USD : rates.GBP))} Coins
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-green-500/5 rounded-3xl p-6 border border-green-500/10 flex flex-col justify-center">
+                                        {addCurrency === 'INR' ? (
+                                            <Button
+                                                className="w-full h-14 rounded-2xl font-black text-lg bg-green-500 hover:bg-green-600 text-white shadow-xl shadow-green-500/20"
+                                                onClick={handleAddCoinsCashfree}
+                                                disabled={addingCoins || !addAmount || Number(addAmount) <= 0}
+                                            >
+                                                {addingCoins ? <Loader2 className="h-5 w-5 animate-spin" /> : "Pay via Cashfree (UPI/Cards)"}
+                                            </Button>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                <p className="text-center text-xs font-bold text-muted-foreground uppercase tracking-widest">Pay Securely via PayPal</p>
+                                                <PayPalScriptProvider options={{ clientId: "test", currency: addCurrency }}>
+                                                    <PayPalButtons
+                                                        style={{ layout: 'vertical', shape: 'pill', label: 'pay' }}
+                                                        disabled={!addAmount || Number(addAmount) <= 0}
+                                                        createOrder={async () => {
+                                                            const res = await api.post('/payments/paypal/create-order', { usdAmount: Number(addAmount), currency: addCurrency });
+                                                            return res.data.id;
+                                                        }}
+                                                        onApprove={async (data) => {
+                                                            await handlePayPalCapture(data.orderID);
+                                                        }}
+                                                    />
+                                                </PayPalScriptProvider>
+                                            </div>
+                                        )}
+                                        <p className="mt-4 text-[10px] text-center text-muted-foreground font-medium flex items-center justify-center gap-1">
+                                            <ShieldCheck className="w-3 h-3 text-green-500" />
+                                            SSL Encrypted Secure Transaction
+                                        </p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* ===== WITHDRAWAL MODAL ===== */}
                 <AnimatePresence>
@@ -443,146 +567,6 @@ function WalletContent() {
                     )}
                 </AnimatePresence>
 
-                {/* ===== TOP UP MODAL ===== */}
-                <AnimatePresence>
-                    {showTopup && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="bg-card border border-border rounded-3xl overflow-hidden shadow-2xl relative z-0 mb-8"
-                        >
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500" />
-                            <CardHeader className="pb-4">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <CardTitle className="text-2xl font-black flex items-center gap-2">
-                                            <Wallet className="h-6 w-6 text-green-500" />
-                                            Top Up Your Wallet
-                                        </CardTitle>
-                                        <CardDescription className="font-medium mt-1">Add coins to your balance for tournament entries.</CardDescription>
-                                    </div>
-                                    <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setShowTopup(false)}>✕</Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="p-6">
-                                {topupStep === 'amount' ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-6">
-                                            <div>
-                                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Choose Top-up Amount</label>
-                                                <div className="grid grid-cols-2 gap-3 mb-4">
-                                                    {[100, 200, 500, 1000].map(amt => (
-                                                        <button
-                                                            key={amt}
-                                                            onClick={() => setTopupAmount(amt.toString())}
-                                                            className={`p-4 rounded-2xl border-2 transition-all font-black text-lg ${topupAmount === amt.toString() ? 'border-green-500 bg-green-500/10 text-green-500' : 'border-border bg-muted/30'}`}
-                                                        >
-                                                            {amt} Coins
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <div className="relative">
-                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500"><Coins className="w-5 h-5" /></span>
-                                                    <Input
-                                                        type="number"
-                                                        placeholder="Custom Amount"
-                                                        value={topupAmount}
-                                                        onChange={(e) => setTopupAmount(e.target.value)}
-                                                        className="text-2xl font-black pl-12 h-14 bg-muted/50 border-border/50"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <Button
-                                                className="w-full h-14 rounded-2xl font-black text-lg bg-green-500 hover:bg-green-600 text-white shadow-xl shadow-green-500/20"
-                                                disabled={!topupAmount || Number(topupAmount) <= 0}
-                                                onClick={() => setTopupStep('payment')}
-                                            >
-                                                Next: Choose Payment
-                                            </Button>
-                                        </div>
-                                        <div className="bg-green-500/5 rounded-3xl p-6 border border-green-500/10 flex flex-col items-center justify-center text-center">
-                                            <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-                                                <ShieldCheck className="w-8 h-8 text-green-500" />
-                                            </div>
-                                            <h4 className="font-bold text-lg mb-2 text-foreground">Secure Payments</h4>
-                                            <p className="text-xs text-muted-foreground">All transactions are encrypted and monitored. Coins are credited instantly after approval.</p>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-6">
-                                            <div className="p-1 rounded-2xl bg-muted/50 flex mb-4">
-                                                <button className="flex-1 py-2 text-xs font-bold uppercase rounded-xl bg-white shadow-sm">Domestic Gateway</button>
-                                                <button disabled className="flex-1 py-2 text-xs font-bold uppercase text-muted-foreground opacity-50">International (Soon)</button>
-                                            </div>
-
-                                            <div className="bg-blue-500/5 border border-blue-500/10 rounded-2xl p-4 flex flex-col items-center text-center gap-3">
-                                                <div className="p-3 bg-white rounded-xl shadow-lg">
-                                                    <img
-                                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=${upiDetails.upiId}&pn=${upiDetails.merchantName}&am=${topupAmount}&cu=INR`)}`}
-                                                        alt="Payment QR"
-                                                        className="w-32 h-32"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-sm">Scan with Any UPI App</p>
-                                                    <p className="text-[10px] text-muted-foreground mt-1">GPay, PhonePe, Paytm, etc.</p>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">UTR / Transaction ID</label>
-                                                <Input
-                                                    placeholder="12-digit UTR Number"
-                                                    value={utrNumber}
-                                                    onChange={(e) => setUtrNumber(e.target.value)}
-                                                    className="h-14 bg-muted/50 border-border/50 font-mono font-bold"
-                                                />
-                                            </div>
-
-                                            <div className="flex gap-3">
-                                                <Button variant="outline" className="flex-1 h-14 rounded-2xl font-bold" onClick={() => setTopupStep('amount')}>Back</Button>
-                                                <Button
-                                                    className="flex-[2] h-14 rounded-2xl font-black text-lg bg-green-600 hover:bg-green-700 text-white shadow-xl shadow-green-600/20"
-                                                    onClick={handleTopup}
-                                                    disabled={submittingTopup || !utrNumber}
-                                                >
-                                                    {submittingTopup ? <Loader2 className="h-5 w-5 animate-spin" /> : "Submit Payment"}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="bg-blue-500/5 rounded-3xl p-6 border border-blue-500/10 space-y-4">
-                                            <h4 className="font-bold text-sm text-blue-600 uppercase tracking-widest">Billing Summary</h4>
-                                            <div className="space-y-2 border-b border-blue-500/10 pb-4">
-                                                <div className="flex justify-between items-center text-sm">
-                                                    <span className="text-muted-foreground">Coins to add</span>
-                                                    <span className="font-black">{Number(topupAmount).toLocaleString()}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-sm">
-                                                    <span className="text-muted-foreground">Exchange Rate</span>
-                                                    <span className="font-bold">₹1 = 1 Coin</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm font-bold">Total Amount Payable</span>
-                                                <span className="text-2xl font-black text-blue-600">₹{Number(topupAmount).toLocaleString()}</span>
-                                            </div>
-                                            <div className="p-3 bg-white/50 rounded-xl border border-blue-500/10 flex items-start gap-2">
-                                                <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                                                <p className="text-[10px] text-blue-700 leading-snug">
-                                                    After payment, please enter the UTR/Reference number provided by your bank/UPI app. Coins will be credited once verified.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
                 {/* ===== TRANSACTION HISTORY ===== */}
                 <Card className="border-border shadow-md rounded-3xl overflow-hidden">
                     <CardHeader className="bg-muted/10 border-b border-border">
@@ -622,7 +606,7 @@ function WalletContent() {
                             </div>
                         ) : (
                             <div className="divide-y divide-border/50">
-                                {ledger.history.map((tx: any) => (
+                                {ledger.history.slice(0, 5).map((tx: any) => (
                                     <div key={tx.id} className="flex items-center gap-4 p-4 sm:p-5 hover:bg-muted/20 transition-colors group">
                                         <div className="p-3 rounded-2xl bg-muted/80 group-hover:bg-primary/10 group-hover:scale-110 transition-all shadow-sm">
                                             {getTxIcon(tx.type)}
@@ -652,6 +636,19 @@ function WalletContent() {
                             </div>
                         )}
                     </CardContent>
+                    {ledger?.history?.length > 5 && (
+                        <div className="p-4 bg-muted/5 border-t border-border flex justify-center">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="font-black text-xs uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-all gap-2"
+                                onClick={() => router.push('/dashboard/wallet/history')}
+                            >
+                                View Full History
+                                <ArrowRightLeft className="w-3 h-3" />
+                            </Button>
+                        </div>
+                    )}
                 </Card>
             </div>
         </div>

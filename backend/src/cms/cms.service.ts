@@ -162,7 +162,8 @@ export class CmsService {
             const defaults: Record<string, string> = {
                 'PAYPAL_EXCHANGE_RATE': '85',
                 'GBP_TO_COIN_RATE': '110',
-                'PAYPAL_ENABLED': 'true'
+                'PAYPAL_ENABLED': 'true',
+                'WALLET_TOPUP_ENABLED': 'true'
             };
 
             if (defaults[key]) {

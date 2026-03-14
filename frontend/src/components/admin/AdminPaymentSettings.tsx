@@ -10,7 +10,6 @@ import api from '@/lib/api';
 export function AdminPaymentSettings() {
     const [upiId, setUpiId] = useState('');
     const [merchantName, setMerchantName] = useState('');
-    const [walletTopupEnabled, setWalletTopupEnabled] = useState(true);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -24,10 +23,6 @@ export function AdminPaymentSettings() {
             const res = await api.get('/wallet/upi-details');
             setUpiId(res.data.upiId);
             setMerchantName(res.data.merchantName);
-
-            // Fetch topup enabled state
-            const topupRes = await api.get('/cms/content/WALLET_TOPUP_ENABLED');
-            setWalletTopupEnabled(topupRes.data?.value === 'true');
         } catch (err) {
             console.error('Failed to fetch UPI settings:', err);
         } finally {
@@ -40,13 +35,8 @@ export function AdminPaymentSettings() {
         setSaving(true);
         setMessage(null);
         try {
-            await Promise.all([
-                api.post('/wallet/admin/upi-settings', { upiId, merchantName }),
-                api.put('/cms/content', {
-                    items: [{ key: 'WALLET_TOPUP_ENABLED', value: walletTopupEnabled.toString() }]
-                })
-            ]);
-            setMessage({ type: 'success', text: 'Payment settings updated successfully!' });
+            await api.post('/wallet/admin/upi-settings', { upiId, merchantName });
+            setMessage({ type: 'success', text: 'UPI settings updated successfully!' });
             // Clear message after 3 seconds
             setTimeout(() => setMessage(null), 3000);
         } catch (err: any) {
@@ -104,27 +94,6 @@ export function AdminPaymentSettings() {
                             <p className="text-xs text-muted-foreground">
                                 The name that will appear in the user's payment app when they scan the QR.
                             </p>
-                        </div>
-                    </div>
-
-                    <div className="pt-4 border-t border-border">
-                        <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-2xl border border-border/50">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${walletTopupEnabled ? 'bg-green-500/10 text-green-500' : 'bg-muted text-muted-foreground'}`}>
-                                    <AlertCircle className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-bold">Enable Wallet Topup</p>
-                                    <p className="text-[10px] text-muted-foreground">Allows users to add coins to their balance</p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setWalletTopupEnabled(!walletTopupEnabled)}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${walletTopupEnabled ? 'bg-green-500' : 'bg-muted'}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${walletTopupEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                            </button>
                         </div>
                     </div>
 
