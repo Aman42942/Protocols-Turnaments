@@ -47,6 +47,7 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
     const [kickingId, setKickingId] = useState<string | null>(null);
     const [kickReason, setKickReason] = useState('');
     const [confirmingKick, setConfirmingKick] = useState<Participant | null>(null);
+    const [refundToWallet, setRefundToWallet] = useState<boolean>(false);
     const [successMsg, setSuccessMsg] = useState('');
 
     useEffect(() => {
@@ -93,24 +94,21 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
 
     const handleKickAndRefund = async () => {
         if (!confirmingKick) return;
-        if (!confirm(`Are you sure you want to KICK and REFUND ${tournament?.entryFeePerPerson} Coins to ${confirmingKick.user.name}? This will process the refund via Cashfree.`)) return;
+        if (!confirm(`Are you sure you want to KICK and REFUND ${tournament?.entryFeePerPerson} Coins to ${confirmingKick.user.name}? This will process the refund via the original payment gateway.`)) return;
 
+        setKickingId(confirmingKick.id);
         try {
-            // 1. Kick the participant
-            await api.delete(`/tournaments/${params.id}/participants/${confirmingKick.id}/kick`, {
-                data: { reason: kickReason || 'Removed and Refunded by Admin' }
-            });
-
-            // 2. Process Refund
-            await api.post('/payments/admin/refund', {
+            // UNIFIED API CALL: This handles both removal and refund in one go
+            const res = await api.post('/payments/admin/refund', {
                 order_id: confirmingKick.paymentId,
                 amount: tournament?.entryFeePerPerson,
                 userId: confirmingKick.user.id,
                 tournamentId: params.id,
-                tournamentTitle: tournament?.title
+                tournamentTitle: tournament?.title,
+                refund_to_wallet: refundToWallet
             });
 
-            toast.success(`Refunded and Removed ${confirmingKick.user.name} successfully!`);
+            toast.success(res.data.message || `Refunded and Removed ${confirmingKick.user.name} successfully!`);
             setConfirmingKick(null);
             setKickReason('');
             await fetchData();
@@ -385,6 +383,35 @@ export default function ParticipantsPage({ params }: { params: { id: string } })
                                 onChange={e => setKickReason(e.target.value)}
                             />
                         </div>
+
+                        {confirmingKick.paymentStatus === 'PAID' && (
+                            <div className="space-y-3 p-3 bg-muted/30 rounded-xl border border-border">
+                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                    <RotateCcw className="w-3 h-3" /> Refund Destination
+                                </label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setRefundToWallet(false)}
+                                        className={`px-3 py-2 text-xs font-bold rounded-lg border transition-all ${!refundToWallet ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20' : 'bg-transparent border-border hover:border-primary/50'}`}
+                                    >
+                                        Original Source (Bank/PayPal)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setRefundToWallet(true)}
+                                        className={`px-3 py-2 text-xs font-bold rounded-lg border transition-all ${refundToWallet ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20' : 'bg-transparent border-border hover:border-primary/50'}`}
+                                    >
+                                        User Wallet
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground leading-tight italic">
+                                    {refundToWallet 
+                                        ? "Coins will be instantly credited to the user's wallet balance." 
+                                        : "Refund will be processed through the payment gateway. May take 5-7 days."}
+                                </p>
+                            </div>
+                        )}
 
                         <div className="flex gap-3">
                             <Button

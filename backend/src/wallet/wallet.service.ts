@@ -139,20 +139,20 @@ export class WalletService {
     const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
     if (!wallet) throw new BadRequestException('User wallet not found');
 
-    // 1. DUPLICATE PROTECTION: Check if a refund for this user & tournament already exists
-    const existingRefund = await this.prisma.transaction.findFirst({
-      where: {
-        walletId: wallet.id,
-        type: 'REFUND',
-        status: 'COMPLETED',
-        metadata: {
-          contains: `"tournamentId":"${tournamentId}"`,
+    // 1. DUPLICATE PROTECTION: Check if a refund for this specific order/reference already exists
+    if (tournamentId !== 'N/A') {
+      const existingRefund = await this.prisma.transaction.findFirst({
+        where: {
+          walletId: wallet.id,
+          type: 'REFUND',
+          status: 'COMPLETED',
+          reference: reference || 'NOT_FOUND', // Match by specific reference
         },
-      },
-    });
-
-    if (existingRefund) {
-      throw new BadRequestException('A refund for this tournament entry has already been processed.');
+      });
+  
+      if (existingRefund) {
+        throw new BadRequestException('A refund for this tournament reference has already been processed.');
+      }
     }
 
     return this.prisma.$transaction(async (tx) => {

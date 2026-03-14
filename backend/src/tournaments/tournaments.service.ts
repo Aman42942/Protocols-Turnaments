@@ -9,6 +9,7 @@ import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { WalletService } from '../wallet/wallet.service';
 import { PaymentsService } from '../payments/payments.service';
+import { PaypalService } from '../payments/paypal.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -21,6 +22,7 @@ export class TournamentsService {
     private walletService: WalletService,
     @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
+    private paypalService: PaypalService,
     private notificationsService: NotificationsService,
   ) { }
 
@@ -489,7 +491,7 @@ export class TournamentsService {
     });
   }
 
-  async refundParticipant(tournamentId: string, participantId: string, adminId: string, ip: string) {
+  async refundParticipant(tournamentId: string, participantId: string, adminId: string, ip: string, refundToWallet: boolean = false) {
     const tournament = await this.findOne(tournamentId);
     if (!tournament) throw new BadRequestException('Tournament not found');
 
@@ -505,45 +507,79 @@ export class TournamentsService {
     const amount = tournament.entryFeePerPerson || 0;
     if (amount <= 0) throw new BadRequestException('No entry fee to refund');
 
-    const isGatewayRefund = participant.paymentId && participant.paymentId.startsWith('ORD');
+    const paymentId = participant.paymentId;
+    const paymentMethod = paymentId?.startsWith('PAYPAL') ? 'PAYPAL' : 
+                         paymentId?.startsWith('ORD') ? 'CASHFREE' : 'WALLET';
 
     // 1. PERFORM REFUND
-    if (isGatewayRefund) {
-        // TRIGGER GATEWAY REFUND FIRST
-        try {
-            console.log(`[REFUND] Triggering Cashfree Gateway Refund for Order: ${participant.paymentId}`);
-            await this.paymentsService.createRefund(participant.paymentId, amount);
-            
-            // Log in wallet history BUT SKIP balance increment (since user gets cash in bank)
-            await this.walletService.refundTournamentEntry(
-                participant.userId,
-                amount,
-                tournamentId,
-                tournament.title,
-                participant.paymentId!, // Non-null because of isGatewayRefund check
-                false // allowBalanceUpdate = false
-            );
-        } catch (err: any) {
-            console.error('[REFUND ERROR] Gateway refund failed! Falling back to Wallet Refund:', err.message);
-            // FALLBACK: If gateway fails, we MUST refund to wallet so user isn't cheated
-            await this.walletService.refundTournamentEntry(
-                participant.userId,
-                amount,
-                tournamentId,
-                tournament.title,
-                participant.paymentId ?? undefined,
-                true // allowBalanceUpdate = true
-            );
-        }
-    } else {
-        // Standard Wallet Refund (No gateway involved)
+    if (refundToWallet) {
+        console.log(`[REFUND] Selective Refund: Crediting Wallet directly for user ${participant.userId}`);
         await this.walletService.refundTournamentEntry(
             participant.userId,
             amount,
             tournamentId,
             tournament.title,
-            participant.paymentId || undefined,
-            true // allowBalanceUpdate = true
+            paymentId || undefined,
+            true // Force wallet credit
+        );
+    } else if (paymentMethod === 'CASHFREE') {
+        try {
+            console.log(`[REFUND] Triggering Cashfree Gateway Refund for Order: ${paymentId}`);
+            await this.paymentsService.createRefund(paymentId!, amount);
+            
+            await this.walletService.refundTournamentEntry(
+                participant.userId,
+                amount,
+                tournamentId,
+                tournament.title,
+                paymentId!,
+                false // allowBalanceUpdate = false for gateway refunds
+            );
+        } catch (err: any) {
+            console.error('[REFUND ERROR] Cashfree refund failed! Falling back to Wallet Refund:', err.message);
+            await this.walletService.refundTournamentEntry(
+                participant.userId,
+                amount,
+                tournamentId,
+                tournament.title,
+                paymentId ?? undefined,
+                true // fallback to wallet credit
+            );
+        }
+    } else if (paymentMethod === 'PAYPAL') {
+        try {
+            console.log(`[REFUND] Triggering PayPal Gateway Refund for Capture: ${paymentId}`);
+            // PayPal paymentId is stored as captureId in our system during registration
+            await this.paypalService.refundCapture(paymentId!, amount, tournament.currency || 'INR');
+            
+            await this.walletService.refundTournamentEntry(
+                participant.userId,
+                amount,
+                tournamentId,
+                tournament.title,
+                paymentId!,
+                false
+            );
+        } catch (err: any) {
+            console.error('[REFUND ERROR] PayPal refund failed! Falling back to Wallet Refund:', err.message);
+            await this.walletService.refundTournamentEntry(
+                participant.userId,
+                amount,
+                tournamentId,
+                tournament.title,
+                paymentId ?? undefined,
+                true
+            );
+        }
+    } else {
+        // Standard Wallet Refund
+        await this.walletService.refundTournamentEntry(
+            participant.userId,
+            amount,
+            tournamentId,
+            tournament.title,
+            paymentId || undefined,
+            true
         );
     }
 

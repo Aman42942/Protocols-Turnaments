@@ -117,9 +117,12 @@ export class PaymentsController {
     @Body('userId') userId: string,
     @Body('tournamentId') tournamentId?: string,
     @Body('tournamentTitle') tournamentTitle?: string,
+    @Body('refund_to_wallet') refundToWallet?: boolean,
     @Request() req?,
   ) {
-    // 1. Auto-detect Tournament if not provided via Reference
+    this.logger.log(`[ADMIN REFUND] Request for User: ${userId} | Order: ${orderId} | Tournament: ${tournamentId} | ToWallet: ${refundToWallet}`);
+
+    // 1. Auto-detect Tournament if not provided (via Reference)
     if (!tournamentId && orderId) {
       const originalTx = await this.prisma.transaction.findFirst({
         where: { reference: orderId, type: 'DEPOSIT' },
@@ -133,41 +136,45 @@ export class PaymentsController {
       }
     }
 
-    // 2. UNIFIED FLOW: If it's a tournament refund, handle exit + wallet + gateway
+    // 2. UNIFIED FLOW: If linked to a tournament, use the tournament refund service
     if (tournamentId) {
       const participant = await this.prisma.tournamentParticipant.findFirst({
         where: { tournamentId, userId, paymentStatus: 'PAID' },
       });
 
       if (participant) {
-        console.log(`[ADMIN REFUND] Unified flow triggered for User: ${userId}, Tournament: ${tournamentId}`);
         const result = await this.tournamentsService.refundParticipant(
           tournamentId,
           participant.id,
           req?.user?.userId || 'ADMIN',
-          req?.ip || '0.0.0.0'
+          req?.ip || '0.0.0.0',
+          !!refundToWallet
         );
         return {
           success: true,
-          message: `Refunded ₹${result.amount} and exited user from ${result.tournamentTitle}.`,
+          message: `Successfully refunded ₹${result.amount} to ${refundToWallet ? 'Wallet' : 'Original Source'} and removed user from tournament.`,
           participant: result.updatedParticipant,
         };
       }
     }
 
-    // 3. FALLBACK: Direct Bank/Wallet Refund (if no tournament link found)
-    console.log(`[ADMIN REFUND] Direct flow triggered for Order: ${orderId}`);
-    
-    // If it's just a wallet adjustment refund (no gateway orderId)
-    if (!orderId || !orderId.startsWith('ORD')) {
+    // 3. FALLBACK: Direct Fiat/Wallet Refund (if no tournament active status found)
+    if (!orderId || (!orderId.startsWith('ORD') && !orderId.startsWith('PAYPAL'))) {
+        // Manual Wallet Balance adjustment refund
         await this.walletService.refundTournamentEntry(userId, amount, 'N/A', tournamentTitle || 'Manual Refund', orderId);
-        return { success: true, message: 'Wallet balance adjusted successfully.' };
+        return { success: true, message: 'Wallet balance adjusted successfully (Manual).' };
+    }
+
+    // Direct Gateway Refund
+    if (orderId.startsWith('PAYPAL')) {
+        await this.paypalService.refundCapture(orderId, amount);
+        return { success: true, message: 'PayPal gateway refund processed.' };
     }
 
     const refundResult = await this.paymentsService.createRefund(orderId, amount);
     return {
       success: true,
-      message: 'Fiat refund processed successfully via Gateway.',
+      message: 'Cashfree gateway refund processed.',
       cashfree: refundResult,
     };
   }

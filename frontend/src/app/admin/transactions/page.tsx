@@ -36,6 +36,8 @@ export default function AdminTransactionsPage() {
     const [adjustmentUser, setAdjustmentUser] = useState<{ id: string, name: string, email: string, balance?: number } | null>(null);
     const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
     const [currentUserRole, setCurrentUserRole] = useState<string>('');
+    const [confirmingRefundTx, setConfirmingRefundTx] = useState<Transaction | null>(null);
+    const [refundToWallet, setRefundToWallet] = useState(false);
 
     useEffect(() => {
         fetchTransactions();
@@ -76,12 +78,14 @@ export default function AdminTransactionsPage() {
 
         setProcessingId(tx.id);
         try {
-            await api.post('/payments/admin/refund', {
+            const res = await api.post('/payments/admin/refund', {
                 order_id: tx.reference,
                 amount: tx.amount,
-                userId: tx.user?.id
+                userId: tx.user?.id,
+                refund_to_wallet: refundToWallet
             });
-            toast.success('Refund initiated successfully');
+            toast.success(res.data.message || 'Refund processed successfully');
+            setConfirmingRefundTx(null);
             await fetchTransactions();
         } catch (err: any) {
             toast.error(err.response?.data?.message || 'Refund failed');
@@ -108,12 +112,14 @@ export default function AdminTransactionsPage() {
     };
 
     const isRefunded = (tx: Transaction) => {
-        // Simple heuristic: check if any COMPLETED REFUND transaction has the same reference
+        // Precise check: find a COMPLETED REFUND transaction that MATCHES this transaction's reference
         return transactions.some(t =>
             t.type === 'REFUND' &&
             t.status === 'COMPLETED' &&
             t.reference === tx.reference &&
-            t.id !== tx.id // Ensure we aren't looking at the refund itself
+            tx.reference !== undefined &&
+            tx.reference !== null &&
+            tx.reference !== ''
         );
     };
 
@@ -261,7 +267,10 @@ export default function AdminTransactionsPage() {
                                                         size="sm"
                                                         className="border-orange-500/50 text-orange-500 hover:bg-orange-500/10 font-bold"
                                                         disabled={!!processingId}
-                                                        onClick={() => handleRefund(tx)}
+                                                        onClick={() => {
+                                                            setConfirmingRefundTx(tx);
+                                                            setRefundToWallet(false);
+                                                        }}
                                                     >
                                                         {processingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1.5" />}
                                                         INITIATE REFUND
@@ -319,6 +328,73 @@ export default function AdminTransactionsPage() {
                     fetchTransactions();
                 }}
             />
+
+            {/* Selective Refund Modal */}
+            {confirmingRefundTx && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-card border border-primary/20 rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                                <RotateCcw className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black uppercase tracking-tighter">Initiate Refund</h3>
+                                <p className="text-muted-foreground text-sm mt-1">
+                                    Choose how you want to refund <strong>{confirmingRefundTx.amount} Coins</strong> to <strong>{confirmingRefundTx.user?.name}</strong>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 p-4 bg-muted/30 rounded-xl border border-border">
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                Destination
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setRefundToWallet(false)}
+                                    className={`px-3 py-3 text-xs font-bold rounded-lg border transition-all ${!refundToWallet ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20' : 'bg-transparent border-border hover:border-primary/50'}`}
+                                >
+                                    Original Source
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setRefundToWallet(true)}
+                                    className={`px-3 py-3 text-xs font-bold rounded-lg border transition-all ${refundToWallet ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20' : 'bg-transparent border-border hover:border-primary/50'}`}
+                                >
+                                    User Wallet
+                                </button>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground leading-tight italic">
+                                {refundToWallet 
+                                    ? "Funds will be added to the user's wallet balance immediately." 
+                                    : "Funds will be returned to the original payment method (Bank/PayPal)."}
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                variant="outline"
+                                className="flex-1 font-bold"
+                                onClick={() => setConfirmingRefundTx(null)}
+                            >
+                                CANCEL
+                            </Button>
+                            <Button
+                                className="flex-1 font-bold bg-primary hover:primary-hover"
+                                onClick={() => handleRefund(confirmingRefundTx)}
+                                disabled={!!processingId}
+                            >
+                                {processingId === confirmingRefundTx.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    'PROCESS REFUND'
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

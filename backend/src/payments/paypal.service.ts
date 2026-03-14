@@ -123,4 +123,38 @@ export class PaypalService {
             throw new BadRequestException('Failed to capture PayPal order.');
         }
     }
+
+    async refundCapture(captureId: string, amount: number, currencyCode: string = 'USD'): Promise<{ id: string }> {
+        if (!captureId || amount <= 0) {
+            throw new BadRequestException('Capture ID and valid amount are required for refund');
+        }
+
+        const accessToken = await this.getAccessToken();
+
+        const body = {
+            amount: {
+                value: Number(amount).toFixed(2),
+                currency_code: currencyCode,
+            },
+            note_to_payer: 'Tournament registration refund',
+        };
+
+        try {
+            this.logger.log(`[PAYPAL] Refunding Capture: ${captureId} | Amount: ${amount} ${currencyCode}`);
+            const response = await axios.post(
+                `${this.baseUrl}/v2/payments/captures/${captureId}/refund`,
+                body,
+                {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                },
+            );
+            return { id: response.data.id };
+        } catch (error: any) {
+            this.logger.error(`[PAYPAL ERROR] Refund Failed for Capture ${captureId}`, error?.response?.data || error.message);
+            throw new BadRequestException(error?.response?.data?.message || 'PayPal refund processing failed');
+        }
+    }
 }
