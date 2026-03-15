@@ -172,7 +172,11 @@ export default function TournamentDetailPage() {
             }
 
             const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';
-            console.log('[DEBUG] PayPal Client ID from Env:', clientId ? 'EXISTS (HIDDEN)' : 'MISSING');
+            console.log('[DEBUG] Platform Settings Loaded:', {
+                paypalClientId: clientId ? 'EXISTS' : 'MISSING',
+                paypalEnabled: paypalEnabledRes.status === 'fulfilled' ? paypalEnabledRes.value.data?.value : 'FAILED',
+                directUpiEnabled: directUpiEnabledRes.status === 'fulfilled' ? directUpiEnabledRes.value.data?.value : 'FAILED'
+            });
             setPaypalClientId(clientId);
         } catch (err) {
             console.error('[DEBUG] Failed to load platform settings:', err);
@@ -279,6 +283,20 @@ export default function TournamentDetailPage() {
             setRegistering(false);
         }
     };
+
+    const tournamentParticipants = tournament?.teams || [];
+    const uniqueTeamIdsCount = new Set(tournamentParticipants.map((p: any) => p.teamId).filter(Boolean)).size;
+    const isFull = tournament?.maxTeams ? (
+        tournament.gameMode === 'SOLO' 
+            ? tournamentParticipants.length >= tournament.maxTeams 
+            : !selectedTeamId 
+                ? uniqueTeamIdsCount >= tournament.maxTeams 
+                : (!new Set(tournamentParticipants.map(p => p.teamId)).has(selectedTeamId) && uniqueTeamIdsCount >= tournament.maxTeams)
+    ) : false;
+
+    const isRegistrationClosed = tournament ? (
+        tournament.status !== 'UPCOMING' || new Date() >= new Date(tournament.startDate)
+    ) : false;
 
     const handlePaypalRegister = async (orderId: string) => {
         if (!tournament) return;
@@ -422,9 +440,8 @@ export default function TournamentDetailPage() {
         </div>
     );
 
-    const spotsLeft = tournament.maxTeams - (tournament._count?.teams || 0);
-    const isFull = spotsLeft <= 0;
-    const fillPercent = Math.min(((tournament._count?.teams || 0) / tournament.maxTeams) * 100, 100);
+    const spotsLeft = tournament.maxTeams - uniqueTeamIdsCount;
+    const fillPercent = Math.min((uniqueTeamIdsCount / tournament.maxTeams) * 100, 100);
     const isValornat = tournament.game.toUpperCase() === 'VALORANT';
     const gameColor = GAME_COLORS[tournament.game] || GAME_COLORS['Valorant'];
     const gameRules = GAME_RULES[tournament.game] || GAME_RULES['Valorant'];
@@ -908,10 +925,12 @@ export default function TournamentDetailPage() {
                                         size="lg"
                                         className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/20"
                                         onClick={handleRegister}
-                                        disabled={registering || isFull}
+                                        disabled={registering || isFull || isRegistrationClosed}
                                     >
                                         {registering ? (
                                             <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Registering...</>
+                                        ) : isRegistrationClosed ? (
+                                            '🔒 Registration Closed'
                                         ) : isFull ? (
                                             '🔒 Tournament Full'
                                         ) : (
@@ -1083,9 +1102,11 @@ export default function TournamentDetailPage() {
                                 size="lg"
                                 className="grow h-14 rounded-2xl font-black tracking-widest uppercase shadow-lg shadow-primary/40 active:scale-95 transition-transform"
                                 onClick={handleRegister}
-                                disabled={registering || isFull}
+                                disabled={registering || isFull || isRegistrationClosed}
                             >
-                                {registering ? <Loader2 className="animate-spin" /> : isFull ? 'FULL' : 'REGISTER NOW'}
+                                {registering ? <Loader2 className="animate-spin" /> : 
+                                 isRegistrationClosed ? 'CLOSED' :
+                                 isFull ? 'FULL' : 'REGISTER NOW'}
                             </Button>
                         </div>
                     </motion.div>

@@ -228,12 +228,35 @@ export class TournamentsService {
       }
     }
 
-    // 2. Capacity Check
-    if (tournament.maxTeams && tournament._count.teams >= tournament.maxTeams) {
-      // In professional mode, maxTeams might mean total slots.
-      // If SOLO, it's total players. If Team-based, it could be total teams.
-      // For now, keep the original behavior for SOLO.
-      if (tournament.gameMode === 'SOLO') throw new BadRequestException('Tournament is full');
+    // 2. Time & Status Check
+    if (tournament.status !== 'UPCOMING') {
+      throw new BadRequestException('Registration is not open for this tournament');
+    }
+
+    if (new Date() >= tournament.startDate) {
+      throw new BadRequestException('Registration has closed for this tournament');
+    }
+
+    // 3. Capacity Check
+    if (tournament.maxTeams) {
+      if (tournament.gameMode === 'SOLO') {
+        if (tournament._count.teams >= tournament.maxTeams) {
+          throw new BadRequestException('Tournament is full');
+        }
+      } else {
+        // Count unique squads (excluding cancelled/rejected)
+        const participants = await this.prisma.tournamentParticipant.findMany({
+          where: { tournamentId, status: { notIn: ['CANCELLED', 'REJECTED'] } },
+          select: { teamId: true },
+        });
+        
+        const uniqueTeamIds = new Set(participants.map(p => p.teamId).filter(Boolean));
+        
+        // If the user's team is not already in the tournament and we hit maxTeams, block.
+        if (!uniqueTeamIds.has(teamId) && uniqueTeamIds.size >= tournament.maxTeams) {
+          throw new BadRequestException('Tournament is full (All team slots occupied)');
+        }
+      }
     }
 
     // 3. Existing Registration Check
@@ -306,14 +329,30 @@ export class TournamentsService {
       teamId = undefined;
     }
 
-    // 2. Check Capacity (Max Teams/Individuals)
-    // Here we interpret maxTeams as the total number of individuals allowed if not using a more complex team-slotting logic
-    if (
-      tournament.maxTeams &&
-      tournament._count.teams >= tournament.maxTeams &&
-      tournament.gameMode === 'SOLO'
-    ) {
-      throw new BadRequestException('Tournament is full');
+    // 2. Check Capacity & Time
+    if (tournament.status !== 'UPCOMING') {
+      throw new BadRequestException('Registration is not open for this tournament');
+    }
+
+    if (new Date() >= tournament.startDate) {
+      throw new BadRequestException('Registration has closed for this tournament');
+    }
+
+    if (tournament.maxTeams) {
+      if (tournament.gameMode === 'SOLO') {
+        if (tournament._count.teams >= tournament.maxTeams) {
+          throw new BadRequestException('Tournament is full');
+        }
+      } else {
+        const participants = await this.prisma.tournamentParticipant.findMany({
+          where: { tournamentId, status: { notIn: ['CANCELLED', 'REJECTED'] } },
+          select: { teamId: true },
+        });
+        const uniqueTeamIds = new Set(participants.map(p => p.teamId).filter(Boolean));
+        if (!uniqueTeamIds.has(teamId) && uniqueTeamIds.size >= tournament.maxTeams) {
+          throw new BadRequestException('Tournament is full');
+        }
+      }
     }
 
     // 3. Check Existing Registration

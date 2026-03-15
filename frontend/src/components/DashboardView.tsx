@@ -293,18 +293,18 @@ export function DashboardView() {
                                                         <div className="bg-primary/10 p-3 rounded-xl border border-primary/20 group-hover:scale-110 transition-transform">
                                                             <Trophy className="h-6 w-6 text-primary" />
                                                         </div>
-                                                        <div>
-                                                            <h3 className="font-bold font-orbitron text-lg group-hover:text-primary transition-colors">{t.title}</h3>
+                                                        <div className="flex-1 min-w-0">
+                                                            <h3 className="font-bold font-orbitron text-lg group-hover:text-primary transition-colors truncate">{t.title}</h3>
                                                             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                                                                <span className="flex items-center gap-1"><Timer className="h-3 w-3" /> {formatDate(t.startDate)}</span>
-                                                                <span className="text-muted-foreground/30">|</span>
-                                                                <span className="uppercase tracking-widest text-primary/70">{t.game}</span>
+                                                                <span className="flex items-center gap-1 shrink-0"><Timer className="h-3 w-3" /> {formatDate(t.startDate)}</span>
+                                                                <span className="text-muted-foreground/30 shrink-0">|</span>
+                                                                <span className="uppercase tracking-widest text-primary/70 truncate">{t.game}</span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex flex-col items-end gap-2">
-                                                        <Badge className="bg-primary hover:bg-primary text-white font-orbitron px-3 py-1">{t.prizePool} Coins</Badge>
-                                                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Entry: {t.entryFeePerPerson} Coins</span>
+                                                    <div className="flex flex-col items-end gap-2 shrink-0 ml-4">
+                                                        <Badge className="bg-primary hover:bg-primary text-white font-orbitron px-3 py-1 whitespace-nowrap">{t.prizePool} Coins</Badge>
+                                                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest whitespace-nowrap">Entry: {t.entryFeePerPerson} Coins</span>
                                                     </div>
                                                 </motion.div>
                                             </Link>
