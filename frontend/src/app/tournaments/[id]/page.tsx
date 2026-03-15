@@ -1108,14 +1108,14 @@ export default function TournamentDetailPage() {
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="space-y-4">
-                            {/* Wallet Option - Premium Glassmorphism */}
+                        <div className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                            {/* Wallet Option - Compact Premium Glassmorphism */}
                             <div className="group relative">
                                 <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/50 to-orange-500/50 rounded-3xl blur opacity-0 group-hover:opacity-30 transition duration-500" />
                                 <button
                                     onClick={handleWalletRegister}
                                     className={cn(
-                                        "relative w-full flex items-center justify-between p-6 rounded-3xl border transition-all duration-300",
+                                        "relative w-full flex items-center justify-between p-4 px-5 rounded-3xl border transition-all duration-300",
                                         "bg-card/50 backdrop-blur-sm border-border/50 hover:bg-card/80",
                                         walletBalance >= tournament.entryFeePerPerson
                                             ? "hover:border-primary/50"
@@ -1124,12 +1124,12 @@ export default function TournamentDetailPage() {
                                 >
                                     <div className="flex items-center gap-5">
                                         <div className={cn(
-                                            "w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-lg",
+                                            "w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-lg",
                                             walletBalance >= tournament.entryFeePerPerson
                                                 ? "bg-primary/20 text-primary shadow-primary/20"
                                                 : "bg-red-500/10 text-red-400 shadow-red-500/10"
                                         )}>
-                                            <Wallet className="w-7 h-7" />
+                                            <Wallet className="w-6 h-6" />
                                         </div>
                                         <div className="text-left">
                                             <p className={cn(
@@ -1176,7 +1176,7 @@ export default function TournamentDetailPage() {
                                     onChange={(e) => setBillingPhone(e.target.value)}
                                     className="w-full bg-muted/20 border border-border/40 focus:border-primary/50 rounded-2xl py-4 pl-12 pr-6 text-sm outline-none transition-all placeholder:text-muted-foreground/50 font-medium text-foreground"
                                 />
-                                <div className="absolute top-1.5 right-6 text-[8px] font-black uppercase tracking-widest text-primary/60">Required for Bank</div>
+                                <div className="absolute top-1 right-6 text-[8px] font-black uppercase tracking-widest text-primary/60">Required for Bank</div>
                             </div>
 
                             {/* Direct Payment Methods Grid */}
@@ -1195,7 +1195,7 @@ export default function TournamentDetailPage() {
                                         handleCashfreeRegister();
                                     }}
                                     disabled={registering}
-                                    className="group relative bg-card border border-border/50 hover:border-blue-500/50 rounded-3xl p-5 transition-all text-left flex flex-col justify-between h-40 overflow-hidden"
+                                    className="group relative bg-card border border-border/50 hover:border-blue-500/50 rounded-3xl p-4 transition-all text-left flex flex-col justify-between min-h-[140px] overflow-hidden"
                                 >
                                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-600/5 blur-3xl group-hover:bg-blue-600/10 transition-all" />
                                     <div className="flex justify-between items-start">
@@ -1236,7 +1236,7 @@ export default function TournamentDetailPage() {
                                             setShowPaymentModal(false);
                                             setShowUpiFallback(true);
                                         }}
-                                        className="group relative bg-orange-500/5 border border-orange-500/20 hover:border-orange-500/50 rounded-3xl p-5 transition-all text-left flex flex-col justify-between h-40 overflow-hidden"
+                                        className="group relative bg-orange-500/5 border border-orange-500/20 hover:border-orange-500/50 rounded-3xl p-4 transition-all text-left flex flex-col justify-between min-h-[140px] overflow-hidden"
                                     >
                                         <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-600/5 blur-3xl group-hover:bg-orange-600/10 transition-all" />
                                         <div className="flex justify-between items-start">
@@ -1265,7 +1265,7 @@ export default function TournamentDetailPage() {
                                         {/* PayPal USD - International */}
                                         <div 
                                             onClick={() => toast('Please click the yellow PayPal button to continue', { icon: '👆', id: 'paypal-hint-usd' })}
-                                            className="group relative bg-card cursor-pointer border border-border/50 hover:border-yellow-500/50 hover:bg-yellow-500/[0.02] active:scale-[0.98] rounded-3xl p-5 transition-all flex flex-col justify-between h-44 overflow-hidden"
+                                            className="group relative bg-card cursor-pointer border border-border/50 hover:border-yellow-500/50 hover:bg-yellow-500/[0.02] active:scale-[0.98] rounded-3xl p-4 transition-all flex flex-col justify-between min-h-[140px] overflow-hidden"
                                         >
                                             <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-600/5 blur-3xl group-hover:bg-yellow-600/10 transition-all pointer-events-none" />
                                             <div className="flex justify-between items-start pointer-events-none">
@@ -1304,7 +1304,7 @@ export default function TournamentDetailPage() {
                                         {/* PayPal GBP - UK */}
                                         <div 
                                             onClick={() => toast('Please click the blue PayPal button to continue', { icon: '👆', id: 'paypal-hint-gbp' })}
-                                            className="md:col-span-2 group relative bg-card cursor-pointer border border-border/50 hover:border-blue-500/50 hover:bg-blue-500/[0.02] active:scale-[0.99] rounded-3xl p-5 px-6 transition-all flex items-center justify-between overflow-hidden"
+                                            className="md:col-span-2 group relative bg-card cursor-pointer border border-border/50 hover:border-blue-500/50 hover:bg-blue-500/[0.02] active:scale-[0.99] rounded-3xl p-4 px-6 transition-all flex items-center justify-between overflow-hidden"
                                         >
                                             <div className="absolute -top-20 -right-20 w-48 h-48 bg-blue-600/5 blur-[80px] group-hover:bg-blue-600/10 transition-all pointer-events-none" />
                                             <div className="flex items-center gap-5 pointer-events-none">
@@ -1340,6 +1340,7 @@ export default function TournamentDetailPage() {
                                         </div>
                                     </PayPalScriptProvider>
                                 ) : null}
+                            </div>
                         <div className="mt-8 flex items-center justify-center gap-2 opacity-30 grayscale group-hover:grayscale-0 transition-all duration-700">
                             <Shield className="w-4 h-4" />
                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Secure Tier-1 Encrypted Checkout</span>
