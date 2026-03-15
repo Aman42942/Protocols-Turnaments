@@ -1344,7 +1344,6 @@ export default function TournamentDetailPage() {
                         <div className="mt-8 flex items-center justify-center gap-2 opacity-30 grayscale group-hover:grayscale-0 transition-all duration-700">
                             <Shield className="w-4 h-4" />
                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Secure Tier-1 Encrypted Checkout</span>
-                        </div>
                     </div>
                 </div>
             </DialogContent>
