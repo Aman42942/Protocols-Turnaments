@@ -1279,12 +1279,12 @@ export default function TournamentDetailPage() {
                                                     <p className="font-black text-xs uppercase tracking-widest text-foreground/90">PayPal USD</p>
                                                     <span className="text-xs font-black text-yellow-500">${(tournament.entryFeePerPerson / exchangeRate).toFixed(2)}</span>
                                                 </div>
-                                                <div className="scale-100 origin-left h-[45px] overflow-hidden rounded-2xl bg-black/20 p-1 border border-white/5">
+                                                <div className="scale-100 origin-left h-[45px] overflow-hidden rounded-2xl border border-white/5">
                                                     <PayPalButtons
                                                         style={{
                                                             layout: "horizontal",
-                                                            height: 38,
-                                                            shape: "pill",
+                                                            height: 43,
+                                                            shape: "rect",
                                                             label: "paypal",
                                                             tagline: false
                                                         }}
@@ -1318,12 +1318,12 @@ export default function TournamentDetailPage() {
                                                     <p className="text-[10px] text-muted-foreground font-bold mt-0.5">Pay exactly £{(tournament.entryFeePerPerson / gbpExchangeRate).toFixed(2)} GBP</p>
                                                 </div>
                                             </div>
-                                            <div className="w-48 scale-100 origin-right h-[45px] overflow-hidden rounded-2xl bg-black/20 p-1 border border-white/5">
+                                            <div className="w-48 scale-100 origin-right h-[45px] overflow-hidden rounded-2xl border border-white/5">
                                                 <PayPalButtons
                                                     style={{
                                                         layout: "horizontal",
-                                                        height: 38,
-                                                        shape: "pill",
+                                                        height: 43,
+                                                        shape: "rect",
                                                         color: "blue",
                                                         tagline: false
                                                     }}

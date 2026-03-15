@@ -43,7 +43,18 @@ export class CmsController {
 
     @Put('theme')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async updateTheme(@Body() body: any, @Request() req) {
         const updatedTheme = await this.cmsService.updateGlobalTheme(body);
         await this.activityLogService.log(
@@ -58,7 +69,18 @@ export class CmsController {
 
     @Post('theme/reset')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async resetTheme(@Request() req) {
         const theme = await this.cmsService.resetToDefaultTheme();
         await this.activityLogService.log(
@@ -77,14 +99,36 @@ export class CmsController {
 
     @Get('presets')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async getPresets() {
         return this.cmsService.getAllPresets();
     }
 
     @Post('presets')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async createPreset(@Body() body: { name: string; theme: any }, @Request() req) {
         const preset = await this.cmsService.createPreset(body.name, body.theme);
         await this.activityLogService.log(
@@ -99,7 +143,18 @@ export class CmsController {
 
     @Post('presets/:id/apply')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async applyPreset(@Param('id') id: string, @Request() req) {
         const theme = await this.cmsService.applyPreset(id);
         await this.activityLogService.log(
@@ -114,7 +169,18 @@ export class CmsController {
 
     @Delete('presets/:id')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async deletePreset(@Param('id') id: string, @Request() req) {
         await this.cmsService.deletePreset(id);
         await this.activityLogService.log(
@@ -129,7 +195,18 @@ export class CmsController {
 
     @Put('content')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async updateContent(@Body() body: { items: { key: string; value: string; type?: string }[] }, @Request() req) {
         const result = await this.cmsService.setMultipleContent(body.items);
         await this.activityLogService.log(
@@ -144,7 +221,18 @@ export class CmsController {
 
     @Put('layout')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async updateLayout(
         @Body() body: { componentId: string; isVisible: boolean; displayOrder: number },
         @Request() req,
@@ -166,7 +254,18 @@ export class CmsController {
 
     @Post('features')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async createFeature(@Body() body: any, @Request() req) {
         const feature = await this.cmsService.createFeature(body);
         await this.activityLogService.log(
@@ -181,7 +280,18 @@ export class CmsController {
 
     @Put('features/:id')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async updateFeature(@Param('id') id: string, @Body() body: any, @Request() req) {
         const feature = await this.cmsService.updateFeature(id, body);
         await this.activityLogService.log(
@@ -196,7 +306,18 @@ export class CmsController {
 
     @Delete('features/:id')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async deleteFeature(@Param('id') id: string, @Request() req) {
         await this.cmsService.deleteFeature(id);
         await this.activityLogService.log(
@@ -215,14 +336,36 @@ export class CmsController {
 
     @Get('slides')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async getAllSlides() {
         return this.cmsService.getAllAdSlides(false);
     }
 
     @Post('slides')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async createSlide(@Body() body: any, @Request() req) {
         const slide = await this.cmsService.createAdSlide(body);
         await this.activityLogService.log(
@@ -237,7 +380,18 @@ export class CmsController {
 
     @Put('slides/:id')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async updateSlide(@Param('id') id: string, @Body() body: any, @Request() req) {
         const slide = await this.cmsService.updateAdSlide(id, body);
         await this.activityLogService.log(
@@ -252,7 +406,18 @@ export class CmsController {
 
     @Delete('slides/:id')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('SUPERADMIN')
+    @Roles(
+        'ULTIMATE_ADMIN',
+        'SUPERADMIN',
+        'ADMIN',
+        'SENIOR_ADMIN',
+        'JUNIOR_ADMIN',
+        'EMPLOYEE',
+        'SENIOR_CHIEF_SECURITY_ADMIN',
+        'CHIEF_DEVELOPMENT_ADMIN',
+        'CHIEF_SECURITY_ADMIN',
+        'VICE_CHIEF_SECURITY_ADMIN',
+    )
     async deleteSlide(@Param('id') id: string, @Request() req) {
         await this.cmsService.deleteAdSlide(id);
         await this.activityLogService.log(
