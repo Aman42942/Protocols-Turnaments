@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { MediaUpload } from '@/components/admin/MediaUpload';
 
 // ===== GAME CONFIGURATIONS =====
 const GAME_CONFIGS = {
@@ -709,38 +710,26 @@ export default function CreateTournamentPage() {
                                         </div>
                                         <h4 className="font-bold text-sm">Tournament Banner</h4>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="md:col-span-2">
-                                            <Label>Banner Image URL</Label>
+                                    <div className="space-y-4">
+                                        <MediaUpload 
+                                            label="Upload Banner Image"
+                                            type="image"
+                                            currentUrl={formData.banner}
+                                            onUploadSuccess={(url) => setFormData(prev => ({ ...prev, banner: url }))}
+                                        />
+                                        <div>
+                                            <Label className="text-[10px] text-muted-foreground mb-1 block">Or provide Direct Image URL</Label>
                                             <Input
                                                 name="banner"
                                                 value={formData.banner}
                                                 onChange={handleChange}
                                                 placeholder="https://images.unsplash.com/photo-..."
-                                                className="mt-1"
+                                                className="text-xs"
                                             />
-                                            <p className="text-[10px] text-muted-foreground mt-2">
-                                                Provide a direct link to a high-quality (1920x1080) JPG/PNG image.
-                                                This will be displayed as the main header on the tournament page.
-                                            </p>
                                         </div>
-                                        <div className="rounded-xl border bg-muted/30 overflow-hidden flex items-center justify-center relative aspect-video">
-                                            {formData.banner ? (
-                                                <img
-                                                    src={formData.banner}
-                                                    alt="Banner Preview"
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Invalid+Image+URL';
-                                                    }}
-                                                />
-                                            ) : (
-                                                <div className="text-center p-4">
-                                                    <Gamepad2 className="h-6 w-6 text-muted-foreground mx-auto mb-1 opacity-20" />
-                                                    <p className="text-[10px] text-muted-foreground">Preview</p>
-                                                </div>
-                                            )}
-                                        </div>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Recommended: 1920x1080px (16:9). JPG, PNG or WEBP up to 20MB.
+                                        </p>
                                     </div>
                                 </div>
 

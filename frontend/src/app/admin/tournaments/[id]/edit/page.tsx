@@ -15,6 +15,7 @@ import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/api';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { toast } from 'react-hot-toast';
+import { MediaUpload } from '@/components/admin/MediaUpload';
 
 export default function EditTournamentPage() {
     const router = useRouter();
@@ -179,16 +180,20 @@ export default function EditTournamentPage() {
                                 <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Visuals</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div>
-                                    <Label className="text-xs">Banner URL</Label>
-                                    <Input name="banner" value={formData.banner} onChange={handleChange} className="text-xs mt-1" />
-                                </div>
-                                <div className="aspect-video rounded-lg border bg-muted/30 overflow-hidden relative">
-                                    {formData.banner ? (
-                                        <img src={formData.banner} alt="Preview" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <Trophy className="h-8 w-8 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20" />
-                                    )}
+                                <MediaUpload 
+                                    label="Upload Banner"
+                                    type="image"
+                                    currentUrl={formData.banner}
+                                    onUploadSuccess={(url) => setFormData(prev => ({ ...prev, banner: url }))}
+                                />
+                                <div className="pt-2">
+                                    <Label className="text-[10px] text-muted-foreground">Or provide Direct URL</Label>
+                                    <Input 
+                                        name="banner" 
+                                        value={formData.banner} 
+                                        onChange={handleChange} 
+                                        className="text-xs mt-1" 
+                                    />
                                 </div>
                             </CardContent>
                         </Card>

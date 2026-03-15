@@ -32,7 +32,18 @@ export class MediaController {
 
   @Post('upload')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN')
+  @Roles(
+    'ULTIMATE_ADMIN',
+    'SUPERADMIN',
+    'ADMIN',
+    'SENIOR_ADMIN',
+    'JUNIOR_ADMIN',
+    'EMPLOYEE',
+    'SENIOR_CHIEF_SECURITY_ADMIN',
+    'CHIEF_DEVELOPMENT_ADMIN',
+    'CHIEF_SECURITY_ADMIN',
+    'VICE_CHIEF_SECURITY_ADMIN',
+  )
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
