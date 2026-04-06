@@ -57,7 +57,6 @@ async function bootstrap() {
     }),
   );
 
-  console.log('Current NODE_ENV:', process.env.NODE_ENV);
 
   // 2. Dynamic CORS — supports Vercel, Render, and local dev
   const allowedOrigins: string[] = [

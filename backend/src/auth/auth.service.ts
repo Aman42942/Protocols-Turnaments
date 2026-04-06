@@ -323,7 +323,9 @@ export class AuthService {
       data: { otpCode, otpExpiry },
     });
 
-    console.log(`[DEV ONLY] Login OTP for ${email}: ${otpCode}`); // Log OTP for dev convenience
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV ONLY] Login OTP for ${email}: ${otpCode}`);
+    }
     await this.emailService.sendLoginOTP(email, user.name || '', otpCode);
 
     return {
@@ -789,7 +791,9 @@ export class AuthService {
       },
     });
 
-    console.log(`[DEV ONLY] Reset Token for ${email}: ${resetToken}`); // Log for dev
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV ONLY] Reset Token for ${email}: ${resetToken}`);
+    }
     await this.emailService.sendPasswordResetEmail(
       email,
       user.name || '',

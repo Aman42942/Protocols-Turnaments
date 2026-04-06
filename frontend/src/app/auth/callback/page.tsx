@@ -20,7 +20,8 @@ function CallbackContent() {
         if (token) {
             localStorage.setItem('token', token);
             // Set cookie for Next.js Middleware (critical for admin protection)
-            document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
+            const isProduction = window.location.protocol === 'https:';
+            document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax${isProduction ? '; Secure' : ''}`;
 
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]));
