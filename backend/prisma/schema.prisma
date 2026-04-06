@@ -1,0 +1,579 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String                  @id @default(auto()) @map("_id") @db.ObjectId
+  email              String                  @unique
+  password           String?
+  name               String?
+  role               String                  @default("USER")
+  avatar             String?
+  banned             Boolean                 @default(false)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  provider           String?
+  providerId         String?
+  emailVerified      Boolean                 @default(false)
+  emailVerifyCode    String?
+  emailVerifyExpiry  DateTime?
+  resetToken         String?
+  resetTokenExpiry   DateTime?
+  otpCode            String?
+  otpExpiry          DateTime?
+  twoFactorEnabled   Boolean                 @default(false)
+  twoFactorSecret    String?
+  lastLoginAt        DateTime?
+  lastLoginIp        String?
+  loginAttempts      Int                     @default(0)
+  lockedUntil        DateTime?
+  riotId             String?
+  pubgId             String?
+  bgmiId             String?
+  freeFireId         String?
+  badges             String?
+  country            String?
+  bio                String?
+  socials            String?
+  hashedRefreshToken String?
+  dob                DateTime?
+  gender             String?
+  phone              String?
+  address            String?
+  city               String?
+  state              String?
+  pincode            String?
+  profileCompletion  Int                     @default(0)
+  profileVisibility  String                  @default("PUBLIC")
+  canChangeVisibility Boolean                @default(false)
+  showGameIds        Boolean                 @default(true)
+  sessions           UserSession[]
+  activityLogs       ActivityLog[]
+  notifications      Notification[]
+  teams              TeamMember[]
+  tournaments        TournamentParticipant[]
+  wallet             Wallet?
+  invitations        TeamInvitation[]
+  securityLogs       SecurityLog[]
+}
+
+model Tournament {
+  id                String                  @id @default(auto()) @map("_id") @db.ObjectId
+  title             String
+  description       String?
+  game              String
+  status            String                  @default("UPCOMING")
+  tier              String                  @default("LOW")
+  entryFeePerPerson Float                   @default(0)
+  prizePool         Float                   @default(0)
+  currency          String                  @default("INR")
+  startDate         DateTime
+  endDate           DateTime?
+  maxTeams          Int
+  minTeams          Int?
+  gameMode          String                  @default("SQUAD")
+  format            String                  @default("SINGLE_ELIM")
+  scoringEngine     String?
+  mapPool           String?
+  gameSettings      String?
+  rules             String?
+  prizeDistribution String?
+  roomId            String?
+  roomPassword      String?
+  slotList          String?
+  shareCode         String?                 @unique
+  whatsappGroupLink String?
+  discordChannelId  String?
+  streamUrl         String?
+  shareMessage      String?
+  region            String?
+  banner            String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  collectedFees     Float                   @default(0)
+  organizerId       String?                 @db.ObjectId
+  matches           Match[]
+  organizer         Organizer?              @relation(fields: [organizerId], references: [id])
+  leaderboard       TournamentLeaderboard[]
+  teams             TournamentParticipant[]
+  
+  @@index([status])
+  @@index([game])
+  @@index([startDate])
+}
+
+model Team {
+  id                  String                  @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  logo                String?
+  leaderId            String                  @db.ObjectId
+  inviteCode          String                  @unique
+  gameType            String                  @default("PUBG_SQUAD")
+  maxMembers          Int                     @default(4)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  matchParticipations MatchParticipation[]
+  members             TeamMember[]
+  leaderboardEntries  TournamentLeaderboard[]
+  tournaments         TournamentParticipant[]
+  invitations         TeamInvitation[]
+}
+
+model TeamMember {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  teamId   String   @db.ObjectId
+  userId   String   @db.ObjectId
+  role     String   @default("MEMBER")
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model TeamInvitation {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  teamId     String   @db.ObjectId
+  userId     String   @db.ObjectId
+  inviterId  String   @db.ObjectId
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model TournamentParticipant {
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  tournamentId  String     @db.ObjectId
+  teamId        String?    @db.ObjectId
+  userId        String     @db.ObjectId
+  status        String     @default("PENDING")
+  paymentStatus String     @default("UNPAID")
+  paymentId     String?
+  registeredAt  DateTime   @default(now())
+  team          Team?      @relation(fields: [teamId], references: [id])
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+  user          User       @relation(fields: [userId], references: [id])
+}
+
+model Match {
+  id             String               @id @default(auto()) @map("_id") @db.ObjectId
+  tournamentId   String               @db.ObjectId
+  round          Int
+  teamAId        String?              @db.ObjectId
+  teamBId        String?              @db.ObjectId
+  scoreA         Int?
+  scoreB         Int?
+  winnerId       String?              @db.ObjectId
+  status         String               @default("SCHEDULED")
+  startTime      DateTime
+  tournament     Tournament           @relation(fields: [tournamentId], references: [id])
+  participations MatchParticipation[]
+}
+
+model MatchParticipation {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  matchId   String @db.ObjectId
+  teamId    String @db.ObjectId
+  placement Int?
+  kills     Int    @default(0)
+  score     Float  @default(0)
+  match     Match  @relation(fields: [matchId], references: [id])
+  team      Team   @relation(fields: [teamId], references: [id])
+
+  @@unique([matchId, teamId])
+}
+
+model TournamentLeaderboard {
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  tournamentId  String     @db.ObjectId
+  teamId        String     @db.ObjectId
+  totalPoints   Float      @default(0)
+  totalKills    Int        @default(0)
+  matchesPlayed Int        @default(0)
+  rank          Int        @default(0)
+  updatedAt     DateTime   @updatedAt
+  team          Team       @relation(fields: [teamId], references: [id])
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+
+  @@unique([tournamentId, teamId])
+}
+
+model Wallet {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String        @unique @db.ObjectId
+  balance       Float         @default(0)
+  currency      String        @default("COIN")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  frozenBalance Float         @default(0)
+  transactions  Transaction[]
+  user          User          @relation(fields: [userId], references: [id])
+}
+
+model Transaction {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  walletId       String   @db.ObjectId
+  type           String
+  amount         Float
+  currency       String   @default( "INR") 
+  conversionRate Float    @default(1.0)
+  status         String   @default("PENDING")
+  method         String?
+  reference      String?
+  description    String?
+  createdAt      DateTime @default(now())
+  metadata       String?
+  wallet         Wallet   @relation(fields: [walletId], references: [id])
+  
+  @@index([walletId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  title     String
+  message   String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model ActivityLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  adminId   String   @db.ObjectId
+  action    String
+  targetId  String?
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  admin     User     @relation(fields: [adminId], references: [id])
+}
+
+model ThemeSettings {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  isActive        Boolean  @default(true)
+  siteName        String   @default("Pro Tournaments")
+  logoUrl         String?
+  faviconUrl      String?
+  primaryColor    String   @default("#ff4f4f")
+  secondaryColor  String   @default("#1f1f1f")
+  accentColor     String   @default("#3b82f6")
+  backgroundColor String   @default("#000000")
+  heroTitle       String   @default("Dominate the Arena")
+  heroSubtitle    String   @default("Join the ultimate esports tournaments and win big prizes.")
+  heroImageUrl    String?
+  smokeVisibility Float    @default(0.5)
+  updatedAt       DateTime @updatedAt
+}
+
+model ContentPage {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug        String   @unique
+  title       String
+  content     String
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Announcement {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  message   String
+  type      String   @default("INFO")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemConfig {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model DailyStat {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  date          DateTime @unique
+  newUsers      Int      @default(0)
+  activeUsers   Int      @default(0)
+  revenue       Float    @default(0)
+  matchesPlayed Int      @default(0)
+  createdAt     DateTime @default(now())
+}
+
+model EscrowPool {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  tournamentId   String    @unique @db.ObjectId
+  totalCollected Float     @default(0)
+  platformFeeRaw Float     @default(0)
+  netPrizePool   Float     @default(0)
+  status         String    @default("OPEN")
+  distributedAt  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model ResultLock {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  matchId        String    @unique @db.ObjectId
+  lockedBy       String    @db.ObjectId
+  lockedAt       DateTime  @default(now())
+  isOverridden   Boolean   @default(false)
+  overrideBy     String?   @db.ObjectId
+  overrideAt     DateTime?
+  overrideReason String?
+}
+
+model Organizer {
+  id           String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String          @unique @db.ObjectId
+  name         String
+  slug         String          @unique
+  logoUrl      String?
+  description  String?
+  website      String?
+  contactEmail String?
+  plan         String          @default("FREE")
+  isVerified   Boolean         @default(false)
+  isActive     Boolean         @default(true)
+  panNumber    String?
+  gstNumber    String?
+  tnc          String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  theme        OrganizerTheme?
+  tournaments  Tournament[]
+}
+
+model OrganizerTheme {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  organizerId  String    @unique @db.ObjectId
+  primaryColor String    @default("#6366f1")
+  accentColor  String    @default("#8b5cf6")
+  bgColor      String    @default("#0a0a0f")
+  textColor    String    @default("#ffffff")
+  logoUrl      String?
+  faviconUrl   String?
+  bannerUrl    String?
+  fontFamily   String    @default("Inter")
+  heroTitle    String?
+  heroSubtitle String?
+  footerText   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  organizer    Organizer @relation(fields: [organizerId], references: [id])
+}
+
+model ComplianceAuditLog {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  organizerId  String
+  tournamentId String?  @db.ObjectId
+  event        String
+  details      String
+  ipAddress    String?
+  performedBy  String   @db.ObjectId
+  createdAt    DateTime @default(now())
+
+  @@index([organizerId])
+  @@index([tournamentId])
+}
+
+model GlobalTheme {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  mode            String   @default("DARK")
+  primaryColor    String   @default("#3b82f6") // Default to Blue
+  secondaryColor  String   @default("#1F1F1F")
+  backgroundColor String   @default("#020617") // Default to Slate-950
+  textColor       String   @default("#FFFFFF")
+  fontFamily      String   @default("Inter")
+  borderRounding  String   @default("0.5rem")
+  animationSpeed  String   @default("normal")
+  buttonStyle     String   @default("solid")
+  glassmorphism   Boolean  @default(false)
+  backgroundStyle String   @default("solid")
+  smokeVisibility Float    @default(0.5)
+  updatedAt       DateTime @updatedAt
+}
+
+model ThemePreset {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  isSystem        Boolean  @default(false)
+  mode            String   @default("DARK")
+  primaryColor    String
+  secondaryColor  String
+  backgroundColor String
+  textColor       String   @default("#FFFFFF")
+  fontFamily      String   @default("Inter")
+  borderRounding  String   @default("0.5rem")
+  animationSpeed  String   @default("normal")
+  buttonStyle     String   @default("solid")
+  glassmorphism   Boolean  @default(false)
+  backgroundStyle String   @default("solid")
+  smokeVisibility Float    @default(0.5)
+  createdAt       DateTime @default(now())
+}
+
+model SiteContent {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  key             String   @unique // e.g., "HERO_TITLE", "LOGO_URL"
+  value           String
+  type            String   // TEXT, IMAGE_URL, HTML
+  updatedAt       DateTime @updatedAt
+}
+
+model ComponentLayout {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  componentId     String   @unique // e.g., "FEATURED_TOURNAMENTS", "TESTIMONIALS"
+  isVisible       Boolean  @default(true)
+  displayOrder    Int      @default(0)
+}
+
+model CustomFeature {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  icon        String?  // Name of the lucide icon or a URL
+  imageUrl    String?  // Optional image for the feature
+  type        String   @default("CARD") // CARD, HERO, TEXT_BLOCK, STAT_BOX
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AdSlide {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  description  String?
+  mediaType    String    @default("IMAGE") // IMAGE, VIDEO
+  mediaUrl     String
+  ctaLink      String?
+  ctaText      String?   @default("Learn More")
+  openInNewTab Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  displayOrder Int       @default(0)
+  startDate    DateTime?
+  endDate      DateTime?
+  titleColor    String?   @default("#FFFFFF")
+  descriptionColor String? @default("#FFFFFF")
+  ctaColor      String?   @default("#3b82f6")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// ── Security & Monitoring System ──
+
+model SecurityLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  type      String   // SQLI, XSS, RATE_LIMIT, BRUTE_FORCE, SUSPICIOUS
+  ipAddress String
+  userId    String?  @db.ObjectId
+  path      String
+  method    String
+  payload   String?
+  severity  String   // LOW, MEDIUM, HIGH, CRITICAL
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([ipAddress])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+model BannedIp {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  ipAddress    String    @unique
+  reason       String
+  attemptCount Int       @default(1)
+  expiresAt    DateTime? 
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model UserSession {
+  id         String   @id @map("_id")
+  userId     String   @db.ObjectId
+  tokenHash  String   @unique
+  device     String?
+  ipAddress  String
+  lastActive DateTime @default(now())
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model EmailTemplate {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  key         String   @unique // e.g., "VERIFICATION_CODE", "WELCOME_EMAIL"
+  subject     String
+  body        String
+  description String?
+  variables   String?  // JSON string of available variables
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SystemRevenue {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  amount      Float
+  type        String   // PLATFORM_FEE, TDS, WITHDRAWAL_FEE, AD_REVENUE
+  sourceId    String?  // TournamentId or TransactionId
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ─── New Admin Controls (Geo-fencing & Payment Routing) ───
+
+model RegionControl {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   @unique // e.g., "India", "Telangana", "USA"
+  type        String   // COUNTRY, STATE
+  isEnabled   Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+model PaymentRouting {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  country     String   @unique // The country to apply this routing to
+  gateways    String[] // e.g., ["CASHFREE", "PAYPAL", "PAYONEER"]
+  updatedAt   DateTime @updatedAt
+}
+
+model PaymentGateway {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  name                String   @unique  // e.g. "Cashfree", "Razorpay", "Stripe"
+  provider            String            // CASHFREE | RAZORPAY | STRIPE | PAYPAL | PHONEPE | UPI | WISE | PAYONEER | CUSTOM
+  type                String   @default("BOTH") // DEPOSIT | WITHDRAWAL | BOTH
+  isEnabled           Boolean  @default(true)
+  mode                String   @default("SANDBOX") // SANDBOX | PRODUCTION
+  apiKey              String?
+  apiSecret           String?
+  webhookSecret       String?
+  extraConfig         Json?             // Any provider-specific custom fields
+  supportedCurrencies String[]          // ["INR","USD","GBP"]
+  description         String?
+  iconUrl             String?
+  displayOrder        Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}

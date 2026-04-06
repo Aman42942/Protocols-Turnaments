@@ -1,0 +1,113 @@
+name: CI/CD → Render + Vercel
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ─────────────────────────────────────────
+  # 1. Backend: Build + Type-Check
+  # ─────────────────────────────────────────
+  backend-check:
+    name: Backend Build & Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Build NestJS
+        run: npm run build
+
+  # ─────────────────────────────────────────
+  # 2. Frontend: Build + Type-Check
+  # ─────────────────────────────────────────
+  frontend-check:
+    name: Frontend Build & Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+
+  # ─────────────────────────────────────────
+  # 3. Deploy Backend → Render (only on main)
+  # ─────────────────────────────────────────
+  deploy-backend:
+    name: Deploy Backend to Render
+    needs: backend-check
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Trigger Render Deploy
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}" \
+          | grep -q "200\|201" && echo "Deploy triggered ✅" || (echo "Deploy failed ❌" && exit 1)
+
+  # ─────────────────────────────────────────
+  # 4. Health Check after Backend Deploy
+  # ─────────────────────────────────────────
+  backend-health:
+    name: Backend Health Check
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Wait for deploy
+        run: sleep 60
+
+      - name: Verify health endpoint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.BACKEND_URL }}/health")
+          echo "Health check status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Backend health check failed!"
+            exit 1
+          fi
+          echo "✅ Backend is healthy"
