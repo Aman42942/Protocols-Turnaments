@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       next: { revalidate: 60 }
     });
 
-    if (!res.ok) throw new Error('Tournament not found');
+    if (!res.ok) throw 'API returned non-200 status (Tournament not found)';
 
     const tournament = await res.json();
     
@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
     };
   } catch (error) {
-    console.error('Error generating tournament metadata:', error);
+    // console.log('Tournament metadata fetch (404/Silent):', error);
     return {
       title: 'Tournament Details | Protocol',
       description: 'Join this tournament on Protocol esports platform.',
