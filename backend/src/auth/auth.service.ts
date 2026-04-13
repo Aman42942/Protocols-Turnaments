@@ -16,6 +16,7 @@ import * as OTPAuth from 'otpauth';
 import * as QRCode from 'qrcode';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { randomInt, randomBytes, createHash, randomUUID } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -42,7 +43,8 @@ export class AuthService {
   // ========== HELPERS ==========
 
   private generateOTP(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    // Use cryptographically secure random number generator
+    return randomInt(100000, 999999).toString();
   }
 
   private isExpired(expiry: Date | null): boolean {
@@ -413,7 +415,7 @@ export class AuthService {
       throw new BadRequestException('2FA is already enabled');
 
     const totp = new OTPAuth.TOTP({
-      issuer: 'Protocal Tournament',
+      issuer: 'Protocol Tournament',
       label: user.email,
       algorithm: 'SHA1',
       digits: 6,
@@ -448,7 +450,7 @@ export class AuthService {
       throw new BadRequestException('2FA setup not initiated');
 
     const totp = new OTPAuth.TOTP({
-      issuer: 'Protocal Tournament',
+      issuer: 'Protocol Tournament',
       label: user.email,
       algorithm: 'SHA1',
       digits: 6,
@@ -485,7 +487,7 @@ export class AuthService {
     }
 
     const totp = new OTPAuth.TOTP({
-      issuer: 'Protocal Tournament',
+      issuer: 'Protocol Tournament',
       label: user.email,
       algorithm: 'SHA1',
       digits: 6,
@@ -538,7 +540,7 @@ export class AuthService {
     }
 
     const totp = new OTPAuth.TOTP({
-      issuer: 'Protocal Tournament',
+      issuer: 'Protocol Tournament',
       label: user.email,
       algorithm: 'SHA1',
       digits: 6,
@@ -559,7 +561,7 @@ export class AuthService {
     }
 
     const totp = new OTPAuth.TOTP({
-      issuer: 'Protocal Tournament',
+      issuer: 'Protocol Tournament',
       label: user.email,
       algorithm: 'SHA1',
       digits: 6,
@@ -621,7 +623,7 @@ export class AuthService {
   }
 
   async getTokens(userId: string, email: string, role: string, name?: string, ip?: string, device?: string) {
-    const sessionId = require('crypto').randomUUID();
+    const sessionId = randomUUID();
     const tokens = await this.generateTokens(userId, email, role, name, sessionId);
     const hash = await bcrypt.hash(tokens.refresh_token, 10);
 
@@ -780,9 +782,8 @@ export class AuthService {
     }
 
     // Generate token
-    const resetToken = require('crypto').randomBytes(32).toString('hex');
-    const resetTokenHash = require('crypto')
-      .createHash('sha256')
+    const resetToken = randomBytes(32).toString('hex');
+    const resetTokenHash = createHash('sha256')
       .update(resetToken)
       .digest('hex');
     const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
@@ -809,8 +810,7 @@ export class AuthService {
 
   async resetPassword(email: string, token: string, newPassword: string) {
     // Hash token to compare with DB
-    const resetTokenHash = require('crypto')
-      .createHash('sha256')
+    const resetTokenHash = createHash('sha256')
       .update(token)
       .digest('hex');
 
@@ -842,12 +842,15 @@ export class AuthService {
         resetTokenExpiry: null,
         loginAttempts: 0,
         lockedUntil: null,
-        // Optional: Logout all other sessions (kill switch logic on individual level)
-        // But we don't track session IDs per se, relying on JWT expiry.
-        // Changing password doesn't invalidate old JWTs unless we use a "token version" system.
-        // For now, this is acceptable.
       },
     });
+
+    // Security: Kill ALL active sessions after password reset
+    // This prevents attackers from maintaining access with stolen tokens
+    await this.prisma.userSession.deleteMany({
+      where: { userId: user.id },
+    });
+    this.logger.log(`[SECURITY] All sessions revoked for user ${user.email} after password reset`);
 
     // Send notification/email
     await this.emailService.sendPasswordChangedEmail(user.email, user.name || '');
@@ -863,11 +866,32 @@ export class AuthService {
 
   // ========== PASSWORD MANAGEMENT ==========
 
-  async setPassword(userId: string, newPassword: string) {
+  async setPassword(userId: string, newPassword: string, currentPassword?: string) {
     if (newPassword.length < 8) {
       throw new BadRequestException(
         'Password must be at least 8 characters long',
       );
+    }
+
+    // Complexity check: must have at least one number or special character
+    const hasComplexity = /[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
+    if (!hasComplexity) {
+      throw new BadRequestException(
+        'Password must contain at least one number or special character',
+      );
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new BadRequestException('User not found');
+
+    // If the user already has a password, require verification of current password
+    if (user.password && currentPassword) {
+      const isCurrentValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentValid) {
+        throw new BadRequestException('Current password is incorrect');
+      }
+    } else if (user.password && !currentPassword) {
+      throw new BadRequestException('Current password is required to set a new password');
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -877,17 +901,19 @@ export class AuthService {
       data: { password: hashedPassword },
     });
 
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    // Kill all other sessions for security
+    await this.prisma.userSession.deleteMany({ where: { userId } });
+
     if (user) {
       await this.emailService.sendPasswordChangedEmail(user.email, user.name || '');
       await this.notificationsService.create(
         user.id,
         '🔐 Password Updated',
-        'Your profile password has been successfully updated.',
+        'Your profile password has been successfully updated. All other sessions have been logged out.',
         'warning',
       );
     }
 
-    return { message: 'Password set successfully.' };
+    return { message: 'Password set successfully. Please log in again.' };
   }
 }

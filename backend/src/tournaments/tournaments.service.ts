@@ -84,37 +84,46 @@ export class TournamentsService {
       `/tournaments/${tournament.id}`
     );
 
-    // 2. Offload Email notifications to background queue
-    const users = await this.usersService.findAll();
-    
-    // Add jobs to queue for each user
-    const jobs = users.map(user => ({
-      name: 'tournament_created',
-      data: {
-        userEmail: user.email,
-        userName: user.name || 'Warrior',
-        tournament: {
-          id: tournament.id,
-          title: tournament.title,
-          game: tournament.game,
-          prizePool: tournament.prizePool,
-          entryFee: tournament.entryFeePerPerson,
-          startDate: tournament.startDate,
-        }
-      },
-      opts: {
-        removeOnComplete: true,
-        removeOnFail: false,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 5000,
-        }
-      }
-    }));
+    // 2. Offload Email notifications to background queue (batched to avoid memory explosion)
+    try {
+      const users = await this.usersService.findAll();
+      const BATCH_SIZE = 100;
+      
+      // Add jobs to queue in batches to avoid memory issues with large user bases
+      for (let i = 0; i < users.length; i += BATCH_SIZE) {
+        const batch = users.slice(i, i + BATCH_SIZE);
+        const jobs = batch.map(user => ({
+          name: 'tournament_created',
+          data: {
+            userEmail: user.email,
+            userName: user.name || 'Warrior',
+            tournament: {
+              id: tournament.id,
+              title: tournament.title,
+              game: tournament.game,
+              prizePool: tournament.prizePool,
+              entryFee: tournament.entryFeePerPerson,
+              startDate: tournament.startDate,
+            }
+          },
+          opts: {
+            removeOnComplete: true,
+            removeOnFail: false,
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 5000,
+            }
+          }
+        }));
 
-    await this.notificationQueue.addBulk(jobs);
-    console.log(`Successfully queued ${jobs.length} tournament notifications.`);
+        await this.notificationQueue.addBulk(jobs);
+      }
+      console.log(`Successfully queued ${users.length} tournament notifications in batches of ${BATCH_SIZE}.`);
+    } catch (err) {
+      console.error('[QUEUE] Failed to queue tournament notifications (Redis may be down):', err.message);
+      // Don't crash tournament creation flow if queue fails
+    }
   }
 
   findAll() {
@@ -195,7 +204,9 @@ export class TournamentsService {
       where: { tournamentId: id, userId, status: 'APPROVED' },
     });
 
-    if (user?.role !== 'ADMIN' && !isParticipant) {
+    // Allow all admin roles to view credentials, not just 'ADMIN'
+    const adminRoles = ['ADMIN', 'SUPERADMIN', 'ULTIMATE_ADMIN', 'EMPLOYEE'];
+    if (!adminRoles.includes(user?.role || '') && !isParticipant) {
       throw new BadRequestException(
         'Access Denied. You are not a participant.',
       );
@@ -719,11 +730,11 @@ export class TournamentsService {
       throw new BadRequestException('Participant is already removed');
     }
 
-    // Mark as kicked (soft delete — preserves audit trail)
+    // Mark as kicked (sets KICKED status for audit trail)
     const updated = await this.prisma.tournamentParticipant.update({
       where: { id: participantId },
       data: {
-        status: 'CANCELLED',
+        status: 'KICKED',
         paymentStatus: 'CANCELLED',
       },
     });

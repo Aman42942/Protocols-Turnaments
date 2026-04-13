@@ -53,6 +53,21 @@ export class WalletService {
     if (result.count === 0) {
       throw new BadRequestException('Insufficient balance to lock funds');
     }
+
+    // Create audit trail for frozen funds
+    const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
+    if (wallet) {
+      await this.prisma.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: 'WITHDRAWAL',
+          amount,
+          status: 'PENDING',
+          description: `Funds locked: ${reason}`,
+          metadata: JSON.stringify({ lockedAt: new Date().toISOString(), reason, isLocked: true }),
+        },
+      });
+    }
   }
 
   // Unlock funds (Move from Frozen -> Balance) e.g. Refund
@@ -670,7 +685,7 @@ export class WalletService {
   }
 
   async deductEntryFee(userId: string, amount: number, tournamentName: string) {
-    if (amount < 0) throw new BadRequestException('Amount cannot be negative');
+    if (amount <= 0) throw new BadRequestException('Entry fee amount must be positive');
 
     try {
       const [updatedWallet, transaction] = await this.prisma.$transaction(

@@ -39,11 +39,13 @@ export class PaymentsService {
     // Cashfree PRODUCTION mode strictly requires HTTPS for return URLs.
     if (this.isProduction) {
       if (envUrl && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
-        console.warn('[CASHFREE] Detected localhost in PRODUCTION mode. Using Vercel HTTPS fallback.');
-        return 'https://protocols-turnaments.vercel.app';
+        console.warn('[CASHFREE] Detected localhost in PRODUCTION mode. Using FRONTEND_URL env fallback.');
+        const fallback = this.configService.get<string>('FRONTEND_URL_PROD') || 'https://protocols-turnaments.vercel.app';
+        return fallback;
       }
       if (!envUrl) {
-         return 'https://protocols-turnaments.vercel.app';
+        const fallback = this.configService.get<string>('FRONTEND_URL_PROD') || 'https://protocols-turnaments.vercel.app';
+        return fallback;
       }
       return envUrl.startsWith('http://') ? envUrl.replace('http://', 'https://') : `https://${envUrl}`;
     }
