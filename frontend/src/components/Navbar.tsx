@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, Trophy, User, LogOut, ChevronRight, LayoutDashboard, CreditCard, Users, Settings, Activity, ShieldCheck, Search, Home, AlertCircle } from 'lucide-react';
+import { Menu, X, Trophy, User, LogOut, ChevronRight, LayoutDashboard, CreditCard, Users, Settings, Activity, ShieldCheck, Search, Home, AlertCircle, TrendingUp } from 'lucide-react';
 import { Button } from './ui/Button';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
@@ -100,6 +100,7 @@ export function Navbar() {
         ...(user ? [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }] : []),
         ...(user?.role === 'ADMIN' ? [{ name: 'Admin', href: '/admin', icon: ShieldCheck }] : []),
         { name: 'Tournaments', href: '/tournaments', icon: Trophy },
+        { name: 'Pricing', href: '/pricing', icon: TrendingUp },
         ...(user ? [{ name: 'My Team', href: '/dashboard/teams', icon: Users }] : []),
         ...(user ? [{ name: 'Wallet', href: '/dashboard/wallet', icon: CreditCard }] : []),
         { name: 'Leaderboard', href: '/leaderboard', icon: Users },
