@@ -1,4 +1,5 @@
-import { Controller, Post, Body, UseGuards, Request, Get, Param, RawBodyRequest, Inject, forwardRef } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, Param, Inject, forwardRef } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { WalletService } from '../wallet/wallet.service';
 import { NotificationsService } from '../notifications/notifications.service';
