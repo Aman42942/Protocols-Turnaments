@@ -645,7 +645,11 @@ export class AuthService {
 
     // Military Grade: Admin Login Alerts
     if (role !== 'USER' && role !== 'EMPLOYEE') {
-      await this.sendAdminLoginAlert(userId, role, ip || 'Unknown', device || 'Unknown Device');
+      try {
+        await this.sendAdminLoginAlert(userId, role, ip || 'Unknown', device || 'Unknown Device');
+      } catch (err) {
+        console.error('Failed to send admin login alert email (SMTP Timeout):', err);
+      }
     }
 
     return tokens;
