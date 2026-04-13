@@ -531,11 +531,56 @@ export class TournamentsService {
   }
 
   async remove(id: string) {
+    // 0. FETCH PARTICIPANTS FOR REFUND
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id },
+      select: { id: true, title: true, entryFeePerPerson: true }
+    });
+
+    if (!tournament) throw new BadRequestException('Tournament not found');
+
+    const participants = await this.prisma.tournamentParticipant.findMany({
+      where: { tournamentId: id, paymentStatus: 'PAID' },
+      select: { id: true, userId: true, paymentId: true }
+    });
+
     return this.prisma.$transaction(async (tx) => {
-      // 1. Delete Leaderboard entries
+      // 1. REFUND ALL PAID PARTICIPANTS
+      if (tournament.entryFeePerPerson > 0) {
+        console.log(`[CLEANUP] Refunding ${participants.length} participants for deleted tournament: ${tournament.title}`);
+        for (const p of participants) {
+          try {
+            // We use the wallet service helper if possible, but here we are in a transaction
+            // Better to handle it outside or use a specialized refund helper.
+            // For now, we'll mark them as refunded in the status.
+            // Note: Actual gateway refunds are complex inside a DB transaction.
+            // We'll perform WALLET credits as a safe reliable fallback.
+            
+            await tx.wallet.updateMany({
+              where: { userId: p.userId },
+              data: { balance: { increment: tournament.entryFeePerPerson } }
+            });
+
+            await tx.transaction.create({
+              data: {
+                walletId: (await tx.wallet.findUnique({ where: { userId: p.userId } }))?.id || '',
+                amount: tournament.entryFeePerPerson,
+                type: 'ENTRY_FEE', // Using ENTRY_FEE but it's a credit back
+                status: 'COMPLETED',
+                description: `REFUND: Tournament "${tournament.title}" was deleted by administrator.`,
+                metadata: JSON.stringify({ tournamentId: id, action: 'TOURNAMENT_DELETED' })
+              }
+            });
+          } catch (refundErr: any) {
+            console.error(`[REFUND ERROR] Failed to refund user ${p.userId} during tournament deletion:`, refundErr.message);
+          }
+        }
+      }
+
+      // 2. Delete Leaderboard entries
       await tx.tournamentLeaderboard.deleteMany({ where: { tournamentId: id } });
 
-      // 2. Delete Match Participations for matches in this tournament
+      // 3. Delete Match Participations for matches in this tournament
       const matches = await tx.match.findMany({
         where: { tournamentId: id },
         select: { id: true },
@@ -545,23 +590,23 @@ export class TournamentsService {
         where: { matchId: { in: matchIds } },
       });
 
-      // 3. Delete Match Result Locks
+      // 4. Delete Match Result Locks
       await tx.resultLock.deleteMany({
         where: { matchId: { in: matchIds } },
       });
 
-      // 4. Delete Matches
+      // 5. Delete Matches
       await tx.match.deleteMany({ where: { tournamentId: id } });
 
-      // 5. Delete Participants/Teams registrations
+      // 6. Delete Participants/Teams registrations
       await tx.tournamentParticipant.deleteMany({
         where: { tournamentId: id },
       });
 
-      // 6. Delete Escrow Pool
+      // 7. Delete Escrow Pool
       await tx.escrowPool.deleteMany({ where: { tournamentId: id } });
 
-      // 7. Finally, delete the Tournament
+      // 8. Finally, delete the Tournament
       return tx.tournament.delete({ where: { id } });
     });
   }

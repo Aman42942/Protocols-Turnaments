@@ -86,7 +86,7 @@ export class NotificationsService {
   async sendWelcome(userId: string) {
     return this.create(
       userId,
-      'Welcome to Protocal! 🎮',
+      'Welcome to Protocol! 🎮',
       'Verify your email and link your game IDs to start playing.',
       'system',
       '/settings',

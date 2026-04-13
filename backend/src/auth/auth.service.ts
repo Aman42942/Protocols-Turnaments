@@ -394,6 +394,16 @@ export class AuthService {
     const user = await this.usersService.findOne(email);
     if (!user) throw new BadRequestException('User not found');
 
+    // cooldown check (60 seconds)
+    if (user.otpExpiry) {
+      const sentAt = user.otpExpiry.getTime() - 5 * 60 * 1000;
+      const now = Date.now();
+      if (now - sentAt < 60 * 1000) {
+        const waitTime = Math.ceil((60 * 1000 - (now - sentAt)) / 1000);
+        throw new BadRequestException(`Please wait ${waitTime} seconds before requesting a new OTP`);
+      }
+    }
+
     const otpCode = this.generateOTP();
     const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
 

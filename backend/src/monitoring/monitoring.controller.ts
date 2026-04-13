@@ -5,17 +5,19 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @Controller('monitoring')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
 export class MonitoringController {
   constructor(private readonly monitoringService: MonitoringService) {}
 
   @Get('dashboard')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN', 'ULTIMATE_ADMIN')
   async getDashboard() {
     return this.monitoringService.getDashboardStats();
   }
 
   @Get('security-logs')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN', 'ULTIMATE_ADMIN')
   async getSecurityLogs(@Query('limit') limit?: string) {
     return this.monitoringService.getSecurityLogs(limit ? parseInt(limit) : 50);
   }

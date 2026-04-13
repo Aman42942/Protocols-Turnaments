@@ -107,13 +107,16 @@ export class PaymentsController {
   }
 
   @Post('webhook')
-  async handleWebhook(@Request() req, @Body() body: any) {
+  async handleWebhook(@Request() req: RawBodyRequest<any>, @Body() body: any) {
     // Note: Cashfree webhooks should be verified here using their specific signature
-    // For now, we use a basic placeholder as requested by the transition
+    // We use req.rawBody (Buffer) converted to string for perfect signature matching
+    const rawBodyBuffer = req.rawBody?.toString('utf8');
+    
     const isValid = await this.paymentsService.verifyWebhook(
       body,
-      req.headers['x-webhook-signature'],
-      req.headers['x-webhook-timestamp'],
+      req.headers['x-webhook-signature'] as string,
+      req.headers['x-webhook-timestamp'] as string,
+      rawBodyBuffer
     );
 
     if (!isValid) {

@@ -165,7 +165,7 @@ export class PaymentsService {
     }
   }
 
-  async verifyWebhook(body: any, signature: string, timestamp?: string) {
+  async verifyWebhook(body: any, signature: string, timestamp: string, rawBody?: string) {
     if (!this.secretKey) {
       console.warn('[SECURITY] Webhook verification skipped because CASHFREE_SECRET_KEY is missing.');
       return false; // Fail secure: If there's no secret key, we shouldn't process webhooks.
@@ -177,35 +177,29 @@ export class PaymentsService {
     }
 
     try {
-      // Cashfree verify webhook logic requires full raw body if using middleware, but we'll use stringified JSON
-      // Note: In NestJS, `body` is usually already parsed. For perfect accuracy with Cashfree, 
-      // you typically want `rawBody`. But basic verification involves taking the timestamp + body.
-      // 
-      // The Cashfree SDK provides a built-in verifier:
-      // Cashfree.PGVerifyWebhookSignature(signature, rawBody, timestamp)
-      // Since we don't have the raw buffer here easily, we implement manual HMAC if timestamp is provided 
-      // or use the older SDK method.
-
       const crypto = require('crypto');
       const ts = timestamp || String(Date.now()); // Fallback if missing
 
-      // The payload Cashfree signs is usually the raw string. In lieu of raw string, stringify the parsed body.
-      // Warning: JSON.stringify order matters. If it fails, we should use raw-body middleware in the future.
-      const payloadString = typeof body === 'string' ? body : JSON.stringify(body);
+      // FOR PERFECT ACCURACY:
+      // We prioritize the raw buffer (rawBody) provided by NestJS middleware.
+      // If not available, we fall back to stringifying the body (less reliable).
+      const payloadString = rawBody || (typeof body === 'string' ? body : JSON.stringify(body));
 
       const expectedSignature = crypto
         .createHmac('sha256', this.secretKey)
         .update(ts + payloadString)
         .digest('base64');
 
-      // For demonstration, we attempt to verify. If the SDK is installed, doing it via Cashfree.PGVerifyWebhookSignature is safer.
-      // Right now, if the signature matches our computed one, we accept. 
-      // Because we lack rawBody, this might fail in strict prod. Let's add a warning.
+      const isWaitMatch = signature === expectedSignature;
 
-      return signature === expectedSignature;
+      if (!isWaitMatch && !rawBody) {
+        console.warn('[SECURITY] Webhook signature mismatch. Note: rawBody was missing, which may cause stringification issues.');
+      }
 
-    } catch (err) {
-      console.error('[SECURITY] Webhook signature verification error:', err);
+      return isWaitMatch;
+
+    } catch (err: any) {
+      console.error('[SECURITY] Webhook signature verification error:', err.message);
       return false;
     }
   }
