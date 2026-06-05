@@ -1,0 +1,141 @@
+
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+// This function can be marked `async` if using `await` inside
+export async function proxy(request: NextRequest) {
+    // 0. MAINTENANCE MODE CHECK
+    // Fetch status from backend (with short timeout)
+    let isMaintenanceMode = false;
+    try {
+        // Use the backend URL from env, usually defined in next.config or .env
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+        // Add timeout to prevent hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // Increased to 5s for local reliability
+        // Append timestamp to utterly defeat aggressive Vercel/Next.js Edge caching
+        const res = await fetch(`${backendUrl}/api/maintenance?t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+            },
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+            const data = await res.json();
+            isMaintenanceMode = data.isMaintenanceMode;
+        }
+    } catch (err: any) {
+        // If it's a timeout (AbortError), fail-open silently to avoid log noise
+        if (err.name === 'AbortError') {
+            isMaintenanceMode = false;
+        } else {
+            console.error('Middleware maintenance check failed:', err.message || err);
+            isMaintenanceMode = false; // Fail open for safety
+        }
+    }
+
+    // 3. Get the token from cookies (Prioritize HTTP-only cookie)
+    const token = request.cookies.get('token')?.value;
+    let isAdmin = false;
+
+    // 4. Verify admin role from JWT token
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const ADMIN_ROLES = [
+                'ULTIMATE_ADMIN', 'SUPERADMIN',
+                'SENIOR_CHIEF_SECURITY_ADMIN', 'CHIEF_DEVELOPMENT_ADMIN',
+                'CHIEF_SECURITY_ADMIN', 'VICE_CHIEF_SECURITY_ADMIN',
+                'SENIOR_ADMIN', 'JUNIOR_ADMIN', 'EMPLOYEE', 'ADMIN'
+            ];
+
+            if (payload.role && ADMIN_ROLES.includes(payload.role)) {
+                isAdmin = true;
+            }
+        } catch (error) {
+            // Invalid token
+        }
+    }
+
+    // Handle Maintenance Mode
+    if (isMaintenanceMode) {
+        // Allow admins to bypass maintenance mode completely
+        if (!isAdmin) {
+            // Exclude specific paths from maintenance mode redirects for regular users
+            const isExcluded =
+                request.nextUrl.pathname.startsWith('/_next') ||
+                request.nextUrl.pathname.startsWith('/static') ||
+                request.nextUrl.pathname.startsWith('/api') || // Next.js API routes
+                request.nextUrl.pathname === '/maintenance' ||
+                request.nextUrl.pathname.startsWith('/auth/callback') || // Allow social login callback
+                request.nextUrl.pathname.startsWith('/secure-admin-login'); // Allow stealth login only
+
+            if (!isExcluded) {
+                return NextResponse.redirect(new URL('/maintenance', request.url));
+            }
+        }
+    } else {
+        // If NOT in maintenance mode, redirect away from /maintenance page
+        if (request.nextUrl.pathname === '/maintenance') {
+            return NextResponse.redirect(new URL('/', request.url));
+        }
+    }
+
+    // 1. CSRF Protection: Strict Origin/Referer Check for Mutations
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
+        const origin = request.headers.get('origin');
+        const referer = request.headers.get('referer');
+        const host = request.headers.get('host'); // e.g. localhost:3000
+
+        // Allow requests with no origin/referer (e.g. mobile apps, curl) if strict mode is off, 
+        // BUT for a web app, we usually respect them. 
+        // Here we ensure that IF they exist, they must match.
+
+        if (origin) {
+            const originHost = new URL(origin).host;
+            if (originHost !== host) {
+                return new NextResponse(JSON.stringify({ message: 'CSRF: Origin Mismatch' }), { status: 403 });
+            }
+        }
+    }
+
+    // 2. Check if the path is an admin route
+    if (request.nextUrl.pathname.startsWith('/admin')) {
+
+        // (Login page moved to /secure-admin-login, so no need to exclude it here as it's outside /admin scope)
+
+        if (!token) {
+            // Stealth Mode: Redirect unauthorized users to Home 
+            // This hides the existence of the admin panel
+            return NextResponse.redirect(new URL('/', request.url));
+        }
+
+        if (!isAdmin) {
+            // Not an admin - redirect silently to home
+            return NextResponse.redirect(new URL('/', request.url));
+        }
+    }
+
+    return NextResponse.next();
+}
+
+export { proxy as middleware };
+
+// See "Matching Paths" below to learn more
+export const config = {
+    matcher: [
+        /*
+         * Match all request paths except for the ones starting with:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+         */
+        '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+    ],
+};

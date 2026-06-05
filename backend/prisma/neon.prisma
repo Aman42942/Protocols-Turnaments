@@ -1,0 +1,9 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/client-neon"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("OLD_DATABASE_URL")
+}

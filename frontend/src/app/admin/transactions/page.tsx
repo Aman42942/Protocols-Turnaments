@@ -1,0 +1,443 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import api from '@/lib/api';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Input } from '@/components/ui/Input';
+import {
+    Loader2, Search, Filter, ArrowDownLeft, ArrowUpRight,
+    CheckCircle, XCircle, Clock, Banknote, IndianRupee,
+    User, History, ExternalLink, ShieldCheck, RotateCcw,
+    AlertCircle, Wallet
+} from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from '@/components/ui/Dialog';
+import { WalletAdjustmentModal } from '@/components/admin/WalletAdjustmentModal';
+import { RefundSuccessModal } from '@/components/admin/RefundSuccessModal';
+import { WithdrawalApprovalModal } from '@/components/admin/WithdrawalApprovalModal';
+import { toast } from 'sonner';
+
+interface Transaction {
+    id: string;
+    type: string;
+    amount: number;
+    status: string;
+    method?: string;
+    reference?: string;
+    description?: string;
+    createdAt: string;
+    user?: { id: string; name: string; email: string };
+}
+
+export default function AdminTransactionsPage() {
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED' | 'FAILED'>('ALL');
+    const [processingId, setProcessingId] = useState<string | null>(null);
+    const [adjustmentUser, setAdjustmentUser] = useState<{ id: string, name: string, email: string, balance?: number } | null>(null);
+    const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+    const [currentUserRole, setCurrentUserRole] = useState<string>('');
+    const [confirmingRefundTx, setConfirmingRefundTx] = useState<Transaction | null>(null);
+    const [refundToWallet, setRefundToWallet] = useState(false);
+    const [successModalData, setSuccessModalData] = useState<{ amount: number, name: string, destination: 'WALLET' | 'GATEWAY', orderId?: string } | null>(null);
+    const [withdrawalTx, setWithdrawalTx] = useState<Transaction | null>(null);
+
+    useEffect(() => {
+        fetchTransactions();
+        try {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                setCurrentUserRole(user.role || '');
+            }
+        } catch (e) { console.error('Error parsing user', e); }
+    }, []);
+
+    const fetchTransactions = async () => {
+        try {
+            const res = await api.get('/admin/transactions');
+            setTransactions(res.data);
+        } catch (err) {
+            console.error('Failed to fetch transactions:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAction = async (id: string, action: 'approve' | 'reject') => {
+        const tx = transactions.find(t => t.id === id);
+        if (tx?.type === 'WITHDRAWAL' && action === 'approve') {
+            setWithdrawalTx(tx);
+            return;
+        }
+
+        setProcessingId(id);
+        try {
+            await api.post(`/admin/transactions/${id}/${action}`);
+            await fetchTransactions();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Action failed');
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleRefund = async (tx: Transaction) => {
+        // Simple confirm first
+        if (!confirm(`Are you sure you want to refund ${tx.amount} Coins to ${tx.user?.name}?`)) return;
+
+        setProcessingId(tx.id);
+        try {
+            const res = await api.post('/payments/admin/refund', {
+                order_id: tx.reference,
+                amount: tx.amount,
+                userId: tx.user?.id,
+                refund_to_wallet: refundToWallet
+            });
+            
+            // Set success modal data instead of just toast
+            setSuccessModalData({
+                amount: tx.amount,
+                name: tx.user?.name || 'User',
+                destination: refundToWallet ? 'WALLET' : 'GATEWAY',
+                orderId: tx.reference
+            });
+
+            setConfirmingRefundTx(null);
+            await fetchTransactions();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Refund failed');
+            // Re-fetch anyway to see if it was actually processed but timed out
+            await fetchTransactions();
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleDeleteAdjustment = async (id: string) => {
+        if (!confirm('Are you sure you want to PERMANENTLY delete this adjustment? This will revert the user\'s balance. This cannot be undone!')) return;
+
+        setProcessingId(id);
+        try {
+            await api.delete(`/wallet/admin/adjustment/${id}`);
+            toast.success('Adjustment deleted and balance reverted');
+            await fetchTransactions();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Deletion failed');
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const isRefunded = (tx: Transaction) => {
+        // Precise check: find a COMPLETED REFUND transaction that MATCHES this transaction's reference
+        return transactions.some(t =>
+            t.type === 'REFUND' &&
+            t.status === 'COMPLETED' &&
+            t.reference === tx.reference &&
+            tx.reference !== undefined &&
+            tx.reference !== null &&
+            tx.reference !== ''
+        );
+    };
+
+    const filtered = transactions.filter(tx => {
+        const matchesSearch =
+            tx.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
+            tx.user?.email?.toLowerCase().includes(search.toLowerCase()) ||
+            tx.reference?.toLowerCase().includes(search.toLowerCase());
+
+        const matchesStatus = statusFilter === 'ALL' || tx.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
+    });
+
+    const getStatusBadge = (status: string) => {
+        switch (status) {
+            case 'COMPLETED': return <Badge className="bg-green-500 hover:bg-green-600">SUCCESS</Badge>;
+            case 'PENDING': return <Badge className="bg-yellow-500 hover:bg-yellow-600">PENDING</Badge>;
+            case 'FAILED': return <Badge className="bg-red-500 hover:bg-red-600">FAILED</Badge>;
+            default: return <Badge variant="outline">{status}</Badge>;
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-black uppercase tracking-tighter">Transaction Control</h1>
+                    <p className="text-muted-foreground text-sm">Monitor and manage site-wide financial movements.</p>
+                </div>
+            </div>
+
+            {/* Filters */}
+            <Card className="border-primary/10 bg-primary/5">
+                <CardContent className="pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search by User, Email or Reference..."
+                                className="pl-10"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex gap-2">
+                            {(['ALL', 'PENDING', 'COMPLETED', 'FAILED'] as const).map(f => (
+                                <Button
+                                    key={f}
+                                    variant={statusFilter === f ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setStatusFilter(f)}
+                                    className="text-[10px] font-bold"
+                                >
+                                    {f}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Table */}
+            <div className="grid grid-cols-1 gap-4">
+                {filtered.length === 0 ? (
+                    <Card className="p-12 text-center text-muted-foreground border-dashed">
+                        <History className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                        <p>No transactions found matching your criteria.</p>
+                    </Card>
+                ) : (
+                    filtered.map(tx => (
+                        <Card key={tx.id} className="group hover:border-primary/30 transition-all">
+                            <CardContent className="p-4 sm:p-6">
+                                <div className="flex flex-col sm:flex-row justify-between gap-4">
+                                    <div className="flex gap-4">
+                                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                            {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? <ArrowDownLeft className="h-6 w-6" /> : <ArrowUpRight className="h-6 w-6" />}
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`font-bold text-lg ${tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? 'text-green-500' : 'text-red-500'}`}>
+                                                    {tx.type === 'DEPOSIT' || tx.type === 'WINNINGS' || tx.type === 'REFUND' ? '+' : '-'}{tx.amount.toLocaleString('en-IN')} Coins
+                                                </span>
+                                                <Badge variant="outline" className="text-[10px] uppercase">{tx.type.replace('_', ' ')}</Badge>
+                                                <Badge variant="outline" className="text-[10px] uppercase bg-muted/50">{tx.method || 'WALLET'}</Badge>
+                                                {getStatusBadge(tx.status)}
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <User className="h-3 w-3 text-muted-foreground" />
+                                                <span className="text-sm font-semibold">{tx.user?.name || 'Unknown User'}</span>
+                                                <span className="text-xs text-muted-foreground">({tx.user?.email})</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col sm:items-end gap-2">
+                                        <div className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
+                                            REF: {tx.reference || 'N/A'}
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground">
+                                            {new Date(tx.createdAt).toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {tx.status === 'PENDING' && (
+                                    <div className="flex gap-2 mt-4 pt-4 border-t border-dashed">
+                                        <Button
+                                            size="sm"
+                                            className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                                            disabled={!!processingId}
+                                            onClick={() => handleAction(tx.id, 'approve')}
+                                        >
+                                            {processingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1.5" />}
+                                            APPROVE
+                                        </Button>
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            className="font-bold"
+                                            disabled={!!processingId}
+                                            onClick={() => handleAction(tx.id, 'reject')}
+                                        >
+                                            <XCircle className="h-4 w-4 mr-1.5" />
+                                            REJECT
+                                        </Button>
+                                    </div>
+                                )}
+
+                                {(tx.status === 'COMPLETED' || tx.status === 'FAILED') && (
+                                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-dashed">
+                                        {tx.type === 'DEPOSIT' && tx.status === 'COMPLETED' && (
+                                            <>
+                                                {!isRefunded(tx) ? (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="border-orange-500/50 text-orange-500 hover:bg-orange-500/10 font-bold"
+                                                        disabled={!!processingId}
+                                                        onClick={() => {
+                                                            setConfirmingRefundTx(tx);
+                                                            setRefundToWallet(false);
+                                                        }}
+                                                    >
+                                                        {processingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1.5" />}
+                                                        INITIATE REFUND
+                                                    </Button>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-green-500 bg-green-500/10 border-green-500/20 py-1 px-3">
+                                                        <RotateCcw className="w-3 h-3 mr-1" /> REFUNDED DONE
+                                                    </Badge>
+                                                )}
+                                            </>
+                                        )}
+
+                                        {/* Delete button for Admin Adjustments */}
+                                        {tx.description?.startsWith('Admin Adjustment:') && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-red-500 hover:bg-red-500/10 font-bold gap-2"
+                                                disabled={!!processingId}
+                                                onClick={() => handleDeleteAdjustment(tx.id)}
+                                            >
+                                                {processingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="w-4 h-4 text-red-500" />}
+                                                DELETE ADJUSTMENT
+                                            </Button>
+                                        )}
+
+                                        {(currentUserRole === 'ULTIMATE_ADMIN' || currentUserRole === 'SUPERADMIN') && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="ml-auto text-primary font-bold gap-2"
+                                                onClick={() => {
+                                                    setAdjustmentUser(tx.user || null);
+                                                    setIsAdjustmentModalOpen(true);
+                                                }}
+                                            >
+                                                <Wallet className="w-4 h-4" />
+                                                ADJUST BALANCE
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
+            </div>
+
+            <WalletAdjustmentModal
+                isOpen={isAdjustmentModalOpen}
+                onClose={() => setIsAdjustmentModalOpen(false)}
+                user={adjustmentUser}
+                onSuccess={() => {
+                    toast.success('Wallet updated successfully');
+                    fetchTransactions();
+                }}
+            />
+
+            {/* Selective Refund Modal */}
+            <Dialog open={!!confirmingRefundTx} onOpenChange={() => setConfirmingRefundTx(null)}>
+                <DialogContent className="sm:max-w-[400px] bg-card border-primary/20 p-6 rounded-2xl">
+                    <DialogHeader className="flex flex-row items-start gap-4 space-y-0">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                            <RotateCcw className="w-6 h-6 text-primary" />
+                        </div>
+                        <div className="space-y-1">
+                            <DialogTitle className="text-xl font-black uppercase tracking-tighter">Initiate Refund</DialogTitle>
+                            <DialogDescription className="text-muted-foreground text-sm">
+                                Choose how you want to refund <strong>{confirmingRefundTx?.amount} Coins</strong> to <strong>{confirmingRefundTx?.user?.name}</strong>.
+                            </DialogDescription>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="space-y-3 p-4 bg-muted/30 rounded-xl border border-border">
+                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                            Destination
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setRefundToWallet(false)}
+                                className={`px-3 py-3 text-xs font-bold rounded-lg border transition-all ${!refundToWallet ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20' : 'bg-transparent border-border hover:border-primary/50'}`}
+                            >
+                                Original Source
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setRefundToWallet(true)}
+                                className={`px-3 py-3 text-xs font-bold rounded-lg border transition-all ${refundToWallet ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20' : 'bg-transparent border-border hover:border-primary/50'}`}
+                            >
+                                User Wallet
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground leading-tight italic">
+                            {refundToWallet 
+                                ? "Funds will be added to the user's wallet balance immediately." 
+                                : "Funds will be returned to the original payment method (Bank/PayPal)."}
+                        </p>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                        <Button
+                            variant="outline"
+                            className="flex-1 font-bold"
+                            onClick={() => setConfirmingRefundTx(null)}
+                        >
+                            CANCEL
+                        </Button>
+                        <Button
+                            className="flex-1 font-bold bg-primary hover:bg-primary/90"
+                            onClick={() => confirmingRefundTx && handleRefund(confirmingRefundTx)}
+                            disabled={!!processingId}
+                        >
+                            {processingId === confirmingRefundTx?.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                'PROCESS REFUND'
+                            )}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            {/* Refund Success Modal */}
+            <RefundSuccessModal
+                isOpen={!!successModalData}
+                onClose={() => setSuccessModalData(null)}
+                amount={successModalData?.amount || 0}
+                userName={successModalData?.name || ''}
+                destination={successModalData?.destination || 'GATEWAY'}
+                orderId={successModalData?.orderId}
+            />
+
+            <WithdrawalApprovalModal
+                isOpen={!!withdrawalTx}
+                onClose={() => setWithdrawalTx(null)}
+                transaction={withdrawalTx}
+                onSuccess={() => {
+                    toast.success('Withdrawal approved and payout triggered!');
+                    fetchTransactions();
+                }}
+            />
+        </div>
+    );
+}
