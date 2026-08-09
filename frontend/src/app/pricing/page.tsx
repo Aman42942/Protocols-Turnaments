@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import { Check, Zap, Award, Crown, Coins, ShieldCheck, Gamepad2, TrendingUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
