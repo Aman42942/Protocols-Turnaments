@@ -122,6 +122,23 @@ export default function MonitoringDashboard() {
     </div>
   );
 
+  if (!stats) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex flex-col items-center gap-4">
+        <AlertTriangle className="w-12 h-12 text-rose-500" />
+        <p className="text-slate-400 font-medium text-center max-w-md">
+          Failed to load monitoring data. Backend API might be unreachable.
+        </p>
+        <button 
+          onClick={fetchStats}
+          className="mt-4 px-6 py-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl hover:bg-indigo-500/20 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="p-8 space-y-8 max-w-[1600px] mx-auto bg-black min-h-screen text-slate-200 font-sans">
       {/* Header */}
