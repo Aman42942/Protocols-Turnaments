@@ -102,6 +102,9 @@ jobs:
     needs: deploy-backend
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: main - tournament-backend
+      url: https://protocols-turnaments.onrender.com
 
     steps:
       - name: Verify health endpoint
