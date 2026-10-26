@@ -2,16 +2,14 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TournamentsService } from './tournaments.service';
 import { TournamentsController } from './tournaments.controller';
 import { PrismaModule } from '../prisma/prisma.module';
-import { LeaderboardGateway } from './leaderboard.gateway';
 import { WalletModule } from '../wallet/wallet.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { ActivityLogModule } from '../activity-log/activity-log.module';
 import { OrganizerModule } from '../organizer/organizer.module';
 import { UsersModule } from '../users/users.module';
-import { EmailModule } from '../email/email.module';
 import { AdminOperationsModule } from '../admin-operations/admin-operations.module';
-import { BullModule } from '@nestjs/bullmq';
+import { LeaderboardGateway } from './leaderboard.gateway';
 
 import { LeaderboardService } from './leaderboard.service';
 import { LeaderboardController } from './leaderboard.controller';
@@ -35,7 +33,6 @@ import { ResultLockService } from './result-lock.service';
     UsersModule,
     AdminOperationsModule,
     forwardRef(() => AdminOperationsModule),
-    BullModule.registerQueue({ name: 'notification' }),
   ],
   controllers: [
     TournamentsController,
@@ -53,12 +50,6 @@ import { ResultLockService } from './result-lock.service';
     EscrowService,
     ResultLockService,
   ],
-  exports: [
-    TournamentsService,
-    LeaderboardService,
-    MatchService,
-    EscrowService,
-    ResultLockService,
-  ],
+  exports: [TournamentsService, EscrowService, ResultLockService],
 })
-export class TournamentsModule { }
+export class TournamentsModule {}
