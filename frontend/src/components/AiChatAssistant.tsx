@@ -40,14 +40,14 @@ export function AiChatAssistant() {
     };
 
     return (
-        <div className="fixed bottom-6 right-6 z-[9999]">
+        <div className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-[9999]">
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
                         initial={{ opacity: 0, y: 20, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        className="mb-4 w-[350px] sm:w-[400px] h-[500px] bg-card/80 backdrop-blur-2xl border border-primary/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+                        className="mb-3 w-[calc(100vw-2rem)] sm:w-[400px] max-w-[400px] h-[480px] max-h-[75vh] bg-card/80 backdrop-blur-2xl border border-primary/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
                     >
                         {/* Header */}
                         <div className="p-4 bg-primary flex items-center justify-between">
@@ -139,7 +139,7 @@ export function AiChatAssistant() {
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all relative group",
+                    "w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center shadow-2xl transition-all relative group",
                     isOpen ? "bg-muted text-foreground border border-border" : "bg-primary text-primary-foreground"
                 )}
             >
